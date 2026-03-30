@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    background-color: #0f172a;
+    color: #f1f5f9;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    margin: 0; padding: 0;
+  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: #1e293b; }
+  ::-webkit-scrollbar-thumb  { background: #475569; border-radius: 3px; }
+}
+
+@layer utilities {
+  .card       { @apply bg-[#1e293b] rounded-xl border border-[#334155] p-5; }
+  .card-sm    { @apply bg-[#1e293b] rounded-lg  border border-[#334155] p-4; }
+  .input-base { @apply bg-[#0f172a] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#475569] focus:outline-none focus:border-[#475569] transition-colors w-full; }
+  .btn-primary   { @apply px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer; }
+  .btn-secondary { @apply px-4 py-2 rounded-lg text-sm font-medium border border-[#334155] text-[#94a3b8] hover:border-[#475569] transition-colors cursor-pointer bg-transparent; }
+  .badge-green  { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400; }
+  .badge-red    { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400; }
+  .badge-amber  { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400; }
+  .badge-blue   { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400; }
+  .badge-gray   { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#334155] text-[#94a3b8]; }
+  .table-base   { @apply w-full text-sm border-collapse; }
+  .table-base th { @apply px-3 py-2 text-left text-xs font-semibold text-[#475569] border-b border-[#334155]; }
+  .table-base td { @apply px-3 py-2 text-[#94a3b8] border-b border-[#334155]/50; }
+  .table-base tr:hover td { @apply bg-[#334155]/30; }
+}
