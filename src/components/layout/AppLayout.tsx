@@ -5,21 +5,21 @@ import { useERPStore } from '../../store/erp.store';
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 const NAV = [
-  { to:'/dashboard',       icon:'▦', label:'Dashboard' },
-  { to:'/cortes',          icon:'✎', label:'Cortes' },
-  { to:'/gastos',          icon:'◎', label:'Gastos' },
-  { to:'/conciliacion',    icon:'⊜', label:'Conciliación' },
-  { to:'/cxc',             icon:'◷', label:'CxC / CxP' },
-  { to:'/reportes',        icon:'∑', label:'Est. Financieros' },
-  { to:'/documentos',      icon:'⊞', label:'Documentos' },
-  { to:'/consolidado',     icon:'◈', label:'Consolidado',    roles:['administrador','gerente','contador'] },
-  { to:'/rh',              icon:'👥', label:'Empleados',      roles:['administrador','gerente','rh'] },
-  { to:'/rh/nomina',       icon:'💰', label:'Nómina',         roles:['administrador','gerente','rh','contador'] },
+  { to:'/dashboard', icon:'▦', label:'Dashboard', roles:['admin','administrador','gerente','contador','rh','cajero','director'] },
+  { to:'/cortes', icon:'✎', label:'Cortes', roles:['admin','administrador','gerente','contador','cajero'] },
+  { to:'/gastos', icon:'◎', label:'Gastos', roles:['admin','administrador','gerente','contador','cajero'] },
+  { to:'/conciliacion', icon:'⊜', label:'Conciliación', roles:['admin','administrador','gerente','contador','director'] },
+  { to:'/cxc', icon:'◷', label:'CxC / CxP', roles:['admin','administrador','gerente','contador','director'] },
+  { to:'/reportes', icon:'∑', label:'Est. Financieros', roles:['admin','administrador','gerente','contador','director'] },
+  { to:'/documentos', icon:'⊞', label:'Documentos', roles:['admin','administrador','gerente','contador','cajero'] },
+  { to:'/consolidado', icon:'◈', label:'Consolidado', roles:['admin','administrador','gerente','contador','director'] },
+  { to:'/rh', icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
+  { to:'/rh/nomina', icon:'💰', label:'Nómina', roles:['admin','administrador','gerente','rh','contador'] },
   { to:'/pos',             icon:'🏪', label:'POS',            companies:['machete'] },
   { to:'/produccion',      icon:'⚙',  label:'Inventarios',    companies:['machete'] },
   { to:'/catalogo',        icon:'≋',  label:'Catálogo',       companies:['machete'] },
   { to:'/machete-reportes',icon:'📊',  label:'Rpt. Ventas',    companies:['machete'] },
-  { to:'/administrador',           icon:'⊛', label:'administrador',          roles:['administrador'] },
+  { to:'/admin', icon:'⊛', label:'Admin', roles:['admin','administrador'] },
 ];
 
 function getUltimos12() {
