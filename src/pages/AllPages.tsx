@@ -431,7 +431,7 @@ export function AdminPage() {
     }
     setError(''); setSaving(true);
     try {
-      await api.post('/admin/users', form);
+      await api.post(`/companies/${form.companyIds[0]}/users`, form);
       setShowNew(false);
       setForm({ name:'', email:'', password:'', roleCode:'contador', companyIds:[] });
       qc.invalidateQueries({ queryKey: ['company-users', cid] });
