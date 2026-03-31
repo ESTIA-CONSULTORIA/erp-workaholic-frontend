@@ -389,27 +389,136 @@ export function ConsolidadoPage() {
 export function AdminPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#3b82f6';
+  const qc    = useQueryClient();
 
-  const { data: usuarios=[] } = useQuery({
-    queryKey:['company-users',cid],
-    queryFn: ()=>api.get(`/companies/${cid}/users`).then(r=>r.data),
-    enabled:!!cid,
+  const [showNew, setShowNew] = useState(false);
+  const [form, setForm] = useState({
+    name: '', email: '', password: '',
+    roleCode: 'contador', companyIds: [] as string[],
   });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
+
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['company-users', cid],
+    queryFn:  () => api.get(`/companies/${cid}/users`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ['all-companies'],
+    queryFn:  () => api.get('/companies').then(r => r.data),
+  });
+
+  const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+
+  const toggleCompany = (id: string) => {
+    setForm(f => ({
+      ...f,
+      companyIds: f.companyIds.includes(id)
+        ? f.companyIds.filter(c => c !== id)
+        : [...f.companyIds, id],
+    }));
+  };
+
+  const guardar = async () => {
+    if (!form.name || !form.email || !form.password) {
+      setError('Nombre, email y contraseña son obligatorios'); return;
+    }
+    if (form.companyIds.length === 0) {
+      setError('Selecciona al menos una empresa'); return;
+    }
+    setError(''); setSaving(true);
+    try {
+      await api.post('/admin/users', form);
+      setShowNew(false);
+      setForm({ name:'', email:'', password:'', roleCode:'contador', companyIds:[] });
+      qc.invalidateQueries({ queryKey: ['company-users', cid] });
+    } catch(e: any) {
+      setError(e.response?.data?.message || 'Error al crear usuario');
+    } finally { setSaving(false); }
+  };
+
+  const ROLES = ['admin','administrador','gerente','contador','rh','cajero','director'];
 
   return (
     <AppLayout>
       <div style={{ maxWidth:800 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Administración</h1>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+          <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Administración</h1>
+          <button className="btn-primary" style={{ background:color, fontSize:13 }}
+            onClick={() => setShowNew(!showNew)}>
+            + Nuevo usuario
+          </button>
+        </div>
+
+        {showNew && (
+          <div className="card" style={{ marginBottom:24 }}>
+            <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:16 }}>Nuevo usuario</h3>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Nombre completo *</label>
+                <input className="input-base" style={{ fontSize:13 }} value={form.name}
+                  onChange={e => set('name', e.target.value)} placeholder="Nombre apellido"/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Email *</label>
+                <input type="email" className="input-base" style={{ fontSize:13 }} value={form.email}
+                  onChange={e => set('email', e.target.value)} placeholder="correo@empresa.com"/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Contraseña temporal *</label>
+                <input type="password" className="input-base" style={{ fontSize:13 }} value={form.password}
+                  onChange={e => set('password', e.target.value)}/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Rol</label>
+                <select className="input-base" style={{ fontSize:13 }} value={form.roleCode}
+                  onChange={e => set('roleCode', e.target.value)}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:8 }}>Empresas con acceso *</label>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                {companies.map((c: any) => (
+                  <button key={c.id} onClick={() => toggleCompany(c.id)}
+                    style={{
+                      padding:'6px 14px', borderRadius:99, fontSize:12, cursor:'pointer',
+                      border:`2px solid ${form.companyIds.includes(c.id) ? c.color : '#334155'}`,
+                      background: form.companyIds.includes(c.id) ? c.color+'22' : 'transparent',
+                      color: form.companyIds.includes(c.id) ? c.color : '#64748b',
+                    }}>
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {error && <p style={{ color:'#f87171', fontSize:13, margin:'0 0 8px' }}>{error}</p>}
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <button className="btn-secondary" style={{ fontSize:13 }} onClick={() => setShowNew(false)}>Cancelar</button>
+              <button className="btn-primary" style={{ background:color, fontSize:13 }}
+                onClick={guardar} disabled={saving}>
+                {saving ? 'Guardando…' : 'Crear usuario'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
             <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr></thead>
             <tbody>
-              {usuarios.map((u:any) => (
-                <tr key={u.user.id}>
-                  <td style={{fontWeight:500}}>{u.user.name}</td>
-                  <td style={{color:'#64748b'}}>{u.user.email}</td>
-                  <td><span className="badge-blue">{u.role.name}</span></td>
-                  <td><span className={u.user.isActive?'badge-green':'badge-red'}>{u.user.isActive?'Activo':'Inactivo'}</span></td>
+              {usuarios.map((u: any) => (
+                <tr key={u.user?.id || u.id}>
+                  <td style={{ fontWeight:500 }}>{u.user?.name || u.name}</td>
+                  <td style={{ color:'#64748b' }}>{u.user?.email || u.email}</td>
+                  <td><span className="badge-blue">{u.role?.name || u.roleCode}</span></td>
+                  <td><span className={u.user?.isActive !== false ? 'badge-green' : 'badge-red'}>
+                    {u.user?.isActive !== false ? 'Activo' : 'Inactivo'}
+                  </span></td>
                 </tr>
               ))}
             </tbody>
