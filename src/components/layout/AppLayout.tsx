@@ -12,14 +12,14 @@ const NAV = [
   { to:'/cxc',             icon:'◷', label:'CxC / CxP' },
   { to:'/reportes',        icon:'∑', label:'Est. Financieros' },
   { to:'/documentos',      icon:'⊞', label:'Documentos' },
-  { to:'/consolidado',     icon:'◈', label:'Consolidado',    roles:['admin','gerente','contador'] },
-  { to:'/rh',              icon:'👥', label:'Empleados',      roles:['admin','gerente','rh'] },
-  { to:'/rh/nomina',       icon:'💰', label:'Nómina',         roles:['admin','gerente','rh','contador'] },
+  { to:'/consolidado',     icon:'◈', label:'Consolidado',    roles:['administrador','gerente','contador'] },
+  { to:'/rh',              icon:'👥', label:'Empleados',      roles:['administrador','gerente','rh'] },
+  { to:'/rh/nomina',       icon:'💰', label:'Nómina',         roles:['administrador','gerente','rh','contador'] },
   { to:'/pos',             icon:'🏪', label:'POS',            companies:['machete'] },
   { to:'/produccion',      icon:'⚙',  label:'Inventarios',    companies:['machete'] },
   { to:'/catalogo',        icon:'≋',  label:'Catálogo',       companies:['machete'] },
   { to:'/machete-reportes',icon:'📊',  label:'Rpt. Ventas',    companies:['machete'] },
-  { to:'/admin',           icon:'⊛', label:'Admin',          roles:['admin'] },
+  { to:'/administrador',           icon:'⊛', label:'administrador',          roles:['administrador'] },
 ];
 
 function getUltimos12() {
