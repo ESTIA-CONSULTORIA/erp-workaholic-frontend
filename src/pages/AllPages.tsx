@@ -392,7 +392,8 @@ export function AdminPage() {
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
 
-  const [showNew, setShowNew] = useState(false);
+  const [showNew,  setShowNew]  = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
   const [form, setForm] = useState({
     name: '', email: '', password: '',
     roleCode: 'contador', companyIds: [] as string[],
@@ -400,7 +401,7 @@ export function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
 
-  const { data: usuarios = [] } = useQuery({
+  const { data: usuarios = [], refetch } = useQuery({
     queryKey: ['company-users', cid],
     queryFn:  () => api.get(`/companies/${cid}/users`).then(r => r.data),
     enabled:  !!cid,
@@ -422,22 +423,46 @@ export function AdminPage() {
     }));
   };
 
+  const resetForm = () => {
+    setForm({ name:'', email:'', password:'', roleCode:'contador', companyIds:[] });
+    setShowNew(false);
+    setEditUser(null);
+    setError('');
+  };
+
   const guardar = async () => {
-    if (!form.name || !form.email || !form.password) {
-      setError('Nombre, email y contraseña son obligatorios'); return;
-    }
-    if (form.companyIds.length === 0) {
-      setError('Selecciona al menos una empresa'); return;
-    }
+    if (!form.name || !form.email) { setError('Nombre y email son obligatorios'); return; }
+    if (!editUser && !form.password) { setError('La contraseña es obligatoria'); return; }
+    if (form.companyIds.length === 0) { setError('Selecciona al menos una empresa'); return; }
     setError(''); setSaving(true);
     try {
-      await api.post(`/companies/${form.companyIds[0]}/users`, form);
-      setShowNew(false);
-      setForm({ name:'', email:'', password:'', roleCode:'contador', companyIds:[] });
-      qc.invalidateQueries({ queryKey: ['company-users', cid] });
+      if (editUser) {
+        await api.put(`/companies/${cid}/users/${editUser.user?.id || editUser.id}`, form);
+      } else {
+        await api.post(`/companies/${form.companyIds[0]}/users`, form);
+      }
+      resetForm();
+      refetch();
     } catch(e: any) {
-      setError(e.response?.data?.message || 'Error al crear usuario');
+      setError(e.response?.data?.message || 'Error');
     } finally { setSaving(false); }
+  };
+
+  const toggle = async (u: any) => {
+    await api.put(`/companies/${cid}/users/${u.user?.id || u.id}/toggle`, {});
+    refetch();
+  };
+
+  const startEdit = (u: any) => {
+    setEditUser(u);
+    setForm({
+      name:      u.user?.name     || u.name     || '',
+      email:     u.user?.email    || u.email    || '',
+      password:  '',
+      roleCode:  u.role?.code     || u.roleCode || 'contador',
+      companyIds: [cid!],
+    });
+    setShowNew(true);
   };
 
   const ROLES = ['admin','administrador','gerente','contador','rh','cajero','director'];
@@ -448,27 +473,31 @@ export function AdminPage() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Administración</h1>
           <button className="btn-primary" style={{ background:color, fontSize:13 }}
-            onClick={() => setShowNew(!showNew)}>
+            onClick={() => { resetForm(); setShowNew(true); }}>
             + Nuevo usuario
           </button>
         </div>
 
         {showNew && (
           <div className="card" style={{ marginBottom:24 }}>
-            <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:16 }}>Nuevo usuario</h3>
+            <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:16 }}>
+              {editUser ? 'Editar usuario' : 'Nuevo usuario'}
+            </h3>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
               <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Nombre completo *</label>
                 <input className="input-base" style={{ fontSize:13 }} value={form.name}
-                  onChange={e => set('name', e.target.value)} placeholder="Nombre apellido"/>
+                  onChange={e => set('name', e.target.value)}/>
               </div>
               <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Email *</label>
                 <input type="email" className="input-base" style={{ fontSize:13 }} value={form.email}
-                  onChange={e => set('email', e.target.value)} placeholder="correo@empresa.com"/>
+                  onChange={e => set('email', e.target.value)} disabled={!!editUser}/>
               </div>
               <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Contraseña temporal *</label>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                  {editUser ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña *'}
+                </label>
                 <input type="password" className="input-base" style={{ fontSize:13 }} value={form.password}
                   onChange={e => set('password', e.target.value)}/>
               </div>
@@ -483,7 +512,7 @@ export function AdminPage() {
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:8 }}>Empresas con acceso *</label>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                {companies.map((c: any) => (
+                {(companies as any[]).map((c: any) => (
                   <button key={c.id} onClick={() => toggleCompany(c.id)}
                     style={{
                       padding:'6px 14px', borderRadius:99, fontSize:12, cursor:'pointer',
@@ -498,10 +527,10 @@ export function AdminPage() {
             </div>
             {error && <p style={{ color:'#f87171', fontSize:13, margin:'0 0 8px' }}>{error}</p>}
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-              <button className="btn-secondary" style={{ fontSize:13 }} onClick={() => setShowNew(false)}>Cancelar</button>
+              <button className="btn-secondary" style={{ fontSize:13 }} onClick={resetForm}>Cancelar</button>
               <button className="btn-primary" style={{ background:color, fontSize:13 }}
                 onClick={guardar} disabled={saving}>
-                {saving ? 'Guardando…' : 'Crear usuario'}
+                {saving ? 'Guardando…' : editUser ? 'Actualizar' : 'Crear usuario'}
               </button>
             </div>
           </div>
@@ -509,16 +538,32 @@ export function AdminPage() {
 
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
-            <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr></thead>
+            <thead>
+              <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+            </thead>
             <tbody>
-              {usuarios.map((u: any) => (
+              {(usuarios as any[]).map((u: any) => (
                 <tr key={u.user?.id || u.id}>
                   <td style={{ fontWeight:500 }}>{u.user?.name || u.name}</td>
                   <td style={{ color:'#64748b' }}>{u.user?.email || u.email}</td>
                   <td><span className="badge-blue">{u.role?.name || u.roleCode}</span></td>
-                  <td><span className={u.user?.isActive !== false ? 'badge-green' : 'badge-red'}>
-                    {u.user?.isActive !== false ? 'Activo' : 'Inactivo'}
-                  </span></td>
+                  <td>
+                    <span className={u.user?.isActive !== false ? 'badge-green' : 'badge-red'}>
+                      {u.user?.isActive !== false ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={() => startEdit(u)}
+                        style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
+                        Editar
+                      </button>
+                      <button onClick={() => toggle(u)}
+                        style={{ background:'none', border:'none', color: u.user?.isActive !== false ? '#f87171' : '#10b981', cursor:'pointer', fontSize:12 }}>
+                        {u.user?.isActive !== false ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
