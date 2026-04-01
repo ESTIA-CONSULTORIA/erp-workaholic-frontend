@@ -116,6 +116,14 @@ export function CxCPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#f59e0b';
+  const [filterCliente, setFilterCliente] = useState('');
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clients', cid],
+    queryFn:  () => api.get(`/companies/${cid}/clients`).then(r => r.data),
+    enabled:  !!cid,
+  });
+```
 
   const { data: summary } = useQuery({
     queryKey:['cxc-summary',cid],
@@ -124,8 +132,8 @@ export function CxCPage() {
   });
 
   const { data: cxcs=[] } = useQuery({
-    queryKey:['cxc',cid,activePeriod],
-    queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}`).then(r=>r.data),
+    queryKey:['cxc',cid,activePeriod,filterCliente],
+queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterCliente?`&clientId=${filterCliente}`:''}`).then(r=>r.data),
     enabled:!!cid,
   });
 
@@ -155,6 +163,13 @@ export function CxCPage() {
               <th style={{textAlign:'right'}}>Saldo</th><th>Estado</th>
             </tr></thead>
             <tbody>
+              <select style={{padding:'6px 12px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:13,marginBottom:16}}
+  value={filterCliente} onChange={e=>setFilterCliente(e.target.value)}>
+  <option value="">Todos los clientes</option>
+  {(clientes as any[]).map((c:any)=>(
+    <option key={c.id} value={c.id}>{c.name}</option>
+  ))}
+</select>
               {cxcs.length===0 && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>}
               {cxcs.map((c:any) => (
                 <tr key={c.id}>
