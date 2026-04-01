@@ -15,10 +15,10 @@ const NAV = [
   { to:'/consolidado', icon:'◈', label:'Consolidado', roles:['admin','administrador','gerente','contador','director'] },
   { to:'/rh', icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
   { to:'/rh/nomina', icon:'💰', label:'Nómina', roles:['admin','administrador','gerente','rh','contador'] },
-  { to:'/pos',             icon:'🏪', label:'POS',            companies:['machete'] },
-  { to:'/produccion',      icon:'⚙',  label:'Inventarios',    companies:['machete'] },
-  { to:'/catalogo',        icon:'≋',  label:'Catálogo',       companies:['machete'] },
-  { to:'/machete-reportes',icon:'📊',  label:'Rpt. Ventas',    companies:['machete'] },
+  { to:'/pos',             icon:'🏪', label:'POS',            companies:['MACHETE'] },
+  { to:'/produccion',      icon:'⚙',  label:'Inventarios',    companies:['MACHETE'] },
+  { to:'/catalogo',        icon:'≋',  label:'Catálogo',       companies:['MACHETE'] },
+  { to:'/machete-reportes',icon:'📊',  label:'Rpt. Ventas',    companies:['MACHETE'] },
   { to:'/admin', icon:'⊛', label:'Admin', roles:['admin','administrador'] },
 ];
 
