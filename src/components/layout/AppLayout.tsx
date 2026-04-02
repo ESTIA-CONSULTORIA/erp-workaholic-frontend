@@ -6,7 +6,7 @@ const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov'
 
 const NAV = [
   { to:'/dashboard', icon:'▦', label:'Dashboard', roles:['admin','administrador','gerente','contador','rh','cajero','director'] },
-  { to:'/cortes', icon:'✎', label:'Cortes', roles:['admin','administrador','gerente','contador','cajero'] },
+  { to:'/corte-caja', icon:'🏧', label:'Corte de Caja', roles:['admin','administrador','gerente','contador','cajero'] },
   { to:'/gastos', icon:'◎', label:'Gastos', roles:['admin','administrador','gerente','contador','cajero'] },
   { to:'/conciliacion', icon:'⊜', label:'Conciliación', roles:['admin','administrador','gerente','contador','director'] },
   { to:'/cxc', icon:'◷', label:'CxC / CxP', roles:['admin','administrador','gerente','contador','director'] },
