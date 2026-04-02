@@ -117,6 +117,9 @@ export function CxCPage() {
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#f59e0b';
   const [filterCliente, setFilterCliente] = useState('');
+  const [pagoModal, setPagoModal] = useState<any>(null);
+  const [pagoForm, setPagoForm] = useState({ amount:0, paymentMethod:'EFECTIVO_MXN', date:new Date().toISOString().slice(0,10), reference:'' });
+  const qc = useQueryClient();
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clients', cid],
@@ -136,6 +139,15 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
     enabled:!!cid,
   });
 
+  const registrarPago = async () => {
+    if (!pagoModal || !pagoForm.amount) return;
+    await api.post(`/companies/${cid}/cxc/${pagoModal.id}/payments`, pagoForm);
+    setPagoModal(null);
+    setPagoForm({ amount:0, paymentMethod:'EFECTIVO_MXN', date:new Date().toISOString().slice(0,10), reference:'' });
+    qc.invalidateQueries({ queryKey: ['cxc', cid] });
+    qc.invalidateQueries({ queryKey: ['cxc-summary', cid] });
+  };
+  
   return (
     <AppLayout>
       <div style={{ maxWidth:900 }}>
@@ -166,7 +178,7 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
             <thead><tr>
               <th>Cliente</th><th>Fecha</th>
               <th style={{textAlign:'right'}}>Original</th>
-              <th style={{textAlign:'right'}}>Saldo</th><th>Estado</th>
+              <th style={{textAlign:'right'}}>Saldo</th><th>Estado</th><th>Acción</th>
             </tr></thead>
             <tbody>
               
@@ -178,12 +190,61 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
                   <td style={{textAlign:'right'}}>{fmt(c.originalAmount)}</td>
                   <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.balance)}</td>
                   <td><span className={c.status==='PAGADO'?'badge-green':c.status==='VENCIDO'?'badge-red':'badge-amber'}>{c.status}</span></td>
+                  <td>
+                    {c.status !== 'PAGADO' && (
+                      <button onClick={() => setPagoModal(c)}
+                        style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                        Registrar pago
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+      {pagoModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:380}}>
+            <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 4px'}}>Registrar pago</h3>
+            <p style={{fontSize:12,color:'#64748b',margin:'0 0 16px'}}>{pagoModal.client?.name} — Saldo: {fmt(pagoModal.balance)}</p>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Monto *</label>
+                <input type="number" min="0" max={pagoModal.balance} className="input-base" style={{fontSize:13}}
+                  value={pagoForm.amount||''} onChange={e=>setPagoForm(f=>({...f,amount:+e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Método de pago</label>
+                <select className="input-base" style={{fontSize:13}} value={pagoForm.paymentMethod}
+                  onChange={e=>setPagoForm(f=>({...f,paymentMethod:e.target.value}))}>
+                  <option value="EFECTIVO_MXN">Efectivo MXN</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="TARJETA">Tarjeta</option>
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha</label>
+                <input type="date" className="input-base" style={{fontSize:13}} value={pagoForm.date}
+                  onChange={e=>setPagoForm(f=>({...f,date:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Referencia</label>
+                <input className="input-base" style={{fontSize:13}} value={pagoForm.reference}
+                  onChange={e=>setPagoForm(f=>({...f,reference:e.target.value}))} placeholder="Número de transferencia, etc."/>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setPagoModal(null)} className="btn-secondary" style={{flex:1,fontSize:13}}>Cancelar</button>
+              <button onClick={registrarPago} className="btn-primary"
+                style={{flex:1,fontSize:13,background:color}} disabled={!pagoForm.amount}>
+                Registrar pago
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
