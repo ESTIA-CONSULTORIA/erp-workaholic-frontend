@@ -123,7 +123,6 @@ export function CxCPage() {
     queryFn:  () => api.get(`/companies/${cid}/clients`).then(r => r.data),
     enabled:  !!cid,
   });
-```
 
   const { data: summary } = useQuery({
     queryKey:['cxc-summary',cid],
