@@ -154,6 +154,13 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
             <p style={{ fontSize:20, fontWeight:700, color:'#94a3b8', margin:0 }}>{summary?.pendingCount||0}</p>
           </div>
         </div>
+        <select style={{padding:'6px 12px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:13,marginBottom:16}}
+  value={filterCliente} onChange={e=>setFilterCliente(e.target.value)}>
+  <option value="">Todos los clientes</option>
+  {(clientes as any[]).map((c:any)=>(
+    <option key={c.id} value={c.id}>{c.name}</option>
+  ))}
+</select>
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
             <thead><tr>
@@ -162,13 +169,7 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
               <th style={{textAlign:'right'}}>Saldo</th><th>Estado</th>
             </tr></thead>
             <tbody>
-              <select style={{padding:'6px 12px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:13,marginBottom:16}}
-  value={filterCliente} onChange={e=>setFilterCliente(e.target.value)}>
-  <option value="">Todos los clientes</option>
-  {(clientes as any[]).map((c:any)=>(
-    <option key={c.id} value={c.id}>{c.name}</option>
-  ))}
-</select>
+              
               {cxcs.length===0 && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>}
               {cxcs.map((c:any) => (
                 <tr key={c.id}>
