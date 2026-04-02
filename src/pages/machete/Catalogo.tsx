@@ -452,7 +452,7 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
             </div>
           )}
 
-          {oc.status !== 'CANCELADA' && oc.status !== 'SURTIDO_COMPLETO' && (
+          {oc.status !== 'CANCELADA' && oc.status !== 'SURTIDO_COMPLETO' && oc.status !== 'CANCELADA' && (
             <div style={{display:'flex',gap:6,marginBottom:8}}>
               <button onClick={async()=>{
                 if(window.confirm('¿Cerrar OC con lo surtido hasta ahora?')){
