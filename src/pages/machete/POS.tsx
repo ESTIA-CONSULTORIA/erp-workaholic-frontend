@@ -405,7 +405,7 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
 
         <p style={{ fontSize:12, color:'#64748b', marginBottom:16 }}>{data.fecha}</p>
 
-        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Por canal</p>
+        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Ventas por canal</p>
         {Object.entries(data.porCanal).map(([k,v]:any) => (
           <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
             <span style={{ fontSize:13, color:'#94a3b8' }}>{CANAL_LABELS[k]||k}</span>
@@ -415,7 +415,7 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
 
         <div style={{ borderTop:'1px solid #334155', margin:'12px 0' }}/>
 
-        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Por método de pago</p>
+        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Ventas por método de pago</p>
         {Object.entries(data.porMetodo).map(([k,v]:any) => (
           <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
             <span style={{ fontSize:13, color:'#94a3b8' }}>{METODO_LABELS[k]||k}</span>
@@ -434,22 +434,38 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
           <span style={{ fontSize:13, color:'#94a3b8' }}>{data.hoy.length}</span>
         </div>
 
-        {isZ && (
+        {/* Tira X — cajero cuenta el efectivo */}
+        {!isZ && (
           <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
-            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:6 }}>Efectivo contado en caja</label>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:6 }}>
+              Efectivo contado en caja
+            </label>
             <input type="number" min="0" step="0.01"
               style={{ width:'100%', padding:'8px', borderRadius:8, border:'1px solid #334155',
                 background:'#1e293b', color:'#f1f5f9', fontSize:14, textAlign:'right' }}
               value={efectivoCaja||''} onChange={e=>onEfectivoCaja(+e.target.value)}/>
-            <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
-              <span style={{ fontSize:12, color:'#64748b' }}>Esperado en caja</span>
+            <p style={{ fontSize:11, color:'#64748b', margin:'6px 0 0' }}>
+              Este valor se guardará para calcular la diferencia en la Tira Z
+            </p>
+          </div>
+        )}
+
+        {/* Tira Z — muestra diferencia con lo contado en X */}
+        {isZ && (
+          <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#64748b' }}>Efectivo esperado</span>
               <span style={{ fontSize:13, color:'#94a3b8' }}>{fmt(data.porMetodo['efectivo']||0)}</span>
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-              <span style={{ fontSize:12, color:'#64748b' }}>Diferencia</span>
-              <span style={{ fontSize:14, fontWeight:700,
-                color: efectivoCaja-(data.porMetodo['efectivo']||0) >= 0 ? '#10b981' : '#f87171' }}>
-                {fmt(efectivoCaja-(data.porMetodo['efectivo']||0))}
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#64748b' }}>Efectivo contado (Tira X)</span>
+              <span style={{ fontSize:13, color:'#94a3b8' }}>{fmt(data.efectivoContado||0)}</span>
+            </div>
+            <div style={{ borderTop:'1px solid #334155', paddingTop:8, display:'flex', justifyContent:'space-between' }}>
+              <span style={{ fontSize:13, fontWeight:700 }}>Diferencia</span>
+              <span style={{ fontSize:16, fontWeight:700,
+                color: (data.efectivoContado||0)-(data.porMetodo['efectivo']||0) >= 0 ? '#10b981' : '#f87171' }}>
+                {fmt((data.efectivoContado||0)-(data.porMetodo['efectivo']||0))}
               </span>
             </div>
           </div>
@@ -461,13 +477,11 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
               background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
             {isZ ? 'Cancelar' : 'Cerrar'}
           </button>
-          {isZ && (
-            <button onClick={onConfirm}
-              style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
-                background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-              Confirmar corte Z
-            </button>
-          )}
+          <button onClick={onConfirm}
+            style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
+              background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+            {isZ ? 'Confirmar corte Z' : 'Guardar Tira X'}
+          </button>
         </div>
       </div>
     </div>
