@@ -256,20 +256,53 @@ function GestionClientes({ cid, color, qc }: any) {
 
 // ── Órdenes de compra ─────────────────────────────────────────
 function OCSection({ cid, clientId, color, ordenes, qc }: any) {
-  const [showNew,  setShowNew]  = useState(false);
-  const [surtidoOC, setSurtidoOC] = useState<string|null>(null);
-  const [form, setForm] = useState({ numero:'', fecha:new Date().toISOString().slice(0,10), montoTotal:0, notes:'' });
-  const [surtForm, setSurtForm] = useState({ fecha:new Date().toISOString().slice(0,10), monto:0, notes:'' });
+  const [showNew,    setShowNew]    = useState(false);
+  const [surtidoOC,  setSurtidoOC]  = useState<string|null>(null);
+  const [form, setForm] = useState({ numero:'', fecha:new Date().toISOString().slice(0,10), notes:'' });
+  const [lineas, setLineas] = useState<any[]>([]);
+  const [surtLineas, setSurtLineas] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
 
+  const { data: productos = [] } = useQuery({
+    queryKey: ['products', cid],
+    queryFn:  () => api.get(`/companies/${cid}/machete/inventory/pt`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const agregarLinea = () => {
+    setLineas(l => [...l, { productId:'', cantidad:1, precioUnitario:0 }]);
+  };
+
+  const setLinea = (idx: number, k: string, v: any) => {
+    setLineas(l => l.map((item, i) => {
+      if (i !== idx) return item;
+      const updated = { ...item, [k]: v };
+      if (k === 'productId') {
+        const prod = (productos as any[]).find((p:any) => p.id === v);
+        if (prod) updated.precioUnitario = prod.priceMostrador || 0;
+      }
+      return updated;
+    }));
+  };
+
+  const montoTotal = lineas.reduce((t, l) => t + (Number(l.cantidad) * Number(l.precioUnitario)), 0);
+
   const crearOC = async () => {
-    if (!form.numero||!form.montoTotal) return;
+    if (!form.numero || lineas.length === 0) return;
     setSaving(true);
     try {
-      await api.post(`/companies/${cid}/clients/${clientId}/ordenes`, form);
+      await api.post(`/companies/${cid}/clients/${clientId}/ordenes`, {
+        ...form,
+        lineas: lineas.map(l => ({
+          productId:      l.productId,
+          cantidad:       Number(l.cantidad),
+          precioUnitario: Number(l.precioUnitario),
+        })),
+      });
       setShowNew(false);
-      setForm({ numero:'', fecha:new Date().toISOString().slice(0,10), montoTotal:0, notes:'' });
+      setForm({ numero:'', fecha:new Date().toISOString().slice(0,10), notes:'' });
+      setLineas([]);
       qc.invalidateQueries({ queryKey: ['client-detail'] });
     } finally { setSaving(false); }
   };
@@ -277,9 +310,13 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
   const registrarSurtido = async (ordenId: string) => {
     setSaving(true);
     try {
-      await api.post(`/companies/${cid}/ordenes/${ordenId}/surtidos`, surtForm);
+      await api.post(`/companies/${cid}/ordenes/${ordenId}/surtidos`, {
+        fecha: new Date().toISOString().slice(0,10),
+        lineas: surtLineas.filter(l => l.cantidad > 0),
+        notes: '',
+      });
       setSurtidoOC(null);
-      setSurtForm({ fecha:new Date().toISOString().slice(0,10), monto:0, notes:'' });
+      setSurtLineas([]);
       qc.invalidateQueries({ queryKey: ['client-detail'] });
     } finally { setSaving(false); }
   };
@@ -300,7 +337,7 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
 
       {showNew && (
         <div style={{background:'#0f172a',borderRadius:8,padding:12,marginBottom:12}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
             <div>
               <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:2}}>Número OC *</label>
               <input className="input-base" style={{fontSize:12}} value={form.numero} onChange={e=>set('numero',e.target.value)} placeholder="OC-001"/>
@@ -309,18 +346,46 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
               <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:2}}>Fecha</label>
               <input type="date" className="input-base" style={{fontSize:12}} value={form.fecha} onChange={e=>set('fecha',e.target.value)}/>
             </div>
-            <div>
-              <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:2}}>Monto total *</label>
-              <input type="number" min="0" className="input-base" style={{fontSize:12}} value={form.montoTotal||''} onChange={e=>set('montoTotal',+e.target.value)}/>
-            </div>
-            <div>
-              <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:2}}>Notas</label>
-              <input className="input-base" style={{fontSize:12}} value={form.notes} onChange={e=>set('notes',e.target.value)}/>
-            </div>
           </div>
+
+          <div style={{marginBottom:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+              <label style={{fontSize:11,color:'#64748b'}}>Productos</label>
+              <button onClick={agregarLinea}
+                style={{background:'none',border:'1px solid #334155',color:'#94a3b8',padding:'2px 8px',borderRadius:6,cursor:'pointer',fontSize:11}}>
+                + Agregar
+              </button>
+            </div>
+            {lineas.map((l, idx) => (
+              <div key={idx} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr auto',gap:6,marginBottom:6,alignItems:'center'}}>
+                <select className="input-base" style={{fontSize:11}} value={l.productId}
+                  onChange={e=>setLinea(idx,'productId',e.target.value)}>
+                  <option value="">— Producto —</option>
+                  {(productos as any[]).filter((p:any)=>p.isActive).map((p:any)=>(
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <input type="number" min="1" placeholder="Cant." className="input-base" style={{fontSize:11}}
+                  value={l.cantidad} onChange={e=>setLinea(idx,'cantidad',+e.target.value)}/>
+                <input type="number" min="0" placeholder="Precio" className="input-base" style={{fontSize:11}}
+                  value={l.precioUnitario} onChange={e=>setLinea(idx,'precioUnitario',+e.target.value)}/>
+                <button onClick={()=>setLineas(ls=>ls.filter((_,i)=>i!==idx))}
+                  style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:16}}>✕</button>
+              </div>
+            ))}
+          </div>
+
+          {lineas.length > 0 && (
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:12,padding:'8px 0',borderTop:'1px solid #334155'}}>
+              <span style={{fontSize:13,color:'#64748b'}}>Total OC</span>
+              <span style={{fontSize:15,fontWeight:700,color}}>{fmt(montoTotal)}</span>
+            </div>
+          )}
+
           <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-            <button className="btn-secondary" style={{fontSize:12}} onClick={()=>setShowNew(false)}>Cancelar</button>
-            <button className="btn-primary" style={{background:color,fontSize:12}} onClick={crearOC} disabled={saving}>
+            <button className="btn-secondary" style={{fontSize:12}} onClick={()=>{setShowNew(false);setLineas([])}}>Cancelar</button>
+            <button className="btn-primary" style={{background:color,fontSize:12}} onClick={crearOC}
+              disabled={saving||!form.numero||lineas.length===0}>
               {saving?'Guardando…':'Crear OC'}
             </button>
           </div>
@@ -340,20 +405,48 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
               {STATUS_LABEL[oc.status]}
             </span>
           </div>
+
+          {/* Líneas de productos */}
+          {oc.lineas?.length > 0 && (
+            <div style={{marginBottom:8}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                <thead>
+                  <tr style={{color:'#64748b'}}>
+                    <th style={{textAlign:'left',paddingBottom:4}}>Producto</th>
+                    <th style={{textAlign:'right',paddingBottom:4}}>Cant.</th>
+                    <th style={{textAlign:'right',paddingBottom:4}}>Surtido</th>
+                    <th style={{textAlign:'right',paddingBottom:4}}>Precio</th>
+                    <th style={{textAlign:'right',paddingBottom:4}}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {oc.lineas.map((l:any) => (
+                    <tr key={l.id} style={{color:'#94a3b8'}}>
+                      <td style={{paddingBottom:2}}>{l.product?.name||l.productId}</td>
+                      <td style={{textAlign:'right'}}>{l.cantidad}</td>
+                      <td style={{textAlign:'right',color:l.cantidadSurtida>=l.cantidad?'#10b981':'#f59e0b'}}>{l.cantidadSurtida}</td>
+                      <td style={{textAlign:'right'}}>{fmt(l.precioUnitario)}</td>
+                      <td style={{textAlign:'right'}}>{fmt(l.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:8}}>
             <div><p style={{fontSize:10,color:'#64748b',margin:'0 0 1px'}}>Total OC</p><p style={{fontSize:13,fontWeight:600,color:'#f1f5f9',margin:0}}>{fmt(oc.montoTotal)}</p></div>
             <div><p style={{fontSize:10,color:'#64748b',margin:'0 0 1px'}}>Surtido</p><p style={{fontSize:13,fontWeight:600,color:'#10b981',margin:0}}>{fmt(oc.montoSurtido)}</p></div>
-            <div><p style={{fontSize:10,color:'#64748b',margin:'0 0 1px'}}>Saldo</p><p style={{fontSize:13,fontWeight:600,color:color,margin:0}}>{fmt(oc.saldo)}</p></div>
+            <div><p style={{fontSize:10,color:'#64748b',margin:'0 0 1px'}}>Saldo</p><p style={{fontSize:13,fontWeight:600,color,margin:0}}>{fmt(oc.saldo)}</p></div>
           </div>
 
-          {oc.surtidos?.length>0 && (
+          {oc.surtidos?.length > 0 && (
             <div style={{marginBottom:8}}>
               <p style={{fontSize:11,color:'#64748b',margin:'0 0 4px'}}>Historial de surtidos:</p>
               {oc.surtidos.map((s:any) => (
                 <div key={s.id} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#94a3b8',padding:'2px 0'}}>
                   <span>{fmtDate(s.fecha)}</span>
                   <span style={{color:'#10b981'}}>{fmt(s.monto)}</span>
-                  {s.notes && <span style={{color:'#64748b'}}>{s.notes}</span>}
                 </div>
               ))}
             </div>
@@ -362,24 +455,37 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
           {oc.status !== 'SURTIDO_COMPLETO' && (
             <>
               {surtidoOC === oc.id ? (
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                  <div>
-                    <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:2}}>Fecha surtido</label>
-                    <input type="date" className="input-base" style={{fontSize:12}} value={surtForm.fecha} onChange={e=>setSurtForm(f=>({...f,fecha:e.target.value}))}/>
-                  </div>
-                  <div>
-                    <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:2}}>Monto surtido</label>
-                    <input type="number" min="0" className="input-base" style={{fontSize:12}} value={surtForm.monto||''} onChange={e=>setSurtForm(f=>({...f,monto:+e.target.value}))}/>
-                  </div>
-                  <div style={{gridColumn:'span 2',display:'flex',gap:8,justifyContent:'flex-end'}}>
-                    <button className="btn-secondary" style={{fontSize:12}} onClick={()=>setSurtidoOC(null)}>Cancelar</button>
+                <div>
+                  <p style={{fontSize:11,color:'#64748b',margin:'0 0 6px'}}>Selecciona cantidades a surtir:</p>
+                  {oc.lineas?.map((l:any) => {
+                    const pendiente = l.cantidad - l.cantidadSurtida;
+                    if (pendiente <= 0) return null;
+                    const surtVal = surtLineas.find(s=>s.lineaId===l.id)?.cantidad||0;
+                    return (
+                      <div key={l.id} style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:8,marginBottom:6,alignItems:'center'}}>
+                        <span style={{fontSize:11,color:'#94a3b8'}}>{l.product?.name} (pendiente: {pendiente})</span>
+                        <input type="number" min="0" max={pendiente} className="input-base" style={{fontSize:11}}
+                          value={surtVal||''}
+                          onChange={e => {
+                            const val = Math.min(+e.target.value, pendiente);
+                            setSurtLineas(sl => {
+                              const exists = sl.findIndex(s=>s.lineaId===l.id);
+                              if (exists>=0) return sl.map((s,i)=>i===exists?{...s,cantidad:val}:s);
+                              return [...sl, { lineaId:l.id, cantidad:val }];
+                            });
+                          }}/>
+                      </div>
+                    );
+                  })}
+                  <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
+                    <button className="btn-secondary" style={{fontSize:12}} onClick={()=>{setSurtidoOC(null);setSurtLineas([])}}>Cancelar</button>
                     <button className="btn-primary" style={{background:color,fontSize:12}} onClick={()=>registrarSurtido(oc.id)} disabled={saving}>
                       {saving?'…':'Registrar surtido'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <button onClick={()=>setSurtidoOC(oc.id)}
+                <button onClick={()=>{setSurtidoOC(oc.id);setSurtLineas([])}}
                   style={{background:'none',border:`1px solid ${color}`,color,padding:'4px 12px',borderRadius:6,cursor:'pointer',fontSize:12,width:'100%'}}>
                   + Registrar surtido
                 </button>
