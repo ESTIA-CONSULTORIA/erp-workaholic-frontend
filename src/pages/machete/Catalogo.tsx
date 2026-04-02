@@ -452,6 +452,28 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
             </div>
           )}
 
+          {oc.status !== 'CANCELADA' && oc.status !== 'SURTIDO_COMPLETO' && (
+            <div style={{display:'flex',gap:6,marginBottom:8}}>
+              <button onClick={async()=>{
+                if(window.confirm('¿Cerrar OC con lo surtido hasta ahora?')){
+                  await api.put(`/companies/${cid}/ordenes/${oc.id}/cerrar`,{});
+                  qc.invalidateQueries({queryKey:['client-detail']});
+                }
+              }} style={{flex:1,padding:'4px',borderRadius:6,fontSize:11,border:'1px solid #10b981',background:'none',color:'#10b981',cursor:'pointer'}}>
+                ✓ Cerrar OC
+              </button>
+              <button onClick={async()=>{
+                const motivo = window.prompt('Motivo de cancelación:');
+                if(motivo !== null){
+                  await api.put(`/companies/${cid}/ordenes/${oc.id}/cancelar`,{motivo});
+                  qc.invalidateQueries({queryKey:['client-detail']});
+                }
+              }} style={{flex:1,padding:'4px',borderRadius:6,fontSize:11,border:'1px solid #f87171',background:'none',color:'#f87171',cursor:'pointer'}}>
+                ✕ Cancelar OC
+              </button>
+            </div>
+          )}
+          
           {oc.status !== 'SURTIDO_COMPLETO' && (
             <>
               {surtidoOC === oc.id ? (
