@@ -10,6 +10,7 @@ import RHPage from './pages/rh/RH';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
 import { CortesPage, GastosPage, ConciliacionPage, CxCPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage } from './pages/AllPages';
+import CorteCajaPage from './pages/CorteCaja';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useERPStore(s => s.user);
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="/dashboard" element={<DashboardPage/>}/>
         <Route path="/cortes" element={<CortesPage/>}/>
+        <Route path="/corte-caja" element={<CorteCajaPage/>}/>
         <Route path="/gastos" element={<GastosPage/>}/>
         <Route path="/conciliacion" element={<ConciliacionPage/>}/>
         <Route path="/cxc" element={<CxCPage/>}/>
