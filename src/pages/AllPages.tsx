@@ -125,8 +125,8 @@ export function CxCPage() {
   });
 
   const { data: summary } = useQuery({
-    queryKey:['cxc-summary',cid],
-    queryFn: ()=>api.get(`/companies/${cid}/cxc/summary`).then(r=>r.data),
+queryKey:['cxc-summary',cid,filterCliente],
+queryFn: ()=>api.get(`/companies/${cid}/cxc/summary${filterCliente?`?clientId=${filterCliente}`:''}`).then(r=>r.data),
     enabled:!!cid,
   });
 
