@@ -257,104 +257,104 @@ export function ReportesPage() {
   const color = activeCompany?.color || '#3b82f6';
 
   const { data: edo, isLoading } = useQuery({
-    queryKey:['income-statement',cid,activePeriod],
-    queryFn: ()=>api.get(`/reports/companies/${cid}/income-statement?period=${activePeriod}`).then(r=>r.data),
-    enabled:!!cid,
+    queryKey: ['income-statement', cid, activePeriod],
+    queryFn:  () => api.get(`/reports/companies/${cid}/income-statement?period=${activePeriod}`).then(r => r.data),
+    enabled:  !!cid,
   });
 
-  const s = edo?.summary||{};
+  if (isLoading) return <AppLayout><p style={{color:'#64748b',padding:32}}>Cargando...</p></AppLayout>;
+
+  const ventas      = edo?.ventas      || {};
+  const gastos      = edo?.gastosPorSeccion || {};
+  const totalGastos = edo?.totalGastos || 0;
+  const contrib     = edo?.contribuciones || 0;
+  const antesContrib = edo?.resultadoAntesContrib || 0;
+  const resultado   = edo?.resultadoEjercicio || 0;
+  const nomina      = edo?.nomina || 0;
+
+  const positivo = (n: number) => n >= 0 ? '#10b981' : '#f87171';
 
   return (
     <AppLayout>
       <div style={{ maxWidth:800 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Estado de Resultados</h1>
-        {isLoading && <p style={{ color:'#64748b' }}>Calculando…</p>}
-        {!isLoading && (
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            {(edo?.sections||[]).map((sec:any) => (
-              <div key={sec.id} className="card" style={{ padding:0, overflow:'hidden' }}>
-                <div style={{ padding:'12px 20px', borderBottom:'1px solid #334155', background:color+'11' }}>
-                  <p style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', color, margin:0, letterSpacing:1 }}>{sec.name}</p>
-                </div>
-                {(sec.groups||[]).flatMap((g:any) =>
-                  (g.rubrics||[]).map((r:any) => (
-                    <div key={r.rubricId} style={{ display:'flex', justifyContent:'space-between', padding:'8px 20px', borderBottom:'1px solid rgba(51,65,85,0.5)' }}>
-                      <span style={{ fontSize:13, color:'#94a3b8' }}>{r.name}</span>
-                      <span style={{ fontSize:13, fontWeight:600, color }}>{fmt(r.net||r.cost||0)}</span>
-                    </div>
-                  ))
-                )}
-                <div style={{ display:'flex', justifyContent:'space-between', padding:'12px 20px', background:color+'11' }}>
-                  <span style={{ fontSize:13, fontWeight:700 }}>Total {sec.name}</span>
-                  <span style={{ fontSize:14, fontWeight:700, color }}>{fmt(sec.total)}</span>
-                </div>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Estado de Resultados — {activePeriod}</h1>
+
+        {/* VENTAS */}
+        <div className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Ingresos</p>
+          <ERRow label="Venta bruta"         value={ventas.bruta    || 0} color={color}/>
+          <ERRow label="(-) Descuentos y cortesías" value={-(ventas.descuentos || 0)} color='#f87171' indent/>
+          <ERRow label="Venta neta POS"      value={ventas.neta     || 0} color={color} indent/>
+          <ERRow label="Venta por cortes"    value={ventas.cortes   || 0} color={color} indent/>
+          <ERRow label="= Total ventas"      value={ventas.total    || 0} color={color} bold/>
+        </div>
+
+        {/* GASTOS GENERALES */}
+        {Object.entries(gastos).filter(([k]) => k !== 'CONTRIBUCIONES').map(([secCode, sec]: any) => (
+          <div key={secCode} className="card" style={{ marginBottom:16 }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>
+              {sec.name}
+            </p>
+            {Object.entries(sec.grupos).map(([grpName, grp]: any) => (
+              <div key={grpName} style={{ marginBottom:8 }}>
+                <p style={{ fontSize:12, fontWeight:600, color:'#94a3b8', margin:'0 0 4px' }}>{grpName}</p>
+                {Object.entries(grp.rubrics).map(([rubName, amount]: any) => (
+                  <ERRow key={rubName} label={rubName} value={-amount} color='#f87171' indent/>
+                ))}
+                <ERRow label={`Subtotal ${grpName}`} value={-grp.total} color='#f87171' indent bold/>
               </div>
             ))}
-            <div className="card" style={{ display:'flex', flexDirection:'column', gap:12 }}>
-              {[
-                { label:'Venta neta',       value:fmt(s.totalNetSale),  color },
-                { label:'Utilidad bruta',   value:fmt(s.grossProfit),   color:'#10b981' },
-                { label:'UTILIDAD / PÉRDIDA NETA', value:fmt(s.netIncome),
-                  color:s.netIncome>=0?'#10b981':'#f87171', big:true },
-              ].map(row => (
-                <div key={row.label} style={{ display:'flex', justifyContent:'space-between' }}>
-                  <span style={{ fontSize:row.big?14:13, fontWeight:row.big?700:400 }}>{row.label}</span>
-                  <span style={{ fontSize:row.big?18:14, fontWeight:700, color:row.color }}>{row.value}</span>
-                </div>
-              ))}
-            </div>
+            <ERRow label={`Total ${sec.name}`} value={-sec.total} color='#f87171' bold/>
+          </div>
+        ))}
+
+        {/* NÓMINA */}
+        {nomina > 0 && (
+          <div className="card" style={{ marginBottom:16 }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Nómina</p>
+            <ERRow label="Nómina del período" value={-nomina} color='#f87171'/>
           </div>
         )}
+
+        {/* RESULTADO ANTES DE CONTRIBUCIONES */}
+        <div className="card" style={{ marginBottom:16, borderLeft:`3px solid ${positivo(antesContrib)}` }}>
+          <ERRow label="= Resultado antes de contribuciones" value={antesContrib} color={positivo(antesContrib)} bold/>
+        </div>
+
+        {/* CONTRIBUCIONES */}
+        {gastos['CONTRIBUCIONES'] && (
+          <div className="card" style={{ marginBottom:16 }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Contribuciones</p>
+            {Object.entries(gastos['CONTRIBUCIONES'].grupos).map(([grpName, grp]: any) => (
+              Object.entries(grp.rubrics).map(([rubName, amount]: any) => (
+                <ERRow key={rubName} label={rubName} value={-amount} color='#f87171' indent/>
+              ))
+            ))}
+            <ERRow label="Total contribuciones" value={-contrib} color='#f87171' bold/>
+          </div>
+        )}
+
+        {/* RESULTADO DEL EJERCICIO */}
+        <div className="card" style={{ borderLeft:`3px solid ${positivo(resultado)}` }}>
+          <ERRow label="= Resultado del ejercicio neto" value={resultado} color={positivo(resultado)} bold/>
+        </div>
       </div>
     </AppLayout>
   );
 }
 
-// ── CONCILIACIÓN ──────────────────────────────────────────────
-export function ConciliacionPage() {
-  const { activeCompany } = useERPStore();
-  const cid   = activeCompany?.companyId;
-  const color = activeCompany?.color || '#3b82f6';
-
-  const { data: balances } = useQuery({
-    queryKey:['balances',cid],
-    queryFn: ()=>api.get(`/companies/${cid}/flow/balances`).then(r=>r.data),
-    enabled:!!cid,
-  });
-
+function ERRow({ label, value, color, bold, indent }: any) {
   return (
-    <AppLayout>
-      <div style={{ maxWidth:800 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Conciliación</h1>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
-          <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
-            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total MXN</p>
-            <p style={{ fontSize:22, fontWeight:700, color, margin:0 }}>{fmt(balances?.totalMxn||0)}</p>
-          </div>
-          <div className="card-sm" style={{ borderLeft:'3px solid #3b82f6' }}>
-            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total USD</p>
-            <p style={{ fontSize:22, fontWeight:700, color:'#3b82f6', margin:0 }}>${(balances?.totalUsd||0).toFixed(2)} USD</p>
-          </div>
-        </div>
-        <div className="card" style={{ padding:0, overflow:'hidden' }}>
-          <table className="table-base">
-            <thead><tr><th>Cuenta</th><th>Tipo</th><th>Moneda</th><th style={{textAlign:'right'}}>Saldo</th></tr></thead>
-            <tbody>
-              {(balances?.accounts||[]).map((a:any) => (
-                <tr key={a.accountId}>
-                  <td style={{fontWeight:500}}>{a.accountName}</td>
-                  <td><span className="badge-gray">{a.type}</span></td>
-                  <td>{a.currency}</td>
-                  <td style={{textAlign:'right',fontWeight:700,color:a.balance>=0?color:'#f87171'}}>
-                    {a.currency==='USD'?`$${a.balance.toFixed(2)} USD`:fmt(a.balance)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </AppLayout>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+      padding: indent ? '3px 0 3px 16px' : '4px 0',
+      borderBottom: bold ? '1px solid #334155' : 'none',
+      marginBottom: bold ? 8 : 0 }}>
+      <span style={{ fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 400,
+        color: bold ? '#f1f5f9' : '#94a3b8' }}>{label}</span>
+      <span style={{ fontSize: bold ? 14 : 12, fontWeight: bold ? 700 : 500, color }}>
+        {fmt(Math.abs(value))}
+      </span>
+    </div>
   );
 }
 
