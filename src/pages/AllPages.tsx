@@ -295,58 +295,318 @@ export function ReportesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
+  const [tab, setTab] = useState<'er'|'ventas'|'cxc'>('er');
 
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1000 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Reportes</h1>
+        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
+          {([['er','Estado de Resultados'],['ventas','Ventas'],['cxc','CxC']] as const).map(([id,label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
+                borderBottom: tab===id ? `2px solid ${color}` : '2px solid transparent',
+                color: tab===id ? color : '#64748b', cursor:'pointer' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {tab === 'er'     && <ERTab     cid={cid!} color={color} activePeriod={activePeriod}/>}
+        {tab === 'ventas' && <VentasTab cid={cid!} color={color}/>}
+        {tab === 'cxc'    && <CxCReporteTab cid={cid!} color={color}/>}
+      </div>
+    </AppLayout>
+  );
+}
+
+// ── Estado de Resultados ──────────────────────────────────────
+function ERTab({ cid, color, activePeriod }: any) {
   const { data: edo, isLoading } = useQuery({
     queryKey: ['income-statement', cid, activePeriod],
     queryFn:  () => api.get(`/reports/companies/${cid}/income-statement?period=${activePeriod}`).then(r => r.data),
     enabled:  !!cid,
   });
 
-  if (isLoading) return <AppLayout><p style={{color:'#64748b',padding:32}}>Cargando...</p></AppLayout>;
+  if (isLoading) return <p style={{color:'#64748b'}}>Cargando...</p>;
 
-  const ventas      = edo?.ventas      || {};
-  const gastos      = edo?.gastosPorSeccion || {};
-  const totalGastos = edo?.totalGastos || 0;
-  const contrib     = edo?.contribuciones || 0;
+  const ventas       = edo?.ventas      || {};
+  const gastos       = edo?.gastosPorSeccion || {};
+  const totalGastos  = edo?.totalGastos || 0;
+  const contrib      = edo?.contribuciones || 0;
   const antesContrib = edo?.resultadoAntesContrib || 0;
-  const resultado   = edo?.resultadoEjercicio || 0;
-  const nomina      = edo?.nomina || 0;
-
-  const positivo = (n: number) => n >= 0 ? '#10b981' : '#f87171';
+  const resultado    = edo?.resultadoEjercicio || 0;
+  const nomina       = edo?.nomina || 0;
+  const positivo     = (n: number) => n >= 0 ? '#10b981' : '#f87171';
 
   return (
-    <AppLayout>
-      <div style={{ maxWidth:800 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Estado de Resultados — {activePeriod}</h1>
+    <div>
+      <div className="card" style={{ marginBottom:16 }}>
+        <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Ingresos</p>
+        <ERRow label="Venta bruta"                value={ventas.bruta    || 0} color={color}/>
+        <ERRow label="(-) Descuentos y cortesías" value={-(ventas.descuentos || 0)} color='#f87171' indent/>
+        <ERRow label="Venta neta POS"             value={ventas.neta     || 0} color={color} indent/>
+        <ERRow label="Venta por cortes"           value={ventas.cortes   || 0} color={color} indent/>
+        <ERRow label="= Total ventas"             value={ventas.total    || 0} color={color} bold/>
+      </div>
 
-        {/* VENTAS */}
-        <div className="card" style={{ marginBottom:16 }}>
-          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Ingresos</p>
-          <ERRow label="Venta bruta"         value={ventas.bruta    || 0} color={color}/>
-          <ERRow label="(-) Descuentos y cortesías" value={-(ventas.descuentos || 0)} color='#f87171' indent/>
-          <ERRow label="Venta neta POS"      value={ventas.neta     || 0} color={color} indent/>
-          <ERRow label="Venta por cortes"    value={ventas.cortes   || 0} color={color} indent/>
-          <ERRow label="= Total ventas"      value={ventas.total    || 0} color={color} bold/>
+      {Object.entries(gastos).filter(([k]) => k !== 'CONTRIBUCIONES').map(([secCode, sec]: any) => (
+        <div key={secCode} className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>{sec.name}</p>
+          {Object.entries(sec.grupos).map(([grpName, grp]: any) => (
+            <div key={grpName} style={{ marginBottom:8 }}>
+              <p style={{ fontSize:12, fontWeight:600, color:'#94a3b8', margin:'0 0 4px' }}>{grpName}</p>
+              {Object.entries(grp.rubrics).map(([rubName, amount]: any) => (
+                <ERRow key={rubName} label={rubName} value={-amount} color='#f87171' indent/>
+              ))}
+              <ERRow label={`Subtotal ${grpName}`} value={-grp.total} color='#f87171' indent bold/>
+            </div>
+          ))}
+          <ERRow label={`Total ${sec.name}`} value={-sec.total} color='#f87171' bold/>
         </div>
+      ))}
 
-        {/* GASTOS GENERALES */}
-        {Object.entries(gastos).filter(([k]) => k !== 'CONTRIBUCIONES').map(([secCode, sec]: any) => (
-          <div key={secCode} className="card" style={{ marginBottom:16 }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>
-              {sec.name}
-            </p>
-            {Object.entries(sec.grupos).map(([grpName, grp]: any) => (
-              <div key={grpName} style={{ marginBottom:8 }}>
-                <p style={{ fontSize:12, fontWeight:600, color:'#94a3b8', margin:'0 0 4px' }}>{grpName}</p>
-                {Object.entries(grp.rubrics).map(([rubName, amount]: any) => (
-                  <ERRow key={rubName} label={rubName} value={-amount} color='#f87171' indent/>
-                ))}
-                <ERRow label={`Subtotal ${grpName}`} value={-grp.total} color='#f87171' indent bold/>
-              </div>
-            ))}
-            <ERRow label={`Total ${sec.name}`} value={-sec.total} color='#f87171' bold/>
+      {nomina > 0 && (
+        <div className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Nómina</p>
+          <ERRow label="Nómina del período" value={-nomina} color='#f87171'/>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom:16, borderLeft:`3px solid ${positivo(antesContrib)}` }}>
+        <ERRow label="= Resultado antes de contribuciones" value={antesContrib} color={positivo(antesContrib)} bold/>
+      </div>
+
+      {gastos['CONTRIBUCIONES'] && (
+        <div className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Contribuciones</p>
+          {Object.entries(gastos['CONTRIBUCIONES'].grupos).map(([grpName, grp]: any) => (
+            Object.entries(grp.rubrics).map(([rubName, amount]: any) => (
+              <ERRow key={rubName} label={rubName} value={-amount} color='#f87171' indent/>
+            ))
+          ))}
+          <ERRow label="Total contribuciones" value={-contrib} color='#f87171' bold/>
+        </div>
+      )}
+
+      <div className="card" style={{ borderLeft:`3px solid ${positivo(resultado)}` }}>
+        <ERRow label="= Resultado del ejercicio neto" value={resultado} color={positivo(resultado)} bold/>
+      </div>
+    </div>
+  );
+}
+
+// ── Reporte de Ventas ─────────────────────────────────────────
+function VentasTab({ cid, color }: any) {
+  const hoy = new Date().toISOString().slice(0,7);
+  const [periodo, setPeriodo] = useState(hoy);
+  const [canal,   setCanal]   = useState('');
+
+  const { data: ventas = [], isLoading } = useQuery({
+    queryKey: ['ventas-reporte', cid, periodo, canal],
+    queryFn:  () => api.get(`/companies/${cid}/machete/sales?period=${periodo}${canal?`&channel=${canal}`:''}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  // Agrupar por familia (meatType + flavor)
+  const porFamilia: Record<string, { cantidad:number, total:number }> = {};
+  const porCanal:   Record<string, { cantidad:number, total:number }> = {};
+  let totalBruto = 0;
+  let totalDesc  = 0;
+  let totalUnits = 0;
+
+  for (const v of ventas as any[]) {
+    const ch = v.channel || 'MOSTRADOR';
+    if (!porCanal[ch]) porCanal[ch] = { cantidad:0, total:0 };
+    porCanal[ch].total    += Number(v.total);
+    porCanal[ch].cantidad += v.lines?.length || 0;
+    totalBruto += Number(v.total);
+    totalDesc  += Number(v.discount || 0);
+
+    for (const l of v.lines || []) {
+      const familia = `${l.product?.meatType || 'RES'} — ${l.product?.flavor || 'NAT'}`;
+      if (!porFamilia[familia]) porFamilia[familia] = { cantidad:0, total:0 };
+      porFamilia[familia].cantidad += Number(l.quantity);
+      porFamilia[familia].total    += Number(l.total);
+      totalUnits += Number(l.quantity);
+    }
+  }
+
+  const CANAL_LABELS: Record<string,string> = { MOSTRADOR:'Tienda', MAYOREO:'Mayoreo', ONLINE:'Distribuidor', ML:'Online' };
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap' }}>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Período</label>
+          <input type="month" className="input-base" style={{ fontSize:13 }}
+            value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Canal</label>
+          <select className="input-base" style={{ fontSize:13 }} value={canal} onChange={e => setCanal(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="MOSTRADOR">Tienda</option>
+            <option value="MAYOREO">Mayoreo</option>
+            <option value="ONLINE">Distribuidor</option>
+            <option value="ML">Online</option>
+          </select>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
+        {[
+          { label:'Venta bruta',   value:fmt(totalBruto),        col:color },
+          { label:'Descuentos',    value:fmt(totalDesc),          col:'#f87171' },
+          { label:'Venta neta',    value:fmt(totalBruto-totalDesc), col:'#10b981' },
+          { label:'Unidades',      value:totalUnits.toString(),   col:'#94a3b8' },
+        ].map(k => (
+          <div key={k.label} className="card-sm" style={{ borderLeft:`3px solid ${k.col}` }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
+            <p style={{ fontSize:18, fontWeight:700, color:k.col, margin:0 }}>{k.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Por canal */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+        <div className="card">
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Por canal</p>
+          {Object.entries(porCanal).map(([ch, d]: any) => (
+            <div key={ch} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:13, color:'#94a3b8' }}>{CANAL_LABELS[ch]||ch}</span>
+              <span style={{ fontSize:13, fontWeight:600, color }}>{fmt(d.total)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="card">
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Por familia</p>
+          {Object.entries(porFamilia).map(([fam, d]: any) => (
+            <div key={fam} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:13, color:'#94a3b8' }}>{fam}</span>
+              <span style={{ fontSize:13, fontWeight:600, color }}>{fmt(d.total)} ({d.cantidad} pzas)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Detalle de ventas */}
+      {isLoading ? <p style={{color:'#64748b'}}>Cargando...</p> : (
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <table className="table-base">
+            <thead><tr>
+              <th>Fecha</th><th>Canal</th><th>Cliente</th>
+              <th style={{textAlign:'right'}}>Total</th><th>Pago</th>
+            </tr></thead>
+            <tbody>
+              {(ventas as any[]).length === 0 && (
+                <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin ventas</td></tr>
+              )}
+              {(ventas as any[]).map((v: any) => (
+                <tr key={v.id}>
+                  <td>{fmtDate(v.date)}</td>
+                  <td><span className="badge-blue">{CANAL_LABELS[v.channel]||v.channel}</span></td>
+                  <td style={{color:'#64748b'}}>{v.client?.name || '—'}</td>
+                  <td style={{textAlign:'right',fontWeight:600,color}}>{fmt(v.total)}</td>
+                  <td style={{color:'#64748b',fontSize:12}}>{v.paymentMethod}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Reporte CxC Multicliente ──────────────────────────────────
+function CxCReporteTab({ cid, color }: any) {
+  const hoy = new Date().toISOString().slice(0,7);
+  const [periodo,   setPeriodo]   = useState(hoy);
+  const [clienteIds, setClienteIds] = useState<string[]>([]);
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clients', cid],
+    queryFn:  () => api.get(`/companies/${cid}/clients`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const { data: cxcs = [], isLoading } = useQuery({
+    queryKey: ['cxc-reporte', cid, periodo, clienteIds],
+    queryFn:  () => {
+      let url = `/companies/${cid}/cxc?period=${periodo}`;
+      if (clienteIds.length === 1) url += `&clientId=${clienteIds[0]}`;
+      return api.get(url).then(r => r.data);
+    },
+    enabled: !!cid,
+  });
+
+  const filtrados = clienteIds.length > 1
+    ? (cxcs as any[]).filter(c => clienteIds.includes(c.clientId))
+    : cxcs as any[];
+
+  const totalPendiente = filtrados.reduce((t, c) => t + Number(c.balance), 0);
+
+  const toggleCliente = (id: string) => {
+    setClienteIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id]);
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap', alignItems:'flex-end' }}>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Período</label>
+          <input type="month" className="input-base" style={{ fontSize:13 }}
+            value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+        </div>
+        <div style={{ flex:1 }}>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Clientes (selección múltiple)</label>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {(clientes as any[]).map((c: any) => (
+              <button key={c.id} onClick={() => toggleCliente(c.id)}
+                style={{ padding:'4px 10px', borderRadius:99, fontSize:11, cursor:'pointer',
+                  border:`1px solid ${clienteIds.includes(c.id) ? color : '#334155'}`,
+                  background: clienteIds.includes(c.id) ? color+'22' : 'transparent',
+                  color: clienteIds.includes(c.id) ? color : '#64748b' }}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card-sm" style={{ borderLeft:`3px solid ${color}`, marginBottom:16 }}>
+        <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total pendiente</p>
+        <p style={{ fontSize:22, fontWeight:700, color, margin:0 }}>{fmt(totalPendiente)}</p>
+      </div>
+
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <table className="table-base">
+          <thead><tr>
+            <th>Cliente</th><th>Fecha</th>
+            <th style={{textAlign:'right'}}>Original</th>
+            <th style={{textAlign:'right'}}>Saldo</th><th>Estado</th>
+          </tr></thead>
+          <tbody>
+            {isLoading && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>}
+            {filtrados.length === 0 && !isLoading && (
+              <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas</td></tr>
+            )}
+            {filtrados.map((c: any) => (
+              <tr key={c.id}>
+                <td style={{fontWeight:500}}>{c.client?.name}</td>
+                <td>{fmtDate(c.date)}</td>
+                <td style={{textAlign:'right'}}>{fmt(c.originalAmount)}</td>
+                <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.balance)}</td>
+                <td><span className={c.status==='PAGADO'?'badge-green':c.status==='VENCIDO'?'badge-red':'badge-amber'}>{c.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
         {/* NÓMINA */}
         {nomina > 0 && (
