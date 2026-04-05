@@ -112,6 +112,46 @@ export function GastosPage() {
   );
 }
 
+export function ConciliacionPage() {
+  const { activeCompany } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#3b82f6';
+
+  const { data: balances = [] } = useQuery({
+    queryKey: ['balances', cid],
+    queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const total = (balances as any[]).reduce((t, b) => t + Number(b.balance || 0), 0);
+
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:800 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Conciliación</h1>
+        <div className="card-sm" style={{ borderLeft:`3px solid ${color}`, marginBottom:24 }}>
+          <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total</p>
+          <p style={{ fontSize:24, fontWeight:700, color, margin:0 }}>{fmt(total)}</p>
+        </div>
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <table className="table-base">
+            <thead><tr><th>Cuenta</th><th>Tipo</th><th style={{textAlign:'right'}}>Saldo</th></tr></thead>
+            <tbody>
+              {(balances as any[]).map((b: any) => (
+                <tr key={b.id}>
+                  <td style={{fontWeight:500}}>{b.name}</td>
+                  <td><span className="badge-blue">{b.type}</span></td>
+                  <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(b.balance||0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
 // ── CxC ───────────────────────────────────────────────────────
 export function CxCPage() {
   const { activeCompany, activePeriod } = useERPStore();
