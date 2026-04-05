@@ -608,41 +608,6 @@ function CxCReporteTab({ cid, color }: any) {
   );
 }
 
-        {/* NÓMINA */}
-        {nomina > 0 && (
-          <div className="card" style={{ marginBottom:16 }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Nómina</p>
-            <ERRow label="Nómina del período" value={-nomina} color='#f87171'/>
-          </div>
-        )}
-
-        {/* RESULTADO ANTES DE CONTRIBUCIONES */}
-        <div className="card" style={{ marginBottom:16, borderLeft:`3px solid ${positivo(antesContrib)}` }}>
-          <ERRow label="= Resultado antes de contribuciones" value={antesContrib} color={positivo(antesContrib)} bold/>
-        </div>
-
-        {/* CONTRIBUCIONES */}
-        {gastos['CONTRIBUCIONES'] && (
-          <div className="card" style={{ marginBottom:16 }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Contribuciones</p>
-            {Object.entries(gastos['CONTRIBUCIONES'].grupos).map(([grpName, grp]: any) => (
-              Object.entries(grp.rubrics).map(([rubName, amount]: any) => (
-                <ERRow key={rubName} label={rubName} value={-amount} color='#f87171' indent/>
-              ))
-            ))}
-            <ERRow label="Total contribuciones" value={-contrib} color='#f87171' bold/>
-          </div>
-        )}
-
-        {/* RESULTADO DEL EJERCICIO */}
-        <div className="card" style={{ borderLeft:`3px solid ${positivo(resultado)}` }}>
-          <ERRow label="= Resultado del ejercicio neto" value={resultado} color={positivo(resultado)} bold/>
-        </div>
-      </div>
-    </AppLayout>
-  );
-}
-
 function ERRow({ label, value, color, bold, indent }: any) {
   return (
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
