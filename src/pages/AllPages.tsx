@@ -442,6 +442,29 @@ function VentasTab({ cid, color }: any) {
     }
   }
 
+  const exportarExcel = () => {
+    import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs').then((XLSX: any) => {
+      const CANAL_LBL: Record<string,string> = { MOSTRADOR:'Tienda', MAYOREO:'Mayoreo', ONLINE:'Distribuidor', ML:'Online' };
+      const rows = (ventas as any[]).flatMap((v: any) =>
+        (v.lines || []).map((l: any) => ({
+          Fecha:      v.date?.slice(0,10),
+          Canal:      CANAL_LBL[v.channel] || v.channel,
+          Cliente:    v.client?.name || '—',
+          SKU:        l.product?.sku || '—',
+          Producto:   l.product?.name || '—',
+          Cantidad:   l.quantity,
+          PrecioUnit: Number(l.unitPrice),
+          Total:      Number(l.total),
+          Pago:       v.paymentMethod,
+        }))
+      );
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+      XLSX.writeFile(wb, `ventas-${new Date().toISOString().slice(0,10)}.xlsx`);
+    });
+  };
+
   const CANAL_LABELS: Record<string,string> = { MOSTRADOR:'Tienda', MAYOREO:'Mayoreo', ONLINE:'Distribuidor', ML:'Online' };
 
   return (
@@ -499,6 +522,13 @@ function VentasTab({ cid, color }: any) {
             <option value="ML">Online</option>
           </select>
         </div>
+      </div>
+
+      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:12}}>
+        <button onClick={exportarExcel}
+          style={{padding:'6px 16px',borderRadius:8,fontSize:12,border:'1px solid #10b981',background:'none',color:'#10b981',cursor:'pointer'}}>
+          ⬇ Exportar Excel
+        </button>
       </div>
 
       {/* KPIs */}
