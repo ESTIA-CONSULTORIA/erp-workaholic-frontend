@@ -397,7 +397,7 @@ function ERTab({ cid, color, activePeriod }: any) {
 
 // ── Reporte de Ventas ─────────────────────────────────────────
 const hoy = new Date().toISOString().slice(0,10);
-  const [tipoFiltro, setTipoFiltro] = useState<'mes'|'dia'|'rango'>('mes');
+  const [tipoFiltro, setTipoFiltro] = useState('mes' as 'mes'|'dia'|'rango');
   const [periodo,    setPeriodo]    = useState(hoy.slice(0,7));
   const [diaFiltro,  setDiaFiltro]  = useState(hoy);
   const [fechaInicio, setFechaInicio] = useState(hoy);
