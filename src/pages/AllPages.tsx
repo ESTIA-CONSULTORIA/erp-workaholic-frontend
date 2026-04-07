@@ -599,9 +599,13 @@ function VentasTab({ cid, color }: any) {
 
 // ── Reporte CxC Multicliente ──────────────────────────────────
 function CxCReporteTab({ cid, color }: any) {
-  const hoy = new Date().toISOString().slice(0,7);
-  const [periodo,   setPeriodo]   = useState(hoy);
-  const [clienteIds, setClienteIds] = useState<string[]>([]);
+  const hoy = new Date().toISOString().slice(0,10);
+  const [tipoFiltro,  setTipoFiltro]  = useState('mes' as 'mes'|'dia'|'rango');
+  const [periodo,     setPeriodo]     = useState(hoy.slice(0,7));
+  const [diaFiltro,   setDiaFiltro]   = useState(hoy);
+  const [fechaInicio, setFechaInicio] = useState(hoy);
+  const [fechaFin,    setFechaFin]    = useState(hoy);
+  const [clienteIds,  setClienteIds]  = useState<string[]>([]);
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clients', cid],
@@ -610,9 +614,12 @@ function CxCReporteTab({ cid, color }: any) {
   });
 
   const { data: cxcs = [], isLoading } = useQuery({
-    queryKey: ['cxc-reporte', cid, periodo, clienteIds],
+    queryKey: ['cxc-reporte', cid, tipoFiltro, periodo, diaFiltro, fechaInicio, fechaFin, clienteIds],
     queryFn:  () => {
-      let url = `/companies/${cid}/cxc?period=${periodo}`;
+      let url = `/companies/${cid}/cxc?`;
+      if (tipoFiltro === 'mes')   url += `period=${periodo}`;
+      if (tipoFiltro === 'dia')   url += `startDate=${diaFiltro}&endDate=${diaFiltro}`;
+      if (tipoFiltro === 'rango') url += `startDate=${fechaInicio}&endDate=${fechaFin}`;
       if (clienteIds.length === 1) url += `&clientId=${clienteIds[0]}`;
       return api.get(url).then(r => r.data);
     },
@@ -629,16 +636,70 @@ function CxCReporteTab({ cid, color }: any) {
     setClienteIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id]);
   };
 
+  const exportarExcel = () => {
+    import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs').then((XLSX: any) => {
+      const rows = filtrados.map((c: any) => ({
+        Cliente:   c.client?.name || '—',
+        Fecha:     c.date?.slice(0,10),
+        Original:  Number(c.originalAmount),
+        Pagado:    Number(c.paidAmount),
+        Saldo:     Number(c.balance),
+        Estado:    c.status,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CxC');
+      XLSX.writeFile(wb, `cxc-${new Date().toISOString().slice(0,10)}.xlsx`);
+    });
+  };
+
   return (
     <div>
       <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap', alignItems:'flex-end' }}>
         <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Período</label>
-          <input type="month" className="input-base" style={{ fontSize:13 }}
-            value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Ver por</label>
+          <div style={{ display:'flex', gap:4 }}>
+            {(['mes','dia','rango'] as const).map(t => (
+              <button key={t} onClick={() => setTipoFiltro(t)}
+                style={{ padding:'6px 12px', borderRadius:8, fontSize:12, cursor:'pointer',
+                  border:`1px solid ${tipoFiltro===t ? color : '#334155'}`,
+                  background: tipoFiltro===t ? color+'22' : 'transparent',
+                  color: tipoFiltro===t ? color : '#64748b' }}>
+                {t === 'mes' ? 'Mes' : t === 'dia' ? 'Día' : 'Rango'}
+              </button>
+            ))}
+          </div>
         </div>
+        {tipoFiltro === 'mes' && (
+          <div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Mes</label>
+            <input type="month" className="input-base" style={{ fontSize:13 }}
+              value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+          </div>
+        )}
+        {tipoFiltro === 'dia' && (
+          <div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Día</label>
+            <input type="date" className="input-base" style={{ fontSize:13 }}
+              value={diaFiltro} onChange={e => setDiaFiltro(e.target.value)}/>
+          </div>
+        )}
+        {tipoFiltro === 'rango' && (
+          <>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Desde</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Hasta</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={fechaFin} onChange={e => setFechaFin(e.target.value)}/>
+            </div>
+          </>
+        )}
         <div style={{ flex:1 }}>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Clientes (selección múltiple)</label>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Clientes</label>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {(clientes as any[]).map((c: any) => (
               <button key={c.id} onClick={() => toggleCliente(c.id)}
@@ -653,9 +714,15 @@ function CxCReporteTab({ cid, color }: any) {
         </div>
       </div>
 
-      <div className="card-sm" style={{ borderLeft:`3px solid ${color}`, marginBottom:16 }}>
-        <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total pendiente</p>
-        <p style={{ fontSize:22, fontWeight:700, color, margin:0 }}>{fmt(totalPendiente)}</p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <div className="card-sm" style={{ borderLeft:`3px solid ${color}`, flex:1, marginRight:16 }}>
+          <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total pendiente</p>
+          <p style={{ fontSize:22, fontWeight:700, color, margin:0 }}>{fmt(totalPendiente)}</p>
+        </div>
+        <button onClick={exportarExcel}
+          style={{ padding:'6px 16px', borderRadius:8, fontSize:12, border:'1px solid #10b981', background:'none', color:'#10b981', cursor:'pointer' }}>
+          ⬇ Exportar Excel
+        </button>
       </div>
 
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
