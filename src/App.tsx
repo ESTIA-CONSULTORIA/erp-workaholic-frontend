@@ -4,6 +4,7 @@ import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
 import POSPage from './pages/machete/POS';
 import ProduccionPage from './pages/machete/Produccion';
+import InventarioPage from './pages/machete/Inventario';
 import CatalogoPage from './pages/machete/Catalogo';
 import MacheteReportesPage from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
@@ -37,6 +38,8 @@ export default function App() {
         <Route path="/produccion" element={<ProduccionPage/>}/>
         <Route path="/catalogo" element={<CatalogoPage/>}/>
         <Route path="/machete-reportes" element={<MacheteReportesPage/>}/>
+        <Route path="/machete/produccion" element={<ProduccionPage/>}/>
+        <Route path="/machete/inventario" element={<InventarioPage/>}/>
         <Route path="/rh" element={<RHPage/>}/>
         <Route path="/rh/empleados/:id" element={<ExpedientePage/>}/>
         <Route path="/rh/nomina" element={<NominaPage/>}/>
