@@ -414,6 +414,8 @@ const hoy = new Date().toISOString().slice(0,10);
     if (canal) url += `&channel=${canal}`;
     return api.get(url).then(r => r.data);
   },
+    enabled: !!cid,
+  });
 
   // Agrupar por familia (meatType + flavor)
   const porFamilia: Record<string, { cantidad:number, total:number }> = {};
