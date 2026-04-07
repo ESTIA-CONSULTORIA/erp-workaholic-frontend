@@ -396,16 +396,24 @@ function ERTab({ cid, color, activePeriod }: any) {
 }
 
 // ── Reporte de Ventas ─────────────────────────────────────────
-function VentasTab({ cid, color }: any) {
-  const hoy = new Date().toISOString().slice(0,7);
-  const [periodo, setPeriodo] = useState(hoy);
-  const [canal,   setCanal]   = useState('');
+const hoy = new Date().toISOString().slice(0,10);
+  const [tipoFiltro, setTipoFiltro] = useState<'mes'|'dia'|'rango'>('mes');
+  const [periodo,    setPeriodo]    = useState(hoy.slice(0,7));
+  const [diaFiltro,  setDiaFiltro]  = useState(hoy);
+  const [fechaInicio, setFechaInicio] = useState(hoy);
+  const [fechaFin,    setFechaFin]    = useState(hoy);
+  const [canal,       setCanal]       = useState('');
 
   const { data: ventas = [], isLoading } = useQuery({
-    queryKey: ['ventas-reporte', cid, periodo, canal],
-    queryFn:  () => api.get(`/companies/${cid}/machete/sales?period=${periodo}${canal?`&channel=${canal}`:''}`).then(r => r.data),
-    enabled:  !!cid,
-  });
+    queryKey: ['ventas-reporte', cid, tipoFiltro, periodo, diaFiltro, fechaInicio, fechaFin, canal],
+  queryFn:  () => {
+    let url = `/companies/${cid}/machete/sales?`;
+    if (tipoFiltro === 'mes')   url += `period=${periodo}`;
+    if (tipoFiltro === 'dia')   url += `startDate=${diaFiltro}&endDate=${diaFiltro}`;
+    if (tipoFiltro === 'rango') url += `startDate=${fechaInicio}&endDate=${fechaFin}`;
+    if (canal) url += `&channel=${canal}`;
+    return api.get(url).then(r => r.data);
+  },
 
   // Agrupar por familia (meatType + flavor)
   const porFamilia: Record<string, { cantidad:number, total:number }> = {};
@@ -435,12 +443,49 @@ function VentasTab({ cid, color }: any) {
 
   return (
     <div>
-      <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap', alignItems:'flex-end' }}>
         <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Período</label>
-          <input type="month" className="input-base" style={{ fontSize:13 }}
-            value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Ver por</label>
+          <div style={{ display:'flex', gap:4 }}>
+            {(['mes','dia','rango'] as const).map(t => (
+              <button key={t} onClick={() => setTipoFiltro(t)}
+                style={{ padding:'6px 12px', borderRadius:8, fontSize:12, cursor:'pointer',
+                  border:`1px solid ${tipoFiltro===t ? color : '#334155'}`,
+                  background: tipoFiltro===t ? color+'22' : 'transparent',
+                  color: tipoFiltro===t ? color : '#64748b' }}>
+                {t === 'mes' ? 'Mes' : t === 'dia' ? 'Día' : 'Rango'}
+              </button>
+            ))}
+          </div>
         </div>
+        {tipoFiltro === 'mes' && (
+          <div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Mes</label>
+            <input type="month" className="input-base" style={{ fontSize:13 }}
+              value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+          </div>
+        )}
+        {tipoFiltro === 'dia' && (
+          <div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Día</label>
+            <input type="date" className="input-base" style={{ fontSize:13 }}
+              value={diaFiltro} onChange={e => setDiaFiltro(e.target.value)}/>
+          </div>
+        )}
+        {tipoFiltro === 'rango' && (
+          <>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Desde</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Hasta</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={fechaFin} onChange={e => setFechaFin(e.target.value)}/>
+            </div>
+          </>
+        )}
         <div>
           <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Canal</label>
           <select className="input-base" style={{ fontSize:13 }} value={canal} onChange={e => setCanal(e.target.value)}>
