@@ -55,8 +55,8 @@ export default function InventarioPage() {
             <tbody>
               {loadProd && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>}
               {(productos as any[]).filter((p:any) => p.isActive).map((p: any) => {
-                const stock = Number(p.stock?.stock || 0);
-                const min   = Number(p.stock?.minStock || 5);
+                const stock = Number(Number(p.stock || 0);
+                const min   = Number(Number(p.minStock || 5);
                 const bajo  = stock <= min;
                 return (
                   <tr key={p.id}>
