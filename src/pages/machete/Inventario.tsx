@@ -37,12 +37,12 @@ export default function InventarioPage() {
     enabled:  !!cid,
   });
 
-  const grupos = (insumos as any[]).reduce((acc: any, ins: any) => {
+  const grupos = Array.isArray(insumos) ? (insumos as any[]).reduce((acc: any, ins: any) => {
     const g = ins.group || 'GENERAL';
     if (!acc[g]) acc[g] = [];
     acc[g].push(ins);
     return acc;
-  }, {});
+  }, {}) : {};
 
   const GRUPO_LABELS: Record<string,string> = {
     CARNES_FRESCAS:    'Carnes Frescas',
