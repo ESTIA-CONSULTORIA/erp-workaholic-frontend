@@ -122,7 +122,7 @@ export function ConciliacionPage() {
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid,
   });
-  const balances = Array.isArray(rawBalances) ? rawBalances : [];
+  const balances = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
 
   const total = (balances as any[]).reduce((t, b) => t + Number(b.balance || 0), 0);
 
