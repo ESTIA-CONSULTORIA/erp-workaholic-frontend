@@ -143,7 +143,7 @@ export default function InventarioPage() {
                   <select className="input-base" style={{ fontSize:13 }} value={compraForm.cuentaId}
                     onChange={e => setC('cuentaId', e.target.value)}>
                     <option value="">— Seleccionar —</option>
-                    {(cuentas as any[]).map((c: any) => (
+                    {(Array.isArray(cuentas) ? cuentas as any[] : []).map((c: any) => (
                       <option key={c.id} value={c.code}>{c.name}</option>
                     ))}
                   </select>
