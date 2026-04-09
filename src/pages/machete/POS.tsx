@@ -38,7 +38,7 @@ export default function POSPage() {
   // Tira X / Z
   const [showTiraX, setShowTiraX] = useState(false);
   const [showTiraZ, setShowTiraZ] = useState(false);
-  const [efectivoCaja, setEfectivoCaja] = useState(0);
+  const [efectivoCaja, setEfectivoCaja] = useState<any>({});
   const [tiraData, setTiraData] = useState<any>(null);
 
   const canalConfig = CANALES.find(c => c.id === canal)!;
