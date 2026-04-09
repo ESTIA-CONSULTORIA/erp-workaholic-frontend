@@ -434,19 +434,78 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
           <span style={{ fontSize:13, color:'#94a3b8' }}>{data.hoy.length}</span>
         </div>
 
-        {/* Tira X — cajero cuenta el efectivo */}
+       {/* Tira X — desglose completo */}
         {!isZ && (
-          <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
-            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:6 }}>
-              Efectivo contado en caja
-            </label>
-            <input type="number" min="0" step="0.01"
-              style={{ width:'100%', padding:'8px', borderRadius:8, border:'1px solid #334155',
-                background:'#1e293b', color:'#f1f5f9', fontSize:14, textAlign:'right' }}
-              value={efectivoCaja||''} onChange={e=>onEfectivoCaja(+e.target.value)}/>
-            <p style={{ fontSize:11, color:'#64748b', margin:'6px 0 0' }}>
-              Este valor se guardará para calcular la diferencia en la Tira Z
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
+              Denominaciones en caja
             </p>
+            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:12 }}>
+              {[500,200,100,50,20,10,5,2,1,0.5].map(d => (
+                <div key={d} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:'#94a3b8', width:50, textAlign:'right' }}>${d}</span>
+                  <span style={{ fontSize:11, color:'#64748b' }}>×</span>
+                  <input type="number" min="0"
+                    style={{ width:60, padding:'4px 8px', borderRadius:6, border:'1px solid #334155',
+                      background:'#1e293b', color:'#f1f5f9', fontSize:12, textAlign:'center' }}
+                    value={efectivoCaja?.[`den_${d}`]||''}
+                    onChange={e => onEfectivoCaja({ ...efectivoCaja, [`den_${d}`]: +e.target.value })}/>
+                  <span style={{ fontSize:12, color, fontWeight:600, marginLeft:'auto' }}>
+                    = {fmt(d * (efectivoCaja?.[`den_${d}`] || 0))}
+                  </span>
+                </div>
+              ))}
+              <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:13, color:'#64748b' }}>Total efectivo</span>
+                <span style={{ fontSize:15, fontWeight:700, color }}>
+                  {fmt([500,200,100,50,20,10,5,2,1,0.5].reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0))}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
+              Terminal bancaria
+            </p>
+            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:12 }}>
+              {[['debito','Débito'],['credito','Crédito'],['transferencia','Transferencia']].map(([k,l]) => (
+                <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:'#94a3b8' }}>{l}</span>
+                  <input type="number" min="0" step="0.01"
+                    style={{ width:100, padding:'4px 8px', borderRadius:6, border:'1px solid #334155',
+                      background:'#1e293b', color:'#f1f5f9', fontSize:12, textAlign:'right' }}
+                    value={efectivoCaja?.[`term_${k}`]||''}
+                    onChange={e => onEfectivoCaja({ ...efectivoCaja, [`term_${k}`]: +e.target.value })}/>
+                </div>
+              ))}
+              <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:13, color:'#64748b' }}>Total terminal</span>
+                <span style={{ fontSize:15, fontWeight:700, color }}>
+                  {fmt(['debito','credito','transferencia'].reduce((t,k) => t + (efectivoCaja?.[`term_${k}`]||0), 0))}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
+              Plataformas delivery
+            </p>
+            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:12 }}>
+              {[['rappi','Rappi'],['ubereats','Uber Eats'],['didi','DiDi Food'],['pedidosya','Pedidos Ya']].map(([k,l]) => (
+                <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:'#94a3b8' }}>{l}</span>
+                  <input type="number" min="0" step="0.01"
+                    style={{ width:100, padding:'4px 8px', borderRadius:6, border:'1px solid #334155',
+                      background:'#1e293b', color:'#f1f5f9', fontSize:12, textAlign:'right' }}
+                    value={efectivoCaja?.[`del_${k}`]||''}
+                    onChange={e => onEfectivoCaja({ ...efectivoCaja, [`del_${k}`]: +e.target.value })}/>
+                </div>
+              ))}
+              <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:13, color:'#64748b' }}>Total delivery</span>
+                <span style={{ fontSize:15, fontWeight:700, color }}>
+                  {fmt(['rappi','ubereats','didi','pedidosya'].reduce((t,k) => t + (efectivoCaja?.[`del_${k}`]||0), 0))}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
