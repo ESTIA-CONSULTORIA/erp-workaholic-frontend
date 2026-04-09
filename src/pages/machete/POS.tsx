@@ -361,6 +361,8 @@ export default function POSPage() {
           titulo="Tira X — Precorte"
           data={tiraData}
           color={color}
+          efectivoCaja={efectivoCaja}
+          onEfectivoCaja={setEfectivoCaja}
           onClose={() => setShowTiraX(false)}
         />
       )}
