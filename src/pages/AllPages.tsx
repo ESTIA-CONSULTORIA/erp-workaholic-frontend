@@ -140,7 +140,7 @@ export function ConciliacionPage() {
             <tbody>
               {(balances as any[]).map((b: any) => (
                 <tr key={b.id}>
-                  <td style={{fontWeight:500}}>{b.name}</td>
+                  <td style={{fontWeight:500}}>{b.accountName}</td>
                   <td><span className="badge-blue">{b.type}</span></td>
                   <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(b.balance||0)}</td>
                 </tr>
