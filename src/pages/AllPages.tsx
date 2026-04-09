@@ -116,38 +116,126 @@ export function ConciliacionPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
+  const qc    = useQueryClient();
+
+  const [editId,    setEditId]    = useState<string|null>(null);
+  const [editName,  setEditName]  = useState('');
+  const [saving,    setSaving]    = useState(false);
 
   const { data: rawBalances } = useQuery({
     queryKey: ['balances', cid],
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid,
   });
-  const balances = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
 
-  const total = (balances as any[]).reduce((t, b) => t + Number(b.balance || 0), 0);
+  const balances = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
+  const totalMxn = rawBalances?.totalMxn || 0;
+  const totalUsd = rawBalances?.totalUsd || 0;
+
+  const TIPO_LABELS: Record<string,string> = {
+    EFECTIVO:   'Efectivo',
+    BANCO:      'Banco',
+    PLATAFORMA: 'Plataforma',
+    CAJA_CHICA: 'Caja chica',
+  };
+
+  const grupos = (balances as any[]).reduce((acc: any, b: any) => {
+    const tipo = b.type || 'OTRO';
+    if (!acc[tipo]) acc[tipo] = [];
+    acc[tipo].push(b);
+    return acc;
+  }, {});
+
+  const guardarNombre = async (accountId: string) => {
+    setSaving(true);
+    try {
+      await api.put(`/companies/${cid}/flow/accounts/${accountId}`, { name: editName });
+      setEditId(null);
+      qc.invalidateQueries({ queryKey: ['balances', cid] });
+    } finally { setSaving(false); }
+  };
+
+  const toggleAccount = async (accountId: string, isActive: boolean) => {
+    await api.put(`/companies/${cid}/flow/accounts/${accountId}`, { isActive: !isActive });
+    qc.invalidateQueries({ queryKey: ['balances', cid] });
+  };
 
   return (
     <AppLayout>
-      <div style={{ maxWidth:800 }}>
+      <div style={{ maxWidth:900 }}>
         <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Conciliación</h1>
-        <div className="card-sm" style={{ borderLeft:`3px solid ${color}`, marginBottom:24 }}>
-          <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total</p>
-          <p style={{ fontSize:24, fontWeight:700, color, margin:0 }}>{fmt(total)}</p>
+
+        {/* KPIs */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
+          <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total MXN</p>
+            <p style={{ fontSize:24, fontWeight:700, color, margin:0 }}>{fmt(totalMxn)}</p>
+          </div>
+          <div className="card-sm" style={{ borderLeft:'3px solid #f59e0b' }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total USD</p>
+            <p style={{ fontSize:24, fontWeight:700, color:'#f59e0b', margin:0 }}>${Number(totalUsd).toFixed(2)}</p>
+          </div>
         </div>
-        <div className="card" style={{ padding:0, overflow:'hidden' }}>
-          <table className="table-base">
-            <thead><tr><th>Cuenta</th><th>Tipo</th><th style={{textAlign:'right'}}>Saldo</th></tr></thead>
-            <tbody>
-              {(balances as any[]).map((b: any) => (
-                <tr key={b.id}>
-                  <td style={{fontWeight:500}}>{b.accountName}</td>
-                  <td><span className="badge-blue">{b.type}</span></td>
-                  <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(b.balance||0)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
+        {/* Cuentas agrupadas por tipo */}
+        {Object.entries(grupos).map(([tipo, cuentas]: any) => (
+          <div key={tipo} style={{ marginBottom:20 }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+              letterSpacing:1, margin:'0 0 8px' }}>
+              {TIPO_LABELS[tipo] || tipo}
+            </p>
+            <div className="card" style={{ padding:0, overflow:'hidden' }}>
+              <table className="table-base">
+                <thead>
+                  <tr>
+                    <th>Cuenta</th><th>Moneda</th>
+                    <th style={{textAlign:'right'}}>Saldo</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(cuentas as any[]).map((b: any) => (
+                    <tr key={b.accountId}>
+                      <td>
+                        {editId === b.accountId ? (
+                          <input className="input-base" style={{ fontSize:12, width:200 }}
+                            value={editName} onChange={e => setEditName(e.target.value)}/>
+                        ) : (
+                          <span style={{ fontWeight:500 }}>{b.accountName}</span>
+                        )}
+                      </td>
+                      <td><span className="badge-blue">{b.currency}</span></td>
+                      <td style={{ textAlign:'right', fontWeight:700, color:Number(b.balance)>=0?color:'#f87171' }}>
+                        {fmt(b.balance)}
+                      </td>
+                      <td>
+                        <div style={{ display:'flex', gap:8 }}>
+                          {editId === b.accountId ? (
+                            <>
+                              <button onClick={() => guardarNombre(b.accountId)} disabled={saving}
+                                style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
+                                ✓ Guardar
+                              </button>
+                              <button onClick={() => setEditId(null)}
+                                style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                                Cancelar
+                              </button>
+                            </>
+                          ) : (
+                            <button onClick={() => { setEditId(b.accountId); setEditName(b.accountName); }}
+                              style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
+                              Renombrar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </div>
     </AppLayout>
   );
