@@ -117,7 +117,7 @@ export function ConciliacionPage() {
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
 
-  const { data: balances = [] } = useQuery({
+  const balances = Array.isArray(rawBalances) ? rawBalances : [];
     queryKey: ['balances', cid],
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid,
