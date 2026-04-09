@@ -117,11 +117,12 @@ export function ConciliacionPage() {
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
 
-  const balances = Array.isArray(rawBalances) ? rawBalances : [];
+  const { data: rawBalances } = useQuery({
     queryKey: ['balances', cid],
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid,
   });
+  const balances = Array.isArray(rawBalances) ? rawBalances : [];
 
   const total = (balances as any[]).reduce((t, b) => t + Number(b.balance || 0), 0);
 
