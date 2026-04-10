@@ -514,30 +514,6 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
 
         <p style={{ fontSize:12, color:'#64748b', marginBottom:16 }}>{data.fecha}</p>
 
-        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Ventas por canal</p>
-        {Object.entries(data.porCanal).map(([k,v]:any) => (
-          <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-            <span style={{ fontSize:13, color:'#94a3b8' }}>{CANAL_LABELS[k]||k}</span>
-            <span style={{ fontSize:13, fontWeight:600, color }}>{fmt(v)}</span>
-          </div>
-        ))}
-
-        <div style={{ borderTop:'1px solid #334155', margin:'12px 0' }}/>
-
-        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Ventas por método</p>
-        {Object.entries(data.porMetodo).map(([k,v]:any) => (
-          <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-            <span style={{ fontSize:13, color:'#94a3b8' }}>{METODO_LABELS[k]||k}</span>
-            <span style={{ fontSize:13, fontWeight:600, color }}>{fmt(v)}</span>
-          </div>
-        ))}
-
-        <div style={{ borderTop:'1px solid #334155', margin:'12px 0' }}/>
-        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
-          <span style={{ fontSize:14, fontWeight:700 }}>Total del día</span>
-          <span style={{ fontSize:18, fontWeight:700, color }}>{fmt(data.totalBruto)}</span>
-        </div>
-
         {/* Tira X — desglose completo */}
         {!isZ && (
           <div>
