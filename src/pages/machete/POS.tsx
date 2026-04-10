@@ -88,20 +88,28 @@ export default function POSPage() {
 
   const cargarDesdeOC = (oc: any) => {
     if (!oc?.lineas) return;
-    const nuevasLineas = (oc.lineas as any[]).map((l: any) => ({
-      id:       l.productId,
-      nombre:   l.product?.name || l.productId,
-      precio:   Number(l.precioUnitario || l.unitPrice || 0),
-      cantidad: Math.max(1, (l.cantidad || 1) - (l.cantidadSurtida || 0)),
-      stock:    999,
-    })).filter((l:any) => l.cantidad > 0);
+    const nuevasLineas = (oc.lineas as any[]).map((l: any) => {
+      const prodInventario = (inventory as any[]).find((p:any) => p.id === l.productId);
+      const stockReal = Number(prodInventario?.stock || 0);
+      const cantPendiente = Math.max(0, (l.cantidad || 1) - (l.cantidadSurtida || 0));
+      const cantSurtir = Math.min(cantPendiente, stockReal);
+      return {
+        id:       l.productId,
+        nombre:   l.product?.name || l.productId,
+        precio:   Number(l.precioUnitario || l.unitPrice || 0),
+        cantidad: cantSurtir,
+        cantPendiente,
+        stock:    stockReal,
+        sinStock: stockReal === 0,
+      };
+    }).filter((l:any) => l.cantPendiente > 0);
     setCarrito(nuevasLineas);
     setOcId(oc.id);
     setEsCredito(true);
   };
 
   const cambiarCantidad = (id: string, valor: number) => {
-    setCarrito(c => c.map(i => i.id===id ? {...i, cantidad:Math.max(0, valor)} : i).filter(i=>i.cantidad>0));
+    setCarrito(c => c.map(i => i.id===id ? {...i, cantidad:Math.max(0, Math.min(valor, i.stock))} : i).filter(i=>i.cantidad>0));
   };
 
   const cambiar = (id: string, delta: number) =>
@@ -130,13 +138,16 @@ export default function POSPage() {
     const porMetodo: Record<string,number> = {};
     const porCanal:  Record<string,number> = {};
     let totalBruto = 0;
+    let totalCredito = 0;
     for (const s of hoy) {
-      porMetodo[s.paymentMethod] = (porMetodo[s.paymentMethod]||0) + Number(s.total);
-      porCanal[s.channel]        = (porCanal[s.channel]||0)        + Number(s.total);
+      const metodo = s.paymentMethod || 'efectivo';
+      porMetodo[metodo] = (porMetodo[metodo]||0) + Number(s.total);
+      porCanal[s.channel] = (porCanal[s.channel]||0) + Number(s.total);
       totalBruto += Number(s.total);
+      if (metodo === 'credito') totalCredito += Number(s.total);
     }
     const efContado = DENOMINACIONES.reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0);
-    setTiraData({ hoy, porMetodo, porCanal, totalBruto, totalDesc:0, fecha: today, efectivoContado: efContado });
+    setTiraData({ hoy, porMetodo, porCanal, totalBruto, totalCredito, totalDesc:0, fecha: today, efectivoContado: efContado });
   };
 
   const saleM = useMutation({
@@ -261,47 +272,132 @@ export default function POSPage() {
                 <span style={{ fontSize:12, color:'#10b981' }}>📋 OC cargada — modifica cantidades en el carrito</span>
               </div>
             )}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
-              {(inventory as any[]).filter((p:any) => p.isActive !== false).map((p:any) => {
+            {/* Catálogo agrupado */}
+            {(() => {
+              const prods = (inventory as any[]).filter((p:any) => p.isActive !== false);
+              
+              // Detectar familia por SKU/nombre
+              const getFamilia = (p: any) => {
+                const sku = (p.sku || '').toUpperCase();
+                if (sku.startsWith('MCH')) return 'Machete';
+                if (sku.startsWith('CHI')) return 'Chicali';
+                if (sku.startsWith('ESC')) return 'Escarchado';
+                if (sku.startsWith('CER')) return 'Cerdo';
+                if (sku.startsWith('MAC')) return 'Machaca';
+                if (sku.startsWith('SCR')) return 'Scrap';
+                return 'Otros';
+              };
+
+              const GRUPOS: Record<string, { label:string, familias:string[], color:string }> = {
+                RES:   { label:'Res',   familias:['Machete','Chicali','Escarchado','Scrap'], color:'#B5451B' },
+                CER:   { label:'Cerdo', familias:['Cerdo'],   color:'#8b5cf6' },
+                OTROS: { label:'Otros', familias:['Machaca','Otros'], color:'#64748b' },
+              };
+
+              const ProductCard = ({ p }: { p: any }) => {
                 const precio = Number((p as any)[priceKey] || 0);
                 const sinPrecio = precio === 0;
                 const enCarrito = carrito.find(i => i.id===p.id);
                 const bloqueado = !!ocId;
+                // Mostrar solo gramaje como etiqueta corta
+                const gramLabel = p.gramsWeight >= 1000
+                  ? `${p.gramsWeight/1000}kg`
+                  : `${p.gramsWeight}g`;
                 return (
-                  <button key={p.id} onClick={() => agregar(p)}
+                  <button onClick={() => agregar(p)}
                     disabled={p.stock<=0||sinPrecio||bloqueado}
-                    style={{ padding:10, borderRadius:12,
-                      border:`2px solid ${enCarrito?canalColor:sinPrecio||bloqueado?'#1e293b':'#334155'}`,
-                      background: enCarrito?canalColor+'11':'#1e293b',
+                    style={{ padding:'8px 10px', borderRadius:10, minWidth:80,
+                      border:`2px solid ${enCarrito?canalColor:p.stock<=0?'#1e293b':sinPrecio||bloqueado?'#1e293b':'#334155'}`,
+                      background: enCarrito?canalColor+'22':'#1e293b',
                       cursor: p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer',
                       opacity: p.stock<=0?0.4:sinPrecio?0.5:bloqueado&&!enCarrito?0.3:1,
-                      textAlign:'left', position:'relative' }}>
+                      textAlign:'center', position:'relative' }}>
                     {enCarrito && (
-                      <div style={{ position:'absolute', top:-8, right:-8, width:20, height:20,
-                        borderRadius:'50%', background:canalColor, color:'#fff', fontSize:10,
+                      <div style={{ position:'absolute', top:-7, right:-7, width:18, height:18,
+                        borderRadius:'50%', background:canalColor, color:'#fff', fontSize:9,
                         fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>
                         {enCarrito.cantidad}
                       </div>
                     )}
-                    <div style={{ display:'flex', gap:4, marginBottom:4 }}>
-                      <span style={{ fontSize:9, padding:'1px 5px', borderRadius:4, background:canalColor+'22', color:canalColor }}>
-                        {TIPO_LABELS[p.meatType]||p.meatType}
-                      </span>
-                      <span style={{ fontSize:9, padding:'1px 5px', borderRadius:4, background:'#334155', color:'#94a3b8' }}>
-                        {SABOR_LABELS[p.flavor]||p.flavor}
-                      </span>
-                    </div>
-                    <p style={{ fontSize:12, fontWeight:600, margin:'0 0 2px', color:'#f1f5f9' }}>{p.name}</p>
-                    <p style={{ fontSize:15, fontWeight:700, color:sinPrecio?'#64748b':canalColor, margin:'0 0 2px' }}>
-                      {sinPrecio?'Sin precio':fmt(precio)}
+                    <p style={{ fontSize:13, fontWeight:700, color:canalColor, margin:'0 0 2px' }}>{gramLabel}</p>
+                    <p style={{ fontSize:13, fontWeight:700, color:sinPrecio?'#64748b':canalColor, margin:'0 0 2px' }}>
+                      {sinPrecio?'—':fmt(precio)}
                     </p>
-                    <p style={{ fontSize:10, color:p.stock<=3?'#f87171':'#64748b', margin:0 }}>
-                      {p.stock<=0?'Sin stock':`${p.stock} pzas`}
+                    <p style={{ fontSize:9, color:p.stock<=3&&p.stock>0?'#f59e0b':p.stock<=0?'#f87171':'#64748b', margin:0 }}>
+                      {p.stock<=0?'Sin stock':`${p.stock}`}
                     </p>
                   </button>
                 );
-              })}
-            </div>
+              };
+
+              return Object.entries(GRUPOS).map(([grupoKey, grupo]) => {
+                const familias = grupo.familias.filter(fam =>
+                  prods.some(p => getFamilia(p) === fam)
+                );
+                if (familias.length === 0) return null;
+
+                return (
+                  <div key={grupoKey} style={{ marginBottom:20 }}>
+                    {/* Encabezado de grupo */}
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                      <div style={{ width:4, height:20, borderRadius:2, background:grupo.color }}/>
+                      <p style={{ fontSize:13, fontWeight:700, color:grupo.color, margin:0, textTransform:'uppercase', letterSpacing:1 }}>
+                        {grupo.label}
+                      </p>
+                      <div style={{ flex:1, height:1, background:'#1e293b' }}/>
+                    </div>
+
+                    {/* Familias dentro del grupo */}
+                    {familias.map(fam => {
+                      const famProds = prods.filter(p => getFamilia(p) === fam);
+                      if (famProds.length === 0) return null;
+
+                      // Agrupar por sabor y ordenar por gramaje
+                      const sabores = ['NAT','CHI','BBQ','MIX'];
+                      const porSabor = sabores.map(sabor => ({
+                        sabor,
+                        label: SABOR_LABELS[sabor] || sabor,
+                        prods: famProds
+                          .filter(p => p.flavor === sabor)
+                          .sort((a:any, b:any) => Number(a.gramsWeight||0) - Number(b.gramsWeight||0)),
+                      })).filter(s => s.prods.length > 0);
+
+                      // Si no tiene sabores definidos, mostrar todos en una fila
+                      const sinSabor = famProds.filter(p => !sabores.includes(p.flavor))
+                        .sort((a:any, b:any) => Number(a.gramsWeight||0) - Number(b.gramsWeight||0));
+
+                      return (
+                        <div key={fam} style={{ marginBottom:14 }}>
+                          <p style={{ fontSize:11, color:'#94a3b8', fontWeight:600, margin:'0 0 8px',
+                            textTransform:'uppercase', letterSpacing:0.5 }}>
+                            {fam}
+                          </p>
+
+                          {/* Una fila por sabor */}
+                          {porSabor.map(({ sabor, label, prods: saborProds }) => (
+                            <div key={sabor} style={{ marginBottom:8 }}>
+                              <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px', fontStyle:'italic' }}>
+                                {label}
+                              </p>
+                              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                {saborProds.map(p => <ProductCard key={p.id} p={p}/>)}
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Productos sin sabor definido */}
+                          {sinSabor.length > 0 && (
+                            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                              {sinSabor.map(p => <ProductCard key={p.id} p={p}/>)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              });
+            })()}
           </div>
 
           {/* Carrito */}
@@ -673,8 +769,8 @@ export default function POSPage() {
                   </div>
                   {Object.entries(tiraData.porMetodo).map(([k,v]:any) => (
                     <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <span style={{ fontSize:11, color:'#94a3b8' }}>{k}</span>
-                      <span style={{ fontSize:12, color:'#94a3b8' }}>{fmt(v)}</span>
+                      <span style={{ fontSize:11, color: k==='credito'?'#f59e0b':'#94a3b8', textTransform:'capitalize' }}>{k}</span>
+                      <span style={{ fontSize:12, color: k==='credito'?'#f59e0b':'#94a3b8' }}>{fmt(v)}</span>
                     </div>
                   ))}
                 </div>
