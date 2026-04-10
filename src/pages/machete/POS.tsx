@@ -299,19 +299,15 @@ export default function POSPage() {
                 const sinPrecio = precio === 0;
                 const enCarrito = carrito.find(i => i.id===p.id);
                 const bloqueado = !!ocId;
-                // Mostrar solo gramaje como etiqueta corta
-                const gramLabel = p.gramsWeight >= 1000
-                  ? `${p.gramsWeight/1000}kg`
-                  : `${p.gramsWeight}g`;
                 return (
                   <button onClick={() => agregar(p)}
                     disabled={p.stock<=0||sinPrecio||bloqueado}
-                    style={{ padding:'8px 10px', borderRadius:10, minWidth:80,
-                      border:`2px solid ${enCarrito?canalColor:p.stock<=0?'#1e293b':sinPrecio||bloqueado?'#1e293b':'#334155'}`,
-                      background: enCarrito?canalColor+'22':'#1e293b',
+                    style={{ padding:8, borderRadius:10,
+                      border:`2px solid ${enCarrito?canalColor:sinPrecio||bloqueado?'#1e293b':'#334155'}`,
+                      background: enCarrito?canalColor+'11':'#1e293b',
                       cursor: p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer',
                       opacity: p.stock<=0?0.4:sinPrecio?0.5:bloqueado&&!enCarrito?0.3:1,
-                      textAlign:'center', position:'relative' }}>
+                      textAlign:'left', position:'relative' }}>
                     {enCarrito && (
                       <div style={{ position:'absolute', top:-7, right:-7, width:18, height:18,
                         borderRadius:'50%', background:canalColor, color:'#fff', fontSize:9,
@@ -319,12 +315,20 @@ export default function POSPage() {
                         {enCarrito.cantidad}
                       </div>
                     )}
-                    <p style={{ fontSize:13, fontWeight:700, color:canalColor, margin:'0 0 2px' }}>{gramLabel}</p>
-                    <p style={{ fontSize:13, fontWeight:700, color:sinPrecio?'#64748b':canalColor, margin:'0 0 2px' }}>
-                      {sinPrecio?'—':fmt(precio)}
+                    <div style={{ display:'flex', gap:3, marginBottom:4 }}>
+                      <span style={{ fontSize:9, padding:'1px 5px', borderRadius:4, background:canalColor+'22', color:canalColor }}>
+                        {TIPO_LABELS[p.meatType]||p.meatType}
+                      </span>
+                      <span style={{ fontSize:9, padding:'1px 5px', borderRadius:4, background:'#334155', color:'#94a3b8' }}>
+                        {SABOR_LABELS[p.flavor]||p.flavor}
+                      </span>
+                    </div>
+                    <p style={{ fontSize:11, fontWeight:600, margin:'0 0 3px', color:'#f1f5f9', lineHeight:1.2 }}>{p.name}</p>
+                    <p style={{ fontSize:14, fontWeight:700, color:sinPrecio?'#64748b':canalColor, margin:'0 0 2px' }}>
+                      {sinPrecio?'Sin precio':fmt(precio)}
                     </p>
-                    <p style={{ fontSize:9, color:p.stock<=3&&p.stock>0?'#f59e0b':p.stock<=0?'#f87171':'#64748b', margin:0 }}>
-                      {p.stock<=0?'Sin stock':`${p.stock}`}
+                    <p style={{ fontSize:10, color:p.stock<=3&&p.stock>0?'#f59e0b':p.stock<=0?'#f87171':'#64748b', margin:0 }}>
+                      {p.stock<=0?'Sin stock':`${p.stock} pzas`}
                     </p>
                   </button>
                 );
