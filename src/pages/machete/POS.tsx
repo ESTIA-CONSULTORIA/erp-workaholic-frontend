@@ -364,6 +364,9 @@ export default function POSPage() {
           efectivoCaja={efectivoCaja}
           onEfectivoCaja={setEfectivoCaja}
           onClose={() => setShowTiraX(false)}
+          onConfirm={() => {
+            setShowTiraX(false);
+          }}
         />
       )}
 
