@@ -4,23 +4,71 @@ import { useERPStore } from '../../store/erp.store';
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-const NAV = [
-  { to:'/dashboard', icon:'▦', label:'Dashboard', roles:['admin','administrador','gerente','contador','rh','cajero','director'] },
-  { to:'/corte-caja', icon:'🏧', label:'Corte de Caja', roles:['admin','administrador','gerente','contador','cajero'] },
-  { to:'/gastos', icon:'◎', label:'Gastos', roles:['admin','administrador','gerente','contador','cajero'] },
-  { to:'/conciliacion', icon:'⊜', label:'Conciliación', roles:['admin','administrador','gerente','contador','director'] },
-  { to:'/cxc', icon:'◷', label:'CxC / CxP', roles:['admin','administrador','gerente','contador','director'] },
-  { to:'/reportes', icon:'∑', label:'Est. Financieros', roles:['admin','administrador','gerente','contador','director'] },
-  { to:'/documentos', icon:'⊞', label:'Documentos', roles:['admin','administrador','gerente','contador','cajero'] },
-  { to:'/consolidado', icon:'◈', label:'Consolidado', roles:['admin','administrador','gerente','contador','director'] },
-  { to:'/rh', icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
-  { to:'/rh/nomina', icon:'💰', label:'Nómina', roles:['admin','administrador','gerente','rh','contador'] },
-  { to:'/pos',             icon:'🏪', label:'POS',            companies:['MACHETE'] },
-  { to:'/machete/inventario',  icon:'📦', label:'Inventarios',  companies:['MACHETE'] },
-  { to:'/machete/produccion',  icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
-  { to:'/catalogo',        icon:'≋',  label:'Catálogo',       companies:['MACHETE'] },
-  { to:'/machete-reportes',icon:'📊',  label:'Rpt. Ventas',    companies:['MACHETE'] },
-  { to:'/admin', icon:'⊛', label:'Admin', roles:['admin','administrador'] },
+const NAV_GROUPS = [
+  {
+    id: 'dashboard',
+    label: null, // sin encabezado
+    items: [
+      { to:'/dashboard', icon:'▦', label:'Dashboard', roles:['admin','administrador','gerente','contador','rh','cajero','director'] },
+    ]
+  },
+  {
+    id: 'operaciones',
+    label: 'Operaciones',
+    icon: '🏪',
+    items: [
+      { to:'/pos',                icon:'🏪', label:'POS',          companies:['MACHETE'] },
+      { to:'/corte-caja',         icon:'🏧', label:'Corte de Caja',roles:['admin','administrador','gerente','contador','cajero'] },
+      { to:'/machete/inventario', icon:'📦', label:'Inventario',   companies:['MACHETE'] },
+      { to:'/machete/produccion', icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
+      { to:'/catalogo',           icon:'≋',  label:'Catálogo',     companies:['MACHETE'] },
+    ]
+  },
+  {
+    id: 'finanzas',
+    label: 'Finanzas',
+    icon: '💼',
+    items: [
+      { to:'/gastos',       icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
+      { to:'/conciliacion', icon:'⊜', label:'Conciliación',  roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/cxc',          icon:'◷', label:'CxC / CxP',     roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/clientes',     icon:'👤', label:'Clientes / OC', roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/documentos',   icon:'⊞', label:'Documentos',    roles:['admin','administrador','gerente','contador','cajero'] },
+    ]
+  },
+  {
+    id: 'estados',
+    label: 'Estados Financieros',
+    icon: '∑',
+    items: [
+      { to:'/reportes',    icon:'∑', label:'Est. Resultados',  roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/consolidado', icon:'◈', label:'Consolidado',      roles:['admin','administrador','gerente','contador','director'] },
+    ]
+  },
+  {
+    id: 'reportes',
+    label: 'Reportes',
+    icon: '📊',
+    items: [
+      { to:'/machete-reportes', icon:'📊', label:'Ventas',       companies:['MACHETE'] },
+    ]
+  },
+  {
+    id: 'rh',
+    label: 'RH',
+    icon: '👥',
+    items: [
+      { to:'/rh',       icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
+      { to:'/rh/nomina',icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
+    ]
+  },
+  {
+    id: 'admin',
+    label: null,
+    items: [
+      { to:'/admin', icon:'⊛', label:'Admin', roles:['admin','administrador'] },
+    ]
+  },
 ];
 
 function getUltimos12() {
@@ -37,17 +85,25 @@ function getUltimos12() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, activeCompany, activePeriod, setActiveCompany, setActivePeriod, logout } = useERPStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed,      setCollapsed]      = useState(false);
+  const [openGroups,     setOpenGroups]     = useState<Record<string,boolean>>({
+    operaciones: true, finanzas: true, estados: false, reportes: false, rh: false,
+  });
+
   const color    = activeCompany?.color || '#3b82f6';
   const periodos = getUltimos12();
 
   if (!user || !activeCompany) return null;
 
-  const visibleNav = NAV.filter((item: any) => {
-    if (item.roles     && !item.roles.includes(activeCompany.roleCode))     return false;
-    if (item.companies && !item.companies.includes(activeCompany.companyCode)) return false;
+  const toggleGroup = (id: string) => {
+    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const filterItem = (item: any) => {
+    if (item.roles     && !item.roles.includes(activeCompany.roleCode))         return false;
+    if (item.companies && !item.companies.includes(activeCompany.companyCode))  return false;
     return true;
-  });
+  };
 
   return (
     <div style={{ display:'flex', height:'100vh', overflow:'hidden' }}>
@@ -90,22 +146,72 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Nav */}
+        {/* Nav agrupado */}
         <nav style={{ flex:1, overflowY:'auto', paddingTop:8, paddingBottom:8 }}>
-          {visibleNav.map(item => (
-            <NavLink key={item.to} to={item.to} style={({ isActive }) => ({
-              display:'flex', alignItems:'center', gap:12,
-              padding:'10px 12px', margin:'0 8px', borderRadius:8,
-              textDecoration:'none', cursor:'pointer', fontSize:14, fontWeight:500,
-              background: isActive ? color + '22' : 'transparent',
-              color:      isActive ? color        : '#94a3b8',
-              borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
-              transition:'all 0.15s',
-            })}>
-              <span style={{ fontSize:16, width:20, textAlign:'center', flexShrink:0 }}>{item.icon}</span>
-              {!collapsed && <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>}
-            </NavLink>
-          ))}
+          {NAV_GROUPS.map(group => {
+            const visibleItems = group.items.filter(filterItem);
+            if (visibleItems.length === 0) return null;
+
+            // Grupo sin encabezado — mostrar items directo
+            if (!group.label) {
+              return (
+                <div key={group.id}>
+                  {visibleItems.map(item => (
+                    <NavLink key={item.to} to={item.to} style={({ isActive }) => ({
+                      display:'flex', alignItems:'center', gap:12,
+                      padding:'9px 12px', margin:'0 8px', borderRadius:8,
+                      textDecoration:'none', cursor:'pointer', fontSize:13, fontWeight:500,
+                      background: isActive ? color + '22' : 'transparent',
+                      color:      isActive ? color        : '#94a3b8',
+                      borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
+                      transition:'all 0.15s',
+                    })}>
+                      <span style={{ fontSize:15, width:20, textAlign:'center', flexShrink:0 }}>{item.icon}</span>
+                      {!collapsed && <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>}
+                    </NavLink>
+                  ))}
+                </div>
+              );
+            }
+
+            const isOpen = openGroups[group.id] !== false;
+
+            return (
+              <div key={group.id} style={{ marginBottom:2 }}>
+                {/* Encabezado del grupo */}
+                {!collapsed && (
+                  <button onClick={() => toggleGroup(group.id)}
+                    style={{ width:'100%', display:'flex', alignItems:'center', gap:8,
+                      padding:'6px 12px', margin:'2px 0', background:'none', border:'none',
+                      cursor:'pointer', textAlign:'left' }}>
+                    <span style={{ fontSize:12 }}>{group.icon}</span>
+                    <span style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+                      letterSpacing:0.8, flex:1 }}>{group.label}</span>
+                    <span style={{ fontSize:10, color:'#475569', transition:'transform 0.2s',
+                      transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                  </button>
+                )}
+
+                {/* Items del grupo */}
+                {(isOpen || collapsed) && visibleItems.map(item => (
+                  <NavLink key={item.to} to={item.to} style={({ isActive }) => ({
+                    display:'flex', alignItems:'center', gap:12,
+                    padding:'8px 12px',
+                    margin: collapsed ? '0 8px' : '0 8px 0 16px',
+                    borderRadius:8,
+                    textDecoration:'none', cursor:'pointer', fontSize:13, fontWeight:500,
+                    background: isActive ? color + '22' : 'transparent',
+                    color:      isActive ? color        : '#94a3b8',
+                    borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
+                    transition:'all 0.15s',
+                  })}>
+                    <span style={{ fontSize:14, width:20, textAlign:'center', flexShrink:0 }}>{item.icon}</span>
+                    {!collapsed && <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Usuario */}
