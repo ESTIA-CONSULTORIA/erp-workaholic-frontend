@@ -332,71 +332,75 @@ export default function POSPage() {
                 </div>
               )}
 
-              {/* Método de pago */}
+              {/* Cliente y OC — primero si es crédito */}
               <div style={{ marginBottom:10 }}>
-                <p style={{ fontSize:11, color:'#64748b', margin:'0 0 6px' }}>Método de pago</p>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
-                  {['efectivo','tarjeta','transferencia'].map(m => (
-                    <button key={m} onClick={() => { setMetodo(m); setEsCredito(false); }}
-                      style={{ padding:'6px 4px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer',
-                        border:`2px solid ${!esCredito&&metodo===m?canalColor:'#334155'}`,
-                        background: !esCredito&&metodo===m?canalColor+'22':'transparent',
-                        color: !esCredito&&metodo===m?canalColor:'#64748b',
-                        textTransform:'capitalize' }}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setEsCredito(!esCredito)}
-                  style={{ width:'100%', marginTop:6, padding:'6px', borderRadius:8, fontSize:11,
-                    fontWeight:600, cursor:'pointer',
+                <button onClick={() => { setEsCredito(!esCredito); setClienteId(''); setOcId(''); }}
+                  style={{ width:'100%', padding:'8px', borderRadius:8, fontSize:12,
+                    fontWeight:600, cursor:'pointer', marginBottom: esCredito ? 8 : 0,
                     border:`2px solid ${esCredito?'#f59e0b':'#334155'}`,
                     background: esCredito?'#f59e0b22':'transparent',
                     color: esCredito?'#f59e0b':'#64748b' }}>
-                  💳 Crédito
+                  💳 {esCredito ? 'Venta a crédito ✓' : 'Venta a crédito'}
                 </button>
-              </div>
 
-              {/* Cliente y OC */}
-              {esCredito && (
-                <div style={{ marginBottom:10 }}>
-                  <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Cliente</label>
-                  <select value={clienteId} onChange={e=>{ setClienteId(e.target.value); setOcId(''); }}
-                    style={{ width:'100%', padding:'6px 8px', borderRadius:8, fontSize:12,
-                      background:'#0f172a', border:'1px solid #334155', color:'#f1f5f9', marginBottom:8 }}>
-                    <option value="">— Seleccionar cliente —</option>
-                    {(clientes as any[]).map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                {esCredito && (
+                  <div>
+                    <select value={clienteId} onChange={e=>{ setClienteId(e.target.value); setOcId(''); setCarrito([]); }}
+                      style={{ width:'100%', padding:'6px 8px', borderRadius:8, fontSize:12,
+                        background:'#0f172a', border:'1px solid #f59e0b', color:'#f1f5f9', marginBottom:6 }}>
+                      <option value="">— Seleccionar cliente —</option>
+                      {(clientes as any[]).map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
 
-                  {clienteId && (ocsPendientes as any[]).length > 0 && (
-                    <>
-                      <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>OC pendiente (opcional)</label>
+                    {clienteId && (
                       <select value={ocId} onChange={e => {
                           setOcId(e.target.value);
                           if (e.target.value) {
                             const oc = (ocsPendientes as any[]).find((o:any) => o.id === e.target.value);
                             if (oc) cargarDesdeOC(oc);
+                          } else {
+                            setCarrito([]);
                           }
                         }}
                         style={{ width:'100%', padding:'6px 8px', borderRadius:8, fontSize:12,
-                          background:'#0f172a', border:'1px solid #f59e0b', color:'#f1f5f9' }}>
-                        <option value="">— Sin OC / venta libre —</option>
+                          background:'#0f172a', border:'1px solid #334155', color:'#f1f5f9' }}>
+                        <option value="">— Venta libre (sin OC) —</option>
                         {(ocsPendientes as any[]).map((oc:any) => (
                           <option key={oc.id} value={oc.id}>
-                            {oc.folio || oc.id.slice(-6)} — {fmt(oc.total || 0)}
+                            {oc.numero} — Saldo: {fmt(oc.saldo || 0)}
                           </option>
                         ))}
                       </select>
-                    </>
-                  )}
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Método de pago — solo para venta no crédito */}
+              {!esCredito && (
+                <div style={{ marginBottom:10 }}>
+                  <p style={{ fontSize:11, color:'#64748b', margin:'0 0 6px' }}>Método de pago</p>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                    {['efectivo','tarjeta','transferencia'].map(m => (
+                      <button key={m} onClick={() => setMetodo(m)}
+                        style={{ padding:'6px 4px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer',
+                          border:`2px solid ${metodo===m?canalColor:'#334155'}`,
+                          background: metodo===m?canalColor+'22':'transparent',
+                          color: metodo===m?canalColor:'#64748b',
+                          textTransform:'capitalize' }}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {error && <p style={{ color:'#f87171', fontSize:12, marginBottom:8 }}>{error}</p>}
 
-              <button onClick={cobrar} disabled={saleM.isPending}
+              <button onClick={cobrar} 
+                disabled={saleM.isPending || (esCredito && !clienteId) || carrito.length === 0}
                 style={{ width:'100%', padding:'12px', borderRadius:12, border:'none',
-                  background: esCredito?'#f59e0b':canalColor,
+                  background: (esCredito && !clienteId) || carrito.length === 0 ? '#334155' : esCredito?'#f59e0b':canalColor,
                   color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer' }}>
                 {saleM.isPending?'Procesando…':esCredito?`Registrar crédito — ${fmt(total)}`:`Cobrar ${fmt(total)}`}
               </button>
