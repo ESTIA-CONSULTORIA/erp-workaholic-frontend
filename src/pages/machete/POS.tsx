@@ -13,6 +13,9 @@ const CANALES = [
 
 const TIPO_LABELS: Record<string,string>  = { RES:'Res', CER:'Cerdo' };
 const SABOR_LABELS: Record<string,string> = { NAT:'Natural', CHI:'Chile', BBQ:'BBQ' };
+const DENOMINACIONES = [500,200,100,50,20,10,5,2,1,0.5];
+const TERMINALES = [['debito','Débito'],['credito','Crédito'],['transferencia','Transferencia']];
+const DELIVERY    = [['rappi','Rappi'],['ubereats','Uber Eats'],['didi','DiDi Food'],['pedidosya','Pedidos Ya']];
 
 export default function POSPage() {
   const { activeCompany } = useERPStore();
@@ -24,6 +27,7 @@ export default function POSPage() {
   const [metodo,     setMetodo]     = useState('efectivo');
   const [esCredito,  setEsCredito]  = useState(false);
   const [clienteId,  setClienteId]  = useState('');
+  const [ocId,       setOcId]       = useState('');
   const [exito,      setExito]      = useState(false);
   const [error,      setError]      = useState('');
 
@@ -36,10 +40,14 @@ export default function POSPage() {
   const [pinError,      setPinError]      = useState('');
 
   // Tira X / Z
-  const [showTiraX, setShowTiraX] = useState(false);
-  const [showTiraZ, setShowTiraZ] = useState(false);
+  const [showTiraX,    setShowTiraX]    = useState(false);
+  const [showTiraZ,    setShowTiraZ]    = useState(false);
   const [efectivoCaja, setEfectivoCaja] = useState<any>({});
-  const [tiraData, setTiraData] = useState<any>(null);
+  const [tiraData,     setTiraData]     = useState<any>(null);
+
+  // Ventana de cobro en efectivo
+  const [showCobro, setShowCobro] = useState(false);
+  const [conCuanto, setConCuanto] = useState(0);
 
   const canalConfig = CANALES.find(c => c.id === canal)!;
   const canalColor  = canalConfig.color;
@@ -57,6 +65,12 @@ export default function POSPage() {
     enabled:  !!cid && esCredito,
   });
 
+  const { data: ocsPendientes = [] } = useQuery({
+    queryKey: ['ocs-pendientes', cid, clienteId],
+    queryFn:  () => api.get(`/companies/${cid}/ordenes?clientId=${clienteId}&status=PENDIENTE`).then(r => r.data),
+    enabled:  !!cid && !!clienteId && esCredito,
+  });
+
   const agregar = (p: any) => {
     const precio = Number((p as any)[priceKey] || 0);
     if (precio === 0) { setError('Sin precio para este canal'); return; }
@@ -72,12 +86,26 @@ export default function POSPage() {
     });
   };
 
+  const cargarDesdeOC = (oc: any) => {
+    if (!oc?.lineas) return;
+    const nuevasLineas = (oc.lineas as any[]).map((l: any) => ({
+      id:       l.productId,
+      nombre:   l.product?.name || l.productId,
+      precio:   Number(l.unitPrice || l.precioUnitario || 0),
+      cantidad: l.cantidadPendiente || l.cantidad || 1,
+      stock:    999,
+    }));
+    setCarrito(nuevasLineas);
+    setOcId(oc.id);
+  };
+
   const cambiar = (id: string, delta: number) =>
     setCarrito(c => c.map(i => i.id===id?{...i,cantidad:Math.max(0,Math.min(i.cantidad+delta,i.stock))}:i).filter(i=>i.cantidad>0));
 
-  const subtotal = carrito.reduce((t,i) => t+i.precio*i.cantidad, 0);
+  const subtotal  = carrito.reduce((t,i) => t+i.precio*i.cantidad, 0);
   const descMonto = tipoDesc==='cortesia' ? subtotal : (descValor > 0 ? Math.min(descValor, subtotal) : 0);
-  const total = descAuth ? Math.max(0, subtotal - descMonto) : subtotal;
+  const total     = descAuth ? Math.max(0, subtotal - descMonto) : subtotal;
+  const cambio    = Math.max(0, conCuanto - total);
 
   const verificarPin = async () => {
     setPinError('');
@@ -96,14 +124,15 @@ export default function POSPage() {
     const hoy = data.filter((s:any) => s.date.slice(0,10) === today);
     const porMetodo: Record<string,number> = {};
     const porCanal:  Record<string,number> = {};
-    let totalDesc = 0;
     let totalBruto = 0;
     for (const s of hoy) {
       porMetodo[s.paymentMethod] = (porMetodo[s.paymentMethod]||0) + Number(s.total);
       porCanal[s.channel]        = (porCanal[s.channel]||0)        + Number(s.total);
       totalBruto += Number(s.total);
     }
-    setTiraData({ hoy, porMetodo, porCanal, totalBruto, totalDesc, fecha: today });
+    // Calcular efectivo contado desde desglose
+    const efContado = DENOMINACIONES.reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0);
+    setTiraData({ hoy, porMetodo, porCanal, totalBruto, totalDesc:0, fecha: today, efectivoContado: efContado });
   };
 
   const saleM = useMutation({
@@ -112,6 +141,7 @@ export default function POSPage() {
       channel:       canal,
       paymentMethod: esCredito ? 'credito' : metodo,
       clientId:      esCredito ? clienteId : null,
+      ocId:          ocId || null,
       isCredit:      esCredito,
       discount:      descAuth ? descMonto : 0,
       discountType:  descAuth ? tipoDesc : null,
@@ -120,6 +150,7 @@ export default function POSPage() {
     }),
     onSuccess: () => {
       setCarrito([]); setDescAuth(null); setDescValor(0); setDescPin('');
+      setOcId(''); setConCuanto(0); setShowCobro(false);
       setExito(true); setTimeout(() => setExito(false), 3000);
     },
     onError: (e:any) => setError(e.response?.data?.message || 'Error'),
@@ -127,7 +158,13 @@ export default function POSPage() {
 
   const cobrar = () => {
     if (esCredito && !clienteId) { setError('Selecciona un cliente'); return; }
-    setError(''); saleM.mutate();
+    setError('');
+    if (!esCredito && metodo === 'efectivo') {
+      setConCuanto(0);
+      setShowCobro(true);
+      return;
+    }
+    saleM.mutate();
   };
 
   return (
@@ -227,7 +264,6 @@ export default function POSPage() {
 
           {carrito.length > 0 && (
             <div style={{ padding:12, borderTop:'1px solid #334155' }}>
-              {/* Subtotal y descuento */}
               <div style={{ marginBottom:10 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                   <span style={{ fontSize:12, color:'#64748b' }}>Subtotal</span>
@@ -247,7 +283,6 @@ export default function POSPage() {
                 </div>
               </div>
 
-              {/* Botón descuento/cortesía */}
               {!descAuth && (
                 <button onClick={() => setShowDescuento(true)}
                   style={{ width:'100%', marginBottom:10, padding:'6px', borderRadius:8, fontSize:12,
@@ -256,7 +291,6 @@ export default function POSPage() {
                 </button>
               )}
 
-              {/* Modal PIN */}
               {showDescuento && (
                 <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:10 }}>
                   <p style={{ fontSize:12, fontWeight:600, margin:'0 0 8px', color:'#f1f5f9' }}>Autorización gerente</p>
@@ -323,15 +357,38 @@ export default function POSPage() {
                 </button>
               </div>
 
+              {/* Cliente y OC */}
               {esCredito && (
                 <div style={{ marginBottom:10 }}>
                   <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Cliente</label>
-                  <select value={clienteId} onChange={e=>setClienteId(e.target.value)}
+                  <select value={clienteId} onChange={e=>{ setClienteId(e.target.value); setOcId(''); }}
                     style={{ width:'100%', padding:'6px 8px', borderRadius:8, fontSize:12,
-                      background:'#0f172a', border:'1px solid #334155', color:'#f1f5f9' }}>
-                    <option value="">— Seleccionar —</option>
+                      background:'#0f172a', border:'1px solid #334155', color:'#f1f5f9', marginBottom:8 }}>
+                    <option value="">— Seleccionar cliente —</option>
                     {(clientes as any[]).map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+
+                  {clienteId && (ocsPendientes as any[]).length > 0 && (
+                    <>
+                      <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>OC pendiente (opcional)</label>
+                      <select value={ocId} onChange={e => {
+                          setOcId(e.target.value);
+                          if (e.target.value) {
+                            const oc = (ocsPendientes as any[]).find((o:any) => o.id === e.target.value);
+                            if (oc) cargarDesdeOC(oc);
+                          }
+                        }}
+                        style={{ width:'100%', padding:'6px 8px', borderRadius:8, fontSize:12,
+                          background:'#0f172a', border:'1px solid #f59e0b', color:'#f1f5f9' }}>
+                        <option value="">— Sin OC / venta libre —</option>
+                        {(ocsPendientes as any[]).map((oc:any) => (
+                          <option key={oc.id} value={oc.id}>
+                            {oc.folio || oc.id.slice(-6)} — {fmt(oc.total || 0)}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -355,6 +412,48 @@ export default function POSPage() {
         </div>
       </div>
 
+      {/* Modal cobro en efectivo */}
+      {showCobro && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:320 }}>
+            <h3 style={{ fontSize:16, fontWeight:700, margin:'0 0 20px', color }}>Cobro en efectivo</h3>
+            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                <span style={{ fontSize:13, color:'#64748b' }}>Total a cobrar</span>
+                <span style={{ fontSize:20, fontWeight:700, color }}>{fmt(total)}</span>
+              </div>
+            </div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:6 }}>Con cuánto paga el cliente</label>
+            <input type="number" min={total} step="10" autoFocus
+              className="input-base" style={{ fontSize:18, fontWeight:700, textAlign:'right', marginBottom:16 }}
+              value={conCuanto||''} onChange={e => setConCuanto(+e.target.value)}/>
+            {conCuanto >= total && (
+              <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between' }}>
+                  <span style={{ fontSize:14, color:'#64748b' }}>Cambio</span>
+                  <span style={{ fontSize:24, fontWeight:700, color:'#10b981' }}>{fmt(cambio)}</span>
+                </div>
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setShowCobro(false)}
+                style={{ flex:1, padding:'10px', borderRadius:8, border:'1px solid #334155',
+                  background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
+                Cancelar
+              </button>
+              <button onClick={() => saleM.mutate()} disabled={conCuanto < total || saleM.isPending}
+                style={{ flex:2, padding:'10px', borderRadius:8, border:'none',
+                  background: conCuanto >= total ? color : '#334155',
+                  color:'#fff', cursor: conCuanto >= total ? 'pointer' : 'not-allowed',
+                  fontSize:13, fontWeight:700 }}>
+                {saleM.isPending ? 'Procesando...' : `Confirmar — Cambio ${fmt(cambio)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Tira X */}
       {showTiraX && tiraData && (
         <TiraModal
@@ -364,9 +463,7 @@ export default function POSPage() {
           efectivoCaja={efectivoCaja}
           onEfectivoCaja={setEfectivoCaja}
           onClose={() => setShowTiraX(false)}
-          onConfirm={() => {
-            setShowTiraX(false);
-          }}
+          onConfirm={() => setShowTiraX(false)}
         />
       )}
 
@@ -382,7 +479,6 @@ export default function POSPage() {
           onClose={() => setShowTiraZ(false)}
           onConfirm={() => {
             setShowTiraZ(false);
-            alert(`Corte registrado. Diferencia: ${fmt(efectivoCaja - (tiraData.porMetodo['efectivo']||0))}`);
           }}
         />
       )}
@@ -399,10 +495,18 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
     efectivo:'Efectivo', tarjeta:'Tarjeta', transferencia:'Transferencia', credito:'Crédito'
   };
 
+  const DENOMINACIONES = [500,200,100,50,20,10,5,2,1,0.5];
+  const efContado   = DENOMINACIONES.reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0);
+  const termContado = ['debito','credito','transferencia'].reduce((t,k) => t + (efectivoCaja?.[`term_${k}`]||0), 0);
+  const delContado  = ['rappi','ubereats','didi','pedidosya'].reduce((t,k) => t + (efectivoCaja?.[`del_${k}`]||0), 0);
+
+  const efEsperado   = data.porMetodo['efectivo']     || 0;
+  const termEsperado = (data.porMetodo['tarjeta']||0) + (data.porMetodo['transferencia']||0);
+
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex',
       alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-      <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:400, maxHeight:'80vh', overflowY:'auto' }}>
+      <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:440, maxHeight:'85vh', overflowY:'auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ fontSize:16, fontWeight:700, margin:0, color }}>{titulo}</h3>
           <button onClick={onClose} style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
@@ -420,7 +524,7 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
 
         <div style={{ borderTop:'1px solid #334155', margin:'12px 0' }}/>
 
-        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Ventas por método de pago</p>
+        <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Ventas por método</p>
         {Object.entries(data.porMetodo).map(([k,v]:any) => (
           <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
             <span style={{ fontSize:13, color:'#94a3b8' }}>{METODO_LABELS[k]||k}</span>
@@ -429,24 +533,19 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
         ))}
 
         <div style={{ borderTop:'1px solid #334155', margin:'12px 0' }}/>
-
-        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
           <span style={{ fontSize:14, fontWeight:700 }}>Total del día</span>
           <span style={{ fontSize:18, fontWeight:700, color }}>{fmt(data.totalBruto)}</span>
         </div>
-        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
-          <span style={{ fontSize:12, color:'#64748b' }}>Transacciones</span>
-          <span style={{ fontSize:13, color:'#94a3b8' }}>{data.hoy.length}</span>
-        </div>
 
-       {/* Tira X — desglose completo */}
+        {/* Tira X — desglose completo */}
         {!isZ && (
           <div>
             <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
               Denominaciones en caja
             </p>
             <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:12 }}>
-              {[500,200,100,50,20,10,5,2,1,0.5].map(d => (
+              {DENOMINACIONES.map(d => (
                 <div key={d} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
                   <span style={{ fontSize:12, color:'#94a3b8', width:50, textAlign:'right' }}>${d}</span>
                   <span style={{ fontSize:11, color:'#64748b' }}>×</span>
@@ -462,15 +561,11 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
               ))}
               <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
                 <span style={{ fontSize:13, color:'#64748b' }}>Total efectivo</span>
-                <span style={{ fontSize:15, fontWeight:700, color }}>
-                  {fmt([500,200,100,50,20,10,5,2,1,0.5].reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0))}
-                </span>
+                <span style={{ fontSize:15, fontWeight:700, color }}>{fmt(efContado)}</span>
               </div>
             </div>
 
-            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
-              Terminal bancaria
-            </p>
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Terminal bancaria</p>
             <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:12 }}>
               {[['debito','Débito'],['credito','Crédito'],['transferencia','Transferencia']].map(([k,l]) => (
                 <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
@@ -484,15 +579,11 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
               ))}
               <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
                 <span style={{ fontSize:13, color:'#64748b' }}>Total terminal</span>
-                <span style={{ fontSize:15, fontWeight:700, color }}>
-                  {fmt(['debito','credito','transferencia'].reduce((t,k) => t + (efectivoCaja?.[`term_${k}`]||0), 0))}
-                </span>
+                <span style={{ fontSize:15, fontWeight:700, color }}>{fmt(termContado)}</span>
               </div>
             </div>
 
-            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
-              Plataformas delivery
-            </p>
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Plataformas delivery</p>
             <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:12 }}>
               {[['rappi','Rappi'],['ubereats','Uber Eats'],['didi','DiDi Food'],['pedidosya','Pedidos Ya']].map(([k,l]) => (
                 <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
@@ -506,32 +597,40 @@ function TiraModal({ titulo, data, color, isZ, efectivoCaja, onEfectivoCaja, onC
               ))}
               <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
                 <span style={{ fontSize:13, color:'#64748b' }}>Total delivery</span>
-                <span style={{ fontSize:15, fontWeight:700, color }}>
-                  {fmt(['rappi','ubereats','didi','pedidosya'].reduce((t,k) => t + (efectivoCaja?.[`del_${k}`]||0), 0))}
-                </span>
+                <span style={{ fontSize:15, fontWeight:700, color }}>{fmt(delContado)}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tira Z — muestra diferencia con lo contado en X */}
+        {/* Tira Z — diferencias */}
         {isZ && (
           <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-              <span style={{ fontSize:12, color:'#64748b' }}>Efectivo esperado</span>
-              <span style={{ fontSize:13, color:'#94a3b8' }}>{fmt(data.porMetodo['efectivo']||0)}</span>
-            </div>
-            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-              <span style={{ fontSize:12, color:'#64748b' }}>Efectivo contado (Tira X)</span>
-              <span style={{ fontSize:13, color:'#94a3b8' }}>{fmt(data.efectivoContado||0)}</span>
-            </div>
-            <div style={{ borderTop:'1px solid #334155', paddingTop:8, display:'flex', justifyContent:'space-between' }}>
-              <span style={{ fontSize:13, fontWeight:700 }}>Diferencia</span>
-              <span style={{ fontSize:16, fontWeight:700,
-                color: (data.efectivoContado||0)-(data.porMetodo['efectivo']||0) >= 0 ? '#10b981' : '#f87171' }}>
-                {fmt((data.efectivoContado||0)-(data.porMetodo['efectivo']||0))}
-              </span>
-            </div>
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 8px' }}>
+              Comparativa
+            </p>
+            {[
+              { label:'Efectivo esperado',    valor: efEsperado,   contado: efContado,   dif: efContado - efEsperado },
+              { label:'Terminal esperada',    valor: termEsperado, contado: termContado, dif: termContado - termEsperado },
+            ].map(r => (
+              <div key={r.label} style={{ marginBottom:12 }}>
+                <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{r.label}</p>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
+                  <span style={{ fontSize:12, color:'#94a3b8' }}>Sistema</span>
+                  <span style={{ fontSize:12, color:'#94a3b8' }}>{fmt(r.valor)}</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
+                  <span style={{ fontSize:12, color:'#94a3b8' }}>Cajero (Tira X)</span>
+                  <span style={{ fontSize:12, color:'#94a3b8' }}>{fmt(r.contado)}</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', borderTop:'1px solid #334155', paddingTop:4 }}>
+                  <span style={{ fontSize:13, fontWeight:700 }}>Diferencia</span>
+                  <span style={{ fontSize:15, fontWeight:700, color: r.dif >= 0 ? '#10b981' : '#f87171' }}>
+                    {r.dif >= 0 ? '+' : ''}{fmt(r.dif)}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
