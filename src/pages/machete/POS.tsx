@@ -67,7 +67,7 @@ export default function POSPage() {
 
   const { data: ocsPendientes = [] } = useQuery({
     queryKey: ['ocs-pendientes', cid, clienteId],
-    queryFn:  () => api.get(`/companies/${cid}/ordenes?clientId=${clienteId}&status=PENDIENTE`).then(r => r.data),
+    queryFn:  () => api.get(`/companies/${cid}/ordenes?clientId=${clienteId}&status=ACTIVAS`).then(r => r.data),
     enabled:  !!cid && !!clienteId && esCredito,
   });
 
