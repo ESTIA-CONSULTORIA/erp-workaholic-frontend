@@ -384,14 +384,14 @@ export function ReportesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
-  const [tab, setTab] = useState<'er'|'ventas'|'cxc'>('er');
+  const [tab, setTab] = useState<'er'|'ventas'|'cxc'|'cxp'>('er');
 
   return (
     <AppLayout>
       <div style={{ maxWidth:1000 }}>
         <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Reportes</h1>
         <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {([['er','Estado de Resultados'],['ventas','Ventas'],['cxc','CxC']] as const).map(([id,label]) => (
+          {([['er','Estado de Resultados'],['ventas','Ventas'],['cxc','CxC'],['cxp','CxP']] as const)
             <button key={id} onClick={() => setTab(id)}
               style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
                 borderBottom: tab===id ? `2px solid ${color}` : '2px solid transparent',
@@ -402,7 +402,7 @@ export function ReportesPage() {
         </div>
         {tab === 'er'     && <ERTab     cid={cid!} color={color} activePeriod={activePeriod}/>}
         {tab === 'ventas' && <VentasTab cid={cid!} color={color}/>}
-        {tab === 'cxc'    && <CxCReporteTab cid={cid!} color={color}/>}
+        {tab === 'cxp'    && <CxPReporteTab cid={cid!} color={color}/>}
       </div>
     </AppLayout>
   );
@@ -856,6 +856,164 @@ function ERRow({ label, value, color, bold, indent }: any) {
     </div>
   );
 }
+
+// ── Reporte CxP ───────────────────────────────────────────────
+function CxPReporteTab({ cid, color }: any) {
+  const hoy = new Date().toISOString().slice(0,10);
+  const [tipoFiltro,  setTipoFiltro]  = useState('mes' as 'mes'|'dia'|'rango');
+  const [periodo,     setPeriodo]     = useState(hoy.slice(0,7));
+  const [diaFiltro,   setDiaFiltro]   = useState(hoy);
+  const [fechaInicio, setFechaInicio] = useState(hoy);
+  const [fechaFin,    setFechaFin]    = useState(hoy);
+  const [proveedorId, setProveedorId] = useState('');
+
+  const { data: proveedores = [] } = useQuery({
+    queryKey: ['suppliers', cid],
+    queryFn:  () => api.get(`/companies/${cid}/suppliers`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const { data: cxps = [], isLoading } = useQuery({
+    queryKey: ['cxp-reporte', cid, tipoFiltro, periodo, diaFiltro, fechaInicio, fechaFin, proveedorId],
+    queryFn:  () => {
+      let url = `/companies/${cid}/cxp?`;
+      if (tipoFiltro === 'mes')   url += `period=${periodo}`;
+      if (tipoFiltro === 'dia')   url += `startDate=${diaFiltro}&endDate=${diaFiltro}`;
+      if (tipoFiltro === 'rango') url += `startDate=${fechaInicio}&endDate=${fechaFin}`;
+      if (proveedorId) url += `&supplierId=${proveedorId}`;
+      return api.get(url).then(r => r.data);
+    },
+    enabled: !!cid,
+  });
+
+  const totalPendiente = (cxps as any[]).reduce((t, c) => t + Number(c.balance || 0), 0);
+  const totalVencido   = (cxps as any[]).filter(c => c.status === 'VENCIDO').reduce((t, c) => t + Number(c.balance || 0), 0);
+
+  const exportarExcel = () => {
+    import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs').then((XLSX: any) => {
+      const rows = (cxps as any[]).map((c: any) => ({
+        Proveedor:   c.proveedorNombre || c.supplier?.name || '—',
+        Concepto:    c.concept || '—',
+        Fecha:       c.date?.slice(0,10),
+        Vencimiento: c.dueDate?.slice(0,10),
+        Original:    Number(c.originalAmount),
+        Pagado:      Number(c.paidAmount),
+        Saldo:       Number(c.balance),
+        Estado:      c.status,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CxP');
+      XLSX.writeFile(wb, `cxp-${new Date().toISOString().slice(0,10)}.xlsx`);
+    });
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap', alignItems:'flex-end' }}>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Ver por</label>
+          <div style={{ display:'flex', gap:4 }}>
+            {(['mes','dia','rango'] as const).map(t => (
+              <button key={t} onClick={() => setTipoFiltro(t)}
+                style={{ padding:'6px 12px', borderRadius:8, fontSize:12, cursor:'pointer',
+                  border:`1px solid ${tipoFiltro===t ? color : '#334155'}`,
+                  background: tipoFiltro===t ? color+'22' : 'transparent',
+                  color: tipoFiltro===t ? color : '#64748b' }}>
+                {t === 'mes' ? 'Mes' : t === 'dia' ? 'Día' : 'Rango'}
+              </button>
+            ))}
+          </div>
+        </div>
+        {tipoFiltro === 'mes' && (
+          <div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Mes</label>
+            <input type="month" className="input-base" style={{ fontSize:13 }}
+              value={periodo} onChange={e => setPeriodo(e.target.value)}/>
+          </div>
+        )}
+        {tipoFiltro === 'dia' && (
+          <div>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Día</label>
+            <input type="date" className="input-base" style={{ fontSize:13 }}
+              value={diaFiltro} onChange={e => setDiaFiltro(e.target.value)}/>
+          </div>
+        )}
+        {tipoFiltro === 'rango' && (
+          <>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Desde</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Hasta</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={fechaFin} onChange={e => setFechaFin(e.target.value)}/>
+            </div>
+          </>
+        )}
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Proveedor</label>
+          <select className="input-base" style={{ fontSize:13 }} value={proveedorId}
+            onChange={e => setProveedorId(e.target.value)}>
+            <option value="">Todos</option>
+            {(proveedores as any[]).map((p:any) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+        <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
+          <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total por pagar</p>
+          <p style={{ fontSize:22, fontWeight:700, color, margin:0 }}>{fmt(totalPendiente)}</p>
+        </div>
+        <div className="card-sm" style={{ borderLeft:'3px solid #f87171' }}>
+          <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Vencido</p>
+          <p style={{ fontSize:22, fontWeight:700, color:'#f87171', margin:0 }}>{fmt(totalVencido)}</p>
+        </div>
+      </div>
+
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
+        <button onClick={exportarExcel}
+          style={{ padding:'6px 16px', borderRadius:8, fontSize:12, border:'1px solid #10b981',
+            background:'none', color:'#10b981', cursor:'pointer' }}>
+          ⬇ Exportar Excel
+        </button>
+      </div>
+
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <table className="table-base">
+          <thead><tr>
+            <th>Proveedor</th><th>Concepto</th><th>Fecha</th><th>Vencimiento</th>
+            <th style={{textAlign:'right'}}>Original</th>
+            <th style={{textAlign:'right'}}>Saldo</th>
+            <th>Estado</th>
+          </tr></thead>
+          <tbody>
+            {isLoading && <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>}
+            {(cxps as any[]).length === 0 && !isLoading && (
+              <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por pagar</td></tr>
+            )}
+            {(cxps as any[]).map((c:any) => (
+              <tr key={c.id}>
+                <td style={{fontWeight:500}}>{c.proveedorNombre || c.supplier?.name || '—'}</td>
+                <td style={{color:'#64748b',fontSize:12}}>{c.concept || '—'}</td>
+                <td>{c.date?.slice(0,10)}</td>
+                <td style={{color: c.status==='VENCIDO'?'#f87171':'#64748b'}}>{c.dueDate?.slice(0,10)}</td>
+                <td style={{textAlign:'right'}}>{fmt(c.originalAmount)}</td>
+                <td style={{textAlign:'right',fontWeight:700,color:c.status==='VENCIDO'?'#f87171':color}}>{fmt(c.balance)}</td>
+                <td><span className={c.status==='PAGADO'?'badge-green':c.status==='VENCIDO'?'badge-red':'badge-amber'}>{c.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+        }
 
 // ── DOCUMENTOS ────────────────────────────────────────────────
 export function DocumentosPage() {
