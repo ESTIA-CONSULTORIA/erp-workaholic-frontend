@@ -8,12 +8,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, fmt, fmtDate, fmtPct } from '../lib/api';
 import { useState } from 'react';
 
-// ── CORTES ────────────────────────────────────────────────────
+// ── CORTES ────────────────────────────────────────────────────// ── CORTES ────────────────────────────────────────────────────
 export function CortesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
+  const role  = activeCompany?.roleCode || '';
+
+  const [corteActivo, setCorteActivo] = useState<any>(null);
+  const [notas,       setNotas]       = useState('');
+  const [accion,      setAccion]      = useState<'aprobar'|'rechazar'|null>(null);
+  const [saving,      setSaving]      = useState(false);
 
   const { data: cortes = [], isLoading } = useQuery({
     queryKey: ['cuts', cid, activePeriod],
@@ -21,30 +27,52 @@ export function CortesPage() {
     enabled: !!cid,
   });
 
-  const totalAprobado = cortes
+  const totalAprobado = (cortes as any[])
     .filter((c:any) => c.status==='APROBADO')
     .reduce((t:number,c:any) => t+(c.lines||[]).reduce((s:number,l:any)=>s+Number(l.netAmount||0),0), 0);
+
+  const puedeValidar = ['admin','administrador','gerente','contador'].includes(role);
+
+  const ejecutarAccion = async () => {
+    if (!corteActivo || !accion) return;
+    setSaving(true);
+    try {
+      if (accion === 'aprobar') {
+        await api.put(`/companies/${cid}/cuts/${corteActivo.id}/approve`, { notes: notas });
+      } else {
+        await api.put(`/companies/${cid}/cuts/${corteActivo.id}/reject`, { notes: notas });
+      }
+      setCorteActivo(null); setNotas(''); setAccion(null);
+      qc.invalidateQueries({ queryKey: ['cuts', cid] });
+    } catch(e:any) {
+      alert(e.response?.data?.message || 'Error');
+    } finally { setSaving(false); }
+  };
 
   return (
     <AppLayout>
       <div style={{ maxWidth:900 }}>
         <h1 style={{ fontSize:24, fontWeight:700, marginBottom:8 }}>Cortes</h1>
         <p style={{ fontSize:14, color:'#64748b', marginBottom:24 }}>
-          {cortes.length} cortes · Total aprobado:{' '}
+          {(cortes as any[]).length} cortes · Total aprobado:{' '}
           <span style={{ color, fontWeight:600 }}>{fmt(totalAprobado)}</span>
         </p>
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
             <thead><tr>
               <th>Folio</th><th>Fecha</th><th>Sucursal</th>
-              <th style={{textAlign:'right'}}>Venta neta</th><th>Estado</th>
+              <th style={{textAlign:'right'}}>Venta neta</th>
+              <th>Estado</th>
+              {puedeValidar && <th>Acciones</th>}
             </tr></thead>
             <tbody>
-              {isLoading && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
-              {!isLoading && cortes.length===0 && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cortes en este período</td></tr>}
-              {cortes.map((c:any) => {
+              {isLoading && <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
+              {!isLoading && (cortes as any[]).length===0 && (
+                <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cortes en este período</td></tr>
+              )}
+              {(cortes as any[]).map((c:any) => {
                 const total = (c.lines||[]).reduce((t:number,l:any)=>t+Number(l.netAmount||0),0);
-                const badge = c.status==='APROBADO'?'badge-green':c.status==='ENVIADO'?'badge-amber':'badge-gray';
+                const badge = c.status==='APROBADO'?'badge-green':c.status==='ENVIADO'?'badge-amber':c.status==='RECHAZADO'?'badge-red':'badge-gray';
                 return (
                   <tr key={c.id}>
                     <td><code style={{fontSize:11,background:'#334155',padding:'2px 6px',borderRadius:4}}>{c.folio}</code></td>
@@ -52,6 +80,24 @@ export function CortesPage() {
                     <td>{c.branch?.name||'—'}</td>
                     <td style={{textAlign:'right',fontWeight:600,color}}>{fmt(total)}</td>
                     <td><span className={badge}>{c.status}</span></td>
+                    {puedeValidar && (
+                      <td>
+                        {c.status === 'ENVIADO' && (
+                          <div style={{ display:'flex', gap:6 }}>
+                            <button onClick={() => { setCorteActivo(c); setAccion('aprobar'); setNotas(''); }}
+                              style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
+                              ✓ Aprobar
+                            </button>
+                            <button onClick={() => { setCorteActivo(c); setAccion('rechazar'); setNotas(''); }}
+                              style={{ background:'none', border:'none', color:'#f87171', cursor:'pointer', fontSize:12 }}>
+                              ✕ Rechazar
+                            </button>
+                          </div>
+                        )}
+                        {c.status === 'APROBADO' && <span style={{fontSize:11,color:'#10b981'}}>✓ Aprobado</span>}
+                        {c.status === 'RECHAZADO' && <span style={{fontSize:11,color:'#f87171'}}>✕ Rechazado</span>}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -59,9 +105,41 @@ export function CortesPage() {
           </table>
         </div>
       </div>
+
+      {corteActivo && accion && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:400, border:'1px solid #334155' }}>
+            <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 4px',
+              color: accion==='aprobar'?'#10b981':'#f87171' }}>
+              {accion==='aprobar' ? '✓ Aprobar corte' : '✕ Rechazar corte'}
+            </h3>
+            <p style={{ fontSize:12, color:'#64748b', margin:'0 0 16px' }}>
+              Folio {corteActivo.folio} — {fmtDate(corteActivo.date)}
+            </p>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                Notas {accion==='rechazar'?'(motivo de rechazo)':'(opcional)'}
+              </label>
+              <textarea className="input-base" style={{ fontSize:13, height:80, resize:'none' }}
+                value={notas} onChange={e => setNotas(e.target.value)}/>
+            </div>
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button className="btn-secondary" style={{ fontSize:13 }}
+                onClick={() => { setCorteActivo(null); setAccion(null); }}>
+                Cancelar
+              </button>
+              <button className="btn-primary" style={{ fontSize:13,
+                background: accion==='aprobar'?'#10b981':'#f87171' }}
+                onClick={ejecutarAccion} disabled={saving}>
+                {saving ? 'Procesando...' : accion==='aprobar' ? 'Aprobar' : 'Rechazar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
-}
 
 // ── GASTOS ────────────────────────────────────────────────────
 export function GastosPage() {
