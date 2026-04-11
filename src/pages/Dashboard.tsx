@@ -1,149 +1,191 @@
 import { useQuery } from '@tanstack/react-query';
 import { useERPStore } from '../store/erp.store';
-import { api, fmt, fmtPct } from '../lib/api';
+import { api, fmt } from '../lib/api';
 import AppLayout from '../components/layout/AppLayout';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Cell, PieChart, Pie,
-} from 'recharts';
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 export default function DashboardPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
 
-  const { data: edo } = useQuery({
+  // Ventas del período activo
+  const { data: ventasPeriodo } = useQuery({
+    queryKey: ['dashboard-ventas', cid, activePeriod],
+    queryFn:  () => api.get(`/companies/${cid}/machete/sales?period=${activePeriod}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  // Estado de resultados del período
+  const { data: er } = useQuery({
     queryKey: ['income-statement', cid, activePeriod],
     queryFn:  () => api.get(`/reports/companies/${cid}/income-statement?period=${activePeriod}`).then(r => r.data),
     enabled:  !!cid,
   });
 
-  const { data: flow } = useQuery({
-    queryKey: ['flow-balances', cid],
-    queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
-    enabled:  !!cid,
-  });
-
-  const { data: cxc } = useQuery({
+  // CxC summary
+  const { data: cxcSummary } = useQuery({
     queryKey: ['cxc-summary', cid],
     queryFn:  () => api.get(`/companies/${cid}/cxc/summary`).then(r => r.data),
     enabled:  !!cid,
   });
 
-  const s  = edo?.summary || {};
-  const totalNet  = s.totalNetSale   || 0;
-  const netIncome = s.netIncome      || 0;
+  // Inventario PT
+  const { data: inventory = [] } = useQuery({
+    queryKey: ['pt-inventory', cid],
+    queryFn:  () => api.get(`/companies/${cid}/machete/inventory/pt`).then(r => r.data),
+    enabled:  !!cid,
+  });
 
-  const chartData = [
-    { name:'Ingresos', value:totalNet,          color },
-    { name:'Costo',    value:s.totalCost    ||0, color:'#f59e0b' },
-    { name:'Gastos',   value:s.totalExpenses||0, color:'#8b5cf6' },
-    { name:'Utilidad', value:Math.max(netIncome,0), color:'#10b981' },
-  ];
+  // Ventas últimos 6 meses
+  const { data: ventasMeses = [] } = useQuery({
+    queryKey: ['dashboard-ventas-meses', cid],
+    queryFn:  async () => {
+      const now = new Date();
+      const results = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const period = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const label  = `${MESES[d.getMonth()]}`;
+        try {
+          const { data } = await api.get(`/companies/${cid}/machete/sales?period=${period}`);
+          const total = (data as any[]).reduce((t:number, s:any) => t + Number(s.total), 0);
+          results.push({ period, label, total });
+        } catch {
+          results.push({ period, label, total: 0 });
+        }
+      }
+      return results;
+    },
+    enabled: !!cid,
+  });
 
-  const flowData = (flow?.accounts||[])
-    .filter((a:any) => a.balance > 0)
-    .map((a:any) => ({ name:a.accountName, value:a.balance }));
+  // Calcular KPIs
+  const ventas = (ventasPeriodo as any[] || []);
+  const totalVentas    = ventas.reduce((t, s) => t + Number(s.total), 0);
+  const totalDesc      = ventas.reduce((t, s) => t + Number(s.discount || 0), 0);
+  const ventasEfectivo = ventas.filter(s => s.paymentMethod === 'efectivo').reduce((t, s) => t + Number(s.total), 0);
+  const ventasCredito  = ventas.filter(s => s.paymentMethod === 'credito').reduce((t, s) => t + Number(s.total), 0);
+  const numTransacciones = ventas.length;
 
-  const COLORS = [color,'#10b981','#f59e0b','#8b5cf6','#3b82f6'];
+  const resultado    = er?.resultadoEjercicio || 0;
+  const totalGastos  = er?.totalGastos        || 0;
+  const cxcPendiente = cxcSummary?.totalPending || 0;
+
+  // Productos con stock bajo
+  const stockBajo = (inventory as any[]).filter(p => Number(p.stock || 0) <= Number(p.minStock || 5) && p.isActive);
+
+  // Máximo para la gráfica de barras
+  const maxVenta = Math.max(...(ventasMeses as any[]).map((m:any) => m.total), 1);
+
+  // Ventas por canal
+  const porCanal: Record<string,number> = {};
+  for (const s of ventas) {
+    porCanal[s.channel] = (porCanal[s.channel] || 0) + Number(s.total);
+  }
+  const CANAL_LABELS: Record<string,string> = { MOSTRADOR:'Tienda', MAYOREO:'Mayoreo', ONLINE:'Distribuidor', ML:'Online' };
+  const CANAL_COLORS: Record<string,string> = { MOSTRADOR:'#3b82f6', MAYOREO:'#f59e0b', ONLINE:'#8b5cf6', ML:'#10b981' };
 
   return (
     <AppLayout>
-      <div style={{ maxWidth:960 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>
-          Dashboard — <span style={{ color }}>{activeCompany?.companyName}</span>
-        </h1>
+      <div style={{ maxWidth:1100 }}>
+        <h1 style={{ fontSize:22, fontWeight:700, marginBottom:20 }}>Dashboard</h1>
 
-        {/* KPIs */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-          <KPI label="Venta neta"     value={fmt(totalNet)}    color={color}
-            sub={`${fmtPct(s.pctMeta||0)} de meta`}/>
-          <KPI label="Utilidad bruta" value={fmt(s.grossProfit||0)} color="#10b981"
-            sub={`Margen ${fmtPct(s.grossMargin||0)}`}/>
-          <KPI label="Utilidad neta"  value={fmt(netIncome)}
-            color={netIncome>=0?'#10b981':'#f87171'}
-            sub={`Margen ${fmtPct(s.netMargin||0)}`}/>
-          <KPI label="Saldo total"    value={fmt(flow?.totalMxn||0)} color="#06b6d4"
-            sub={`+$${(flow?.totalUsd||0).toFixed(2)} USD`}/>
+        {/* KPIs principales */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+          {[
+            { label:'Venta del período',   value:fmt(totalVentas),    color, sub:`${numTransacciones} transacciones` },
+            { label:'Resultado neto',       value:fmt(resultado),      color:resultado>=0?'#10b981':'#f87171', sub: resultado>=0?'Utilidad':'Pérdida' },
+            { label:'Gastos del período',   value:fmt(totalGastos),    color:'#8b5cf6', sub:`Desc: ${fmt(totalDesc)}` },
+            { label:'CxC pendiente',        value:fmt(cxcPendiente),   color:'#f59e0b', sub:'Por cobrar' },
+          ].map(k => (
+            <div key={k.label} className="card-sm" style={{ borderLeft:`3px solid ${k.color}` }}>
+              <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
+              <p style={{ fontSize:20, fontWeight:700, color:k.color, margin:'0 0 2px' }}>{k.value}</p>
+              <p style={{ fontSize:10, color:'#475569', margin:0 }}>{k.sub}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Gráficas */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16, marginBottom:16 }}>
+          {/* Gráfica de barras — ventas últimos 6 meses */}
           <div className="card">
-            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:16, marginTop:0 }}>
-              Resultado del mes
+            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 16px' }}>
+              Ventas últimos 6 meses
             </p>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData} margin={{ top:4,right:8,bottom:4,left:8 }}>
-                <XAxis dataKey="name" tick={{ fill:'#64748b', fontSize:11 }}/>
-                <YAxis tick={{ fill:'#64748b', fontSize:10 }}
-                  tickFormatter={v => `$${(v/1000).toFixed(0)}k`}/>
-                <Tooltip
-                  formatter={(v:any) => [fmt(v),'']}
-                  contentStyle={{ background:'#1e293b', border:'1px solid #334155', borderRadius:8 }}
-                  labelStyle={{ color:'#f1f5f9' }}/>
-                <Bar dataKey="value" radius={[4,4,0,0]}>
-                  {chartData.map((d,i) => <Cell key={i} fill={d.color}/>)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ display:'flex', alignItems:'flex-end', gap:8, height:140 }}>
+              {(ventasMeses as any[]).map((m:any) => {
+                const pct = maxVenta > 0 ? (m.total / maxVenta) * 100 : 0;
+                const esPeriodoActivo = m.period === activePeriod;
+                return (
+                  <div key={m.period} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                    <p style={{ fontSize:9, color:esPeriodoActivo?color:'#64748b', fontWeight:esPeriodoActivo?700:400, margin:0 }}>
+                      {fmt(m.total)}
+                    </p>
+                    <div style={{ width:'100%', borderRadius:'4px 4px 0 0',
+                      height:`${Math.max(pct, 2)}%`,
+                      background: esPeriodoActivo ? color : color+'44',
+                      transition:'height 0.3s', minHeight:4 }}/>
+                    <p style={{ fontSize:10, color:esPeriodoActivo?color:'#64748b',
+                      fontWeight:esPeriodoActivo?700:400, margin:0 }}>{m.label}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
+          {/* Ventas por canal */}
           <div className="card">
-            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:16, marginTop:0 }}>
-              Distribución de saldos
+            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 16px' }}>
+              Por canal
             </p>
-            {flowData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={flowData} dataKey="value" nameKey="name"
-                    cx="50%" cy="50%" outerRadius={65}
-                    label={({ name, percent }:any) => `${name}: ${(percent*100).toFixed(0)}%`}>
-                    {flowData.map((_:any,i:number) => <Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
-                  </Pie>
-                  <Tooltip formatter={(v:any) => [fmt(v),'']}
-                    contentStyle={{ background:'#1e293b', border:'1px solid #334155', borderRadius:8 }}/>
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ height:180, display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:14 }}>
-                Sin movimientos
-              </div>
-            )}
+            {Object.keys(porCanal).length === 0
+              ? <p style={{ color:'#64748b', fontSize:13 }}>Sin ventas</p>
+              : Object.entries(porCanal).sort((a,b) => b[1]-a[1]).map(([canal, monto]) => {
+                  const pct = totalVentas > 0 ? (monto / totalVentas) * 100 : 0;
+                  const c   = CANAL_COLORS[canal] || '#64748b';
+                  return (
+                    <div key={canal} style={{ marginBottom:10 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
+                        <span style={{ fontSize:12, color:'#94a3b8' }}>{CANAL_LABELS[canal]||canal}</span>
+                        <span style={{ fontSize:12, fontWeight:600, color:c }}>{fmt(monto)}</span>
+                      </div>
+                      <div style={{ height:6, borderRadius:99, background:'#1e293b', overflow:'hidden' }}>
+                        <div style={{ height:'100%', width:`${pct}%`, background:c, borderRadius:99 }}/>
+                      </div>
+                    </div>
+                  );
+                })
+            }
+            <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
+              <span style={{ fontSize:11, color:'#64748b' }}>Efectivo</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#10b981' }}>{fmt(ventasEfectivo)}</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between' }}>
+              <span style={{ fontSize:11, color:'#64748b' }}>Crédito</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#f59e0b' }}>{fmt(ventasCredito)}</span>
+            </div>
           </div>
         </div>
 
-        {/* CxC */}
-        <div className="card">
-          <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, marginBottom:12, marginTop:0 }}>
-            Cuentas por cobrar
-          </p>
-          <div style={{ display:'flex', gap:24 }}>
-            <div>
-              <p style={{ fontSize:12, color:'#64748b', margin:'0 0 4px' }}>Total pendiente</p>
-              <p style={{ fontSize:20, fontWeight:700, color:'#f59e0b', margin:0 }}>{fmt(cxc?.totalPending||0)}</p>
-            </div>
-            <div>
-              <p style={{ fontSize:12, color:'#64748b', margin:'0 0 4px' }}>Vencido</p>
-              <p style={{ fontSize:20, fontWeight:700, color:'#f87171', margin:0 }}>{fmt(cxc?.totalOverdue||0)}</p>
-            </div>
-            <div>
-              <p style={{ fontSize:12, color:'#64748b', margin:'0 0 4px' }}>Cuentas abiertas</p>
-              <p style={{ fontSize:20, fontWeight:700, color:'#94a3b8', margin:0 }}>{cxc?.pendingCount||0}</p>
+        {/* Stock bajo */}
+        {stockBajo.length > 0 && (
+          <div className="card" style={{ borderLeft:'3px solid #f87171' }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'#f87171', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>
+              ⚠ Stock bajo ({stockBajo.length} productos)
+            </p>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+              {stockBajo.slice(0,8).map((p:any) => (
+                <div key={p.id} style={{ background:'#0f172a', borderRadius:8, padding:'8px 10px' }}>
+                  <p style={{ fontSize:11, fontWeight:500, margin:'0 0 2px', color:'#f1f5f9' }}>{p.name}</p>
+                  <p style={{ fontSize:12, fontWeight:700, color:'#f87171', margin:0 }}>{p.stock} pzas</p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        )}
       </div>
     </AppLayout>
-  );
-}
-
-function KPI({ label, value, color, sub }: any) {
-  return (
-    <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
-      <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px', textTransform:'uppercase', letterSpacing:0.5 }}>{label}</p>
-      <p style={{ fontSize:20, fontWeight:700, color, margin:'0 0 2px' }}>{value}</p>
-      {sub && <p style={{ fontSize:11, color:'#64748b', margin:0 }}>{sub}</p>}
-    </div>
   );
 }
