@@ -12,7 +12,6 @@ import { useState } from 'react';
 export function CortesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
-  console.log('Admin CID:', cid, 'usuarios:', usuarios);
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
 
