@@ -391,7 +391,7 @@ export function ReportesPage() {
       <div style={{ maxWidth:1000 }}>
         <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Reportes</h1>
         <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {([['er','Estado de Resultados'],['ventas','Ventas'],['cxc','CxC'],['cxp','CxP']] as const)
+          {([['er','Estado de Resultados'],['ventas','Ventas'],['cxc','CxC'],['cxp','CxP']] as const).map(([id,label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
                 borderBottom: tab===id ? `2px solid ${color}` : '2px solid transparent',
