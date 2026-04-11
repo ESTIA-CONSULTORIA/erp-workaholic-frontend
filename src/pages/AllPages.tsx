@@ -862,6 +862,10 @@ export function DocumentosPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
+  const qc    = useQueryClient();
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const { data: docs=[], isLoading } = useQuery({
     queryKey:['documents',cid],
@@ -870,21 +874,74 @@ export function DocumentosPage() {
     refetchInterval:10000,
   });
 
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setUploadError('');
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload  = () => res((reader.result as string).split(',')[1]);
+        reader.onerror = () => rej(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
+      await api.post(`/companies/${cid}/documents`, {
+        fileName: file.name,
+        mimeType: file.type,
+        fileUrl:  `data:${file.type};base64,${base64}`,
+        type:     'DOCUMENTO',
+      });
+      qc.invalidateQueries({ queryKey: ['documents', cid] });
+    } catch(e:any) {
+      setUploadError(e.response?.data?.message || 'Error al subir archivo');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const STATUS_LABEL: Record<string,string> = {
+    CARGADO: 'Cargado', PROCESANDO: 'Procesando',
+    PENDIENTE_VALIDACION: 'Pendiente', VALIDADO: 'Validado',
+    RECHAZADO: 'Rechazado', ARCHIVADO: 'Archivado',
+  };
+
   return (
     <AppLayout>
       <div style={{ maxWidth:800 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Bandeja documental</h1>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+          <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Bandeja documental</h1>
+          <label style={{
+            padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600,
+            background: uploading ? '#334155' : color, color:'#fff',
+            cursor: uploading ? 'not-allowed' : 'pointer',
+          }}>
+            {uploading ? 'Subiendo...' : '+ Subir documento'}
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
+              style={{ display:'none' }} onChange={handleFile} disabled={uploading}/>
+          </label>
+        </div>
+
+        {uploadError && (
+          <div style={{ background:'rgba(248,113,113,0.1)', border:'1px solid #f87171',
+            borderRadius:8, padding:'8px 12px', marginBottom:16, fontSize:13, color:'#f87171' }}>
+            {uploadError}
+          </div>
+        )}
+
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {isLoading && <p style={{ color:'#64748b' }}>Cargando…</p>}
-          {!isLoading && docs.length===0 && (
+          {!isLoading && (docs as any[]).length===0 && (
             <div className="card" style={{ textAlign:'center', padding:48 }}>
               <p style={{ fontSize:36, marginBottom:12 }}>📄</p>
-              <p style={{ color:'#94a3b8', fontWeight:500 }}>Sin documentos</p>
+              <p style={{ color:'#94a3b8', fontWeight:500, marginBottom:8 }}>Sin documentos</p>
+              <p style={{ color:'#64748b', fontSize:13 }}>Sube facturas, tickets, comprobantes o cualquier documento</p>
             </div>
           )}
-          {docs.map((doc:any) => (
+          {(docs as any[]).map((doc:any) => (
             <div key={doc.id} className="card" style={{ display:'flex', alignItems:'center', gap:16 }}>
-              <div style={{ width:48, height:48, borderRadius:8, background:'#334155', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <div style={{ width:48, height:48, borderRadius:8, background:'#334155',
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                 {doc.fileUrl?.startsWith('data:image')
                   ? <img src={doc.fileUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:8 }}/>
                   : <span style={{ fontSize:24 }}>📄</span>}
@@ -893,9 +950,20 @@ export function DocumentosPage() {
                 <p style={{ fontSize:14, fontWeight:500, margin:'0 0 2px' }}>{doc.fileName}</p>
                 <p style={{ fontSize:12, color:'#64748b', margin:0 }}>{fmtDate(doc.createdAt)}</p>
               </div>
-              <span className={doc.status==='VALIDADO'?'badge-green':doc.status==='PENDIENTE_VALIDACION'?'badge-amber':'badge-gray'}>
-                {doc.status?.replace(/_/g,' ')}
-              </span>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span className={
+                  doc.status==='VALIDADO'?'badge-green':
+                  doc.status==='PENDIENTE_VALIDACION'?'badge-amber':'badge-gray'
+                }>
+                  {STATUS_LABEL[doc.status] || doc.status?.replace(/_/g,' ')}
+                </span>
+                {doc.fileUrl && (
+                  <a href={doc.fileUrl} download={doc.fileName} target="_blank" rel="noreferrer"
+                    style={{ fontSize:18, textDecoration:'none' }} title="Descargar">
+                    ⬇
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
