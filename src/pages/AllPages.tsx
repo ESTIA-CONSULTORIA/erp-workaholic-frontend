@@ -957,20 +957,24 @@ export function DocumentosPage() {
                 }>
                   {STATUS_LABEL[doc.status] || doc.status?.replace(/_/g,' ')}
                 </span>
-                {doc.status === 'CARGADO' && (doc.type === 'TICKET' || doc.type === 'DOCUMENTO') && (
+                {doc.status === 'CARGADO' && (
                   <button onClick={async () => {
-                    await api.post(`/companies/${cid}/documents/${doc.id}/extract`, {});
-                    qc.invalidateQueries({ queryKey: ['documents', cid] });
+                    try {
+                      await api.post(`/companies/${cid}/documents/${doc.id}/extract`, {});
+                      qc.invalidateQueries({ queryKey: ['documents', cid] });
+                    } catch(e:any) {
+                      alert(e.response?.data?.message || 'Error al extraer');
+                    }
                   }}
                     style={{ fontSize:11, padding:'3px 10px', borderRadius:6, border:`1px solid ${color}`,
                       background:'none', color, cursor:'pointer' }}>
                     🔍 Extraer datos
                   </button>
                 )}
-                {doc.status === 'PENDIENTE_VALIDACION' && doc.extractedJson && (
+                {doc.status === 'PENDIENTE_VALIDACION' && (doc as any).extractedJson && (
                   <button onClick={() => {
-                    const d = doc.extractedJson as any;
-                    alert(`Proveedor: ${d.proveedor}\nFecha: ${d.fecha}\nTotal: $${d.total}\n\n¿Crear gasto?`);
+                    const d = (doc as any).extractedJson;
+                    alert(`Proveedor: ${d.proveedor}\nFecha: ${d.fecha}\nTotal: $${d.total}`);
                   }}
                     style={{ fontSize:11, padding:'3px 10px', borderRadius:6, border:'1px solid #10b981',
                       background:'none', color:'#10b981', cursor:'pointer' }}>
