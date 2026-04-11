@@ -957,6 +957,27 @@ export function DocumentosPage() {
                 }>
                   {STATUS_LABEL[doc.status] || doc.status?.replace(/_/g,' ')}
                 </span>
+                {doc.status === 'CARGADO' && (doc.type === 'TICKET' || doc.type === 'DOCUMENTO') && (
+                  <button onClick={async () => {
+                    await api.post(`/companies/${cid}/documents/${doc.id}/extract`, {});
+                    qc.invalidateQueries({ queryKey: ['documents', cid] });
+                  }}
+                    style={{ fontSize:11, padding:'3px 10px', borderRadius:6, border:`1px solid ${color}`,
+                      background:'none', color, cursor:'pointer' }}>
+                    🔍 Extraer datos
+                  </button>
+                )}
+                {doc.status === 'PENDIENTE_VALIDACION' && doc.extractedJson && (
+                  <button onClick={() => {
+                    const d = doc.extractedJson as any;
+                    alert(`Proveedor: ${d.proveedor}\nFecha: ${d.fecha}\nTotal: $${d.total}\n\n¿Crear gasto?`);
+                  }}
+                    style={{ fontSize:11, padding:'3px 10px', borderRadius:6, border:'1px solid #10b981',
+                      background:'none', color:'#10b981', cursor:'pointer' }}>
+                    ✓ Ver datos
+                  </button>
+                )}
+                
                 {doc.fileUrl && (
                   <a href={doc.fileUrl} download={doc.fileName} target="_blank" rel="noreferrer"
                     style={{ fontSize:18, textDecoration:'none' }} title="Descargar">
