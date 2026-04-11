@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, fmt, fmtDate, fmtPct } from '../lib/api';
 import { useState } from 'react';
 
-// ── CORTES ────────────────────────────────────────────────────// ── CORTES ────────────────────────────────────────────────────
+// ── CORTES ────────────────────────────────────────────────────
 export function CortesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
