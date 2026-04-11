@@ -140,6 +140,7 @@ export function CortesPage() {
       )}
     </AppLayout>
   );
+}
 
 // ── GASTOS ────────────────────────────────────────────────────
 export function GastosPage() {
