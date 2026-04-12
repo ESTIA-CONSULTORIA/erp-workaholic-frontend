@@ -29,7 +29,6 @@ const NAV_GROUPS = [
     label: 'Finanzas',
     icon: '💼',
     items: [
-      { to:'/cortes', icon:'📋', label:'Cortes', roles:['admin','administrador','gerente','contador'] },
       { to:'/gastos',       icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
       { to:'/conciliacion', icon:'⊜', label:'Conciliación',  roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxc',          icon:'◷', label:'CxC / CxP',     roles:['admin','administrador','gerente','contador','director'] },
