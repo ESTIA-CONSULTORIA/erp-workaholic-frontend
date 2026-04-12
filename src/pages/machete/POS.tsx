@@ -817,15 +817,32 @@ export default function POSPage() {
                   background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
                 Cancelar
               </button>
-              <button onClick={() => setShowTiraZ(false)}
+       
+<button onClick={async () => {
+                  try {
+                    await api.post(`/companies/${cid}/corte-caja`, {
+                      fecha:                  tiraData.fecha,
+                      totalVentas:            tiraData.totalBruto,
+                      totalEfectivo:          tiraData.porMetodo['efectivo']||0,
+                      totalTarjeta:           tiraData.porMetodo['tarjeta']||0,
+                      totalTransfer:          tiraData.porMetodo['transferencia']||0,
+                      totalCredito:           tiraData.porMetodo['credito']||0,
+                      totalDelivery:          ['rappi','ubereats','didi','pedidosya'].reduce((t:number,k:string) => t+(efectivoCaja?.[`del_${k}`]||0),0),
+                      totalTerminal:          ['debito','credito','transferencia'].reduce((t:number,k:string) => t+(efectivoCaja?.[`term_${k}`]||0),0),
+                      efectivoContado:        DENOMINACIONES.reduce((t,d) => t+d*(efectivoCaja?.[`den_${d}`]||0),0),
+                      desgloseDenominaciones: efectivoCaja,
+                      desgloseTerminales:     efectivoCaja,
+                      desgloseDelivery:       efectivoCaja,
+                    });
+                    setShowTiraZ(false);
+                    setTiraXGuardada(false);
+                    setEfectivoCaja({});
+                    alert('✓ Corte enviado al contador para validación');
+                  } catch(e:any) {
+                    alert(e.response?.data?.message || 'Error al crear corte');
+                  }
+                }}
                 style={{ padding:'8px 24px', borderRadius:8, border:'none',
                   background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
                 Confirmar Tira Z
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </AppLayout>
-  );
-}
