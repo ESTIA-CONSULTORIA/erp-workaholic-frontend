@@ -817,8 +817,7 @@ export default function POSPage() {
                   background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
                 Cancelar
               </button>
-       
-<button onClick={async () => {
+              <button onClick={async () => {
                   try {
                     await api.post(`/companies/${cid}/corte-caja`, {
                       fecha:                  tiraData.fecha,
@@ -846,3 +845,10 @@ export default function POSPage() {
                   background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
                 Confirmar Tira Z
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  );
+}
