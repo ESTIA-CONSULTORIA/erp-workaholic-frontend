@@ -6,10 +6,10 @@ import { api, fmt, fmtDate } from '../../lib/api';
 
 type Vista = 'productos' | 'insumos' | 'clientes';
 
-const MEAT_TYPES  = ['RES','CER'];
-const FLAVORS     = ['NAT','CHI','BBQ','MIX'];
-const UNITS       = ['kg','lt','pza','g','ml','bolsa','caja'];
-const GROUPS      = ['CARNE','CONDIMENTO','EMPAQUE','LIMPIEZA','GENERAL'];
+const MEAT_TYPES = ['RES','CER'];
+const FLAVORS    = ['NAT','CHI','BBQ','MIX'];
+const UNITS      = ['kg','lt','pza','g','ml','bolsa','caja'];
+const GROUPS     = ['CARNE','CONDIMENTO','EMPAQUE','LIMPIEZA','GENERAL'];
 
 export default function CatalogoPage() {
   const { activeCompany } = useERPStore();
@@ -50,21 +50,29 @@ export default function CatalogoPage() {
 //  TAB PRODUCTOS
 // ══════════════════════════════════════════════════════════════
 function ProductosTab({ cid, color, qc }: any) {
-  const [showNew,    setShowNew]    = useState(false);
-  const [editId,     setEditId]     = useState<string|null>(null);
-  const [editPrices, setEditPrices] = useState<any>({});
-  const [saving,     setSaving]     = useState(false);
-  const [form, setForm] = useState({
+  const [showNew,   setShowNew]   = useState(false);
+  const [editProd,  setEditProd]  = useState<any>(null);
+  const [saving,    setSaving]    = useState(false);
+  const [filtroActivo, setFiltroActivo] = useState<'todos'|'activos'|'inactivos'>('activos');
+
+  const initForm = {
     sku:'', name:'', meatType:'RES', flavor:'NAT',
-    presentation:'250G', gramsWeight:'', minStock:'5',
+    presentation:'', gramsWeight:'', minStock:'5',
     priceMostrador:'', priceMayoreo:'', priceOnline:'', priceML:'',
-  });
+  };
+  const [form, setForm] = useState(initForm);
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
 
   const { data: products = [] } = useQuery({
     queryKey: ['products', cid],
     queryFn:  () => api.get(`/companies/${cid}/machete/products`).then(r => r.data),
     enabled:  !!cid,
+  });
+
+  const filtrados = (products as any[]).filter(p => {
+    if (filtroActivo === 'activos')   return p.isActive !== false;
+    if (filtroActivo === 'inactivos') return p.isActive === false;
+    return true;
   });
 
   const crearProducto = async () => {
@@ -74,32 +82,51 @@ function ProductosTab({ cid, color, qc }: any) {
       await api.post(`/companies/${cid}/machete/products`, form);
       qc.invalidateQueries({ queryKey: ['products', cid] });
       setShowNew(false);
-      setForm({ sku:'', name:'', meatType:'RES', flavor:'NAT', presentation:'250G', gramsWeight:'', minStock:'5',
-        priceMostrador:'', priceMayoreo:'', priceOnline:'', priceML:'' });
+      setForm(initForm);
     } finally { setSaving(false); }
   };
 
-  const startEdit = (p: any) => {
-    setEditId(p.id);
-    setEditPrices({ priceMostrador: p.priceMostrador, priceMayoreo: p.priceMayoreo,
-      priceOnline: p.priceOnline, priceML: p.priceML });
-  };
-
-  const guardarPrecios = async (id: string) => {
+  const guardarEdicion = async () => {
+    if (!editProd) return;
     setSaving(true);
     try {
-      await api.put(`/companies/${cid}/machete/products/${id}`, editPrices);
+      await api.put(`/companies/${cid}/machete/products/${editProd.id}`, editProd);
       qc.invalidateQueries({ queryKey: ['products', cid] });
-      setEditId(null);
+      setEditProd(null);
     } finally { setSaving(false); }
   };
+
+  const toggleActivo = async (p: any) => {
+    await api.put(`/companies/${cid}/machete/products/${p.id}`, { isActive: !p.isActive });
+    qc.invalidateQueries({ queryKey: ['products', cid] });
+  };
+
+  const setEdit = (k: string, v: any) => setEditProd((p:any) => ({ ...p, [k]: v }));
+
+  const PRECIO_COLS = [
+    { key:'priceMostrador', label:'Tienda',       col:color },
+    { key:'priceMayoreo',   label:'Mayoreo',      col:'#f59e0b' },
+    { key:'priceOnline',    label:'Distribuidor', col:'#8b5cf6' },
+    { key:'priceML',        label:'Online',       col:'#10b981' },
+  ];
 
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-        <p style={{ fontSize:14, color:'#64748b', margin:0 }}>
-          {(products as any[]).length} productos registrados
-        </p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:8 }}>
+        <div style={{ display:'flex', gap:4 }}>
+          {(['activos','inactivos','todos'] as const).map(f => (
+            <button key={f} onClick={() => setFiltroActivo(f)}
+              style={{ padding:'4px 12px', borderRadius:99, fontSize:12, cursor:'pointer',
+                border:`1px solid ${filtroActivo===f ? color : '#334155'}`,
+                background: filtroActivo===f ? color+'22' : 'transparent',
+                color: filtroActivo===f ? color : '#64748b' }}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+          <span style={{ fontSize:13, color:'#64748b', alignSelf:'center', marginLeft:8 }}>
+            {filtrados.length} productos
+          </span>
+        </div>
         <button className="btn-primary" style={{ background:color, fontSize:13 }}
           onClick={() => setShowNew(!showNew)}>
           {showNew ? 'Cancelar' : '+ Nuevo producto'}
@@ -114,7 +141,7 @@ function ProductosTab({ cid, color, qc }: any) {
             <div>
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>SKU *</label>
               <input className="input-base" style={{ fontSize:13 }} value={form.sku}
-                onChange={e => set('sku', e.target.value)} placeholder="RES-NAT-250G"/>
+                onChange={e => set('sku', e.target.value)} placeholder="MCH-NAT-250G"/>
             </div>
             <div>
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Nombre *</label>
@@ -125,7 +152,8 @@ function ProductosTab({ cid, color, qc }: any) {
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Tipo de carne</label>
               <select className="input-base" style={{ fontSize:13 }} value={form.meatType}
                 onChange={e => set('meatType', e.target.value)}>
-                {MEAT_TYPES.map(m => <option key={m} value={m}>{m === 'RES' ? 'Res' : 'Cerdo'}</option>)}
+                <option value="RES">Res</option>
+                <option value="CER">Cerdo</option>
               </select>
             </div>
             <div>
@@ -135,41 +163,33 @@ function ProductosTab({ cid, color, qc }: any) {
                 {FLAVORS.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
-           <div>
-  <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Presentación</label>
-  <input className="input-base" style={{ fontSize:13 }} value={form.presentation}
-    onChange={e => set('presentation', e.target.value)} placeholder="30G, 250G, 1KG..."/>
-</div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Presentación</label>
+              <input className="input-base" style={{ fontSize:13 }} value={form.presentation}
+                onChange={e => set('presentation', e.target.value)} placeholder="250G, 1KG, Jumbo..."/>
+            </div>
             <div>
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Gramos</label>
               <input type="number" min="0" className="input-base" style={{ fontSize:13 }} value={form.gramsWeight}
                 onChange={e => set('gramsWeight', e.target.value)} placeholder="250"/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Stock mínimo</label>
+              <input type="number" min="0" className="input-base" style={{ fontSize:13 }} value={form.minStock}
+                onChange={e => set('minStock', e.target.value)}/>
             </div>
           </div>
           <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 8px' }}>
             Precios por canal
           </p>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:16 }}>
-            {[
-              { key:'priceMostrador', label:'Tienda',       col:color },
-              { key:'priceMayoreo',   label:'Mayoreo',      col:'#f59e0b' },
-              { key:'priceOnline',    label:'Distribuidor', col:'#8b5cf6' },
-              { key:'priceML',        label:'Online',       col:'#10b981' },
-            ].map(({ key, label, col }) => (
+            {PRECIO_COLS.map(({ key, label, col }) => (
               <div key={key}>
                 <label style={{ fontSize:11, color:col, display:'block', marginBottom:3 }}>{label}</label>
                 <input type="number" min="0" step="0.01" className="input-base" style={{ fontSize:13 }}
-                  value={(form as any)[key]}
-                  onChange={e => set(key, e.target.value)} placeholder="0.00"/>
+                  value={(form as any)[key]} onChange={e => set(key, e.target.value)} placeholder="0.00"/>
               </div>
             ))}
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-            <div>
-              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Stock mínimo</label>
-              <input type="number" min="0" className="input-base" style={{ fontSize:13 }} value={form.minStock}
-                onChange={e => set('minStock', e.target.value)}/>
-            </div>
           </div>
           <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
             <button className="btn-secondary" style={{ fontSize:13 }} onClick={() => setShowNew(false)}>Cancelar</button>
@@ -189,67 +209,118 @@ function ProductosTab({ cid, color, qc }: any) {
               <th>SKU</th><th>Producto</th><th>Stock</th>
               <th style={{textAlign:'right'}}>Tienda</th>
               <th style={{textAlign:'right'}}>Mayoreo</th>
-              <th style={{textAlign:'right'}}>Distribuidor</th>
+              <th style={{textAlign:'right'}}>Dist.</th>
               <th style={{textAlign:'right'}}>Online</th>
-              <th>Acción</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {(products as any[]).length === 0 && (
-              <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin productos registrados</td></tr>
+            {filtrados.length === 0 && (
+              <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin productos</td></tr>
             )}
-            {(products as any[]).map((p: any) => (
-              <tr key={p.id}>
+            {filtrados.map((p: any) => (
+              <tr key={p.id} style={{ opacity: p.isActive === false ? 0.5 : 1 }}>
                 <td><code style={{fontSize:11,background:'#334155',padding:'2px 6px',borderRadius:4}}>{p.sku}</code></td>
                 <td style={{fontWeight:500,fontSize:13}}>{p.name}</td>
                 <td>
-                  <span style={{ fontSize:12, color: (p.currentStock?.stock||0) <= (p.currentStock?.minStock||5) ? '#f87171' : '#10b981', fontWeight:600 }}>
+                  <span style={{ fontSize:12, fontWeight:600,
+                    color: (p.currentStock?.stock||0) <= (p.currentStock?.minStock||5) ? '#f87171' : '#10b981' }}>
                     {p.currentStock?.stock || 0} pzas
                   </span>
                 </td>
-                {editId === p.id ? (
-                  <>
-                    {['priceMostrador','priceMayoreo','priceOnline','priceML'].map(k => (
-                      <td key={k} style={{textAlign:'right'}}>
-                        <input type="number" min="0" step="0.01"
-                          style={{ width:80, padding:'2px 6px', borderRadius:6, border:'1px solid #334155',
-                            background:'#0f172a', color:'#f1f5f9', fontSize:12, textAlign:'right' }}
-                          value={editPrices[k] || ''}
-                          onChange={e => setEditPrices((prev:any) => ({...prev,[k]:e.target.value}))}/>
-                      </td>
-                    ))}
-                    <td>
-                      <div style={{display:'flex',gap:6}}>
-                        <button onClick={() => guardarPrecios(p.id)} disabled={saving}
-                          style={{background:color,border:'none',color:'#fff',padding:'3px 10px',borderRadius:6,cursor:'pointer',fontSize:12}}>
-                          {saving?'…':'✓'}
-                        </button>
-                        <button onClick={() => setEditId(null)}
-                          style={{background:'none',border:'1px solid #334155',color:'#64748b',padding:'3px 8px',borderRadius:6,cursor:'pointer',fontSize:12}}>
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td style={{textAlign:'right',color}}>{p.priceMostrador>0?fmt(p.priceMostrador):'—'}</td>
-                    <td style={{textAlign:'right',color:'#f59e0b'}}>{p.priceMayoreo>0?fmt(p.priceMayoreo):'—'}</td>
-                    <td style={{textAlign:'right',color:'#8b5cf6'}}>{p.priceOnline>0?fmt(p.priceOnline):'—'}</td>
-                    <td style={{textAlign:'right',color:'#10b981'}}>{p.priceML>0?fmt(p.priceML):'—'}</td>
-                    <td>
-                      <button onClick={() => startEdit(p)}
-                        style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                        Editar precios
-                      </button>
-                    </td>
-                  </>
-                )}
+                <td style={{textAlign:'right',color}}>{p.priceMostrador>0?fmt(p.priceMostrador):'—'}</td>
+                <td style={{textAlign:'right',color:'#f59e0b'}}>{p.priceMayoreo>0?fmt(p.priceMayoreo):'—'}</td>
+                <td style={{textAlign:'right',color:'#8b5cf6'}}>{p.priceOnline>0?fmt(p.priceOnline):'—'}</td>
+                <td style={{textAlign:'right',color:'#10b981'}}>{p.priceML>0?fmt(p.priceML):'—'}</td>
+                <td>
+                  <div style={{display:'flex',gap:6}}>
+                    <button onClick={() => setEditProd({...p})}
+                      style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                      Editar
+                    </button>
+                    <button onClick={() => toggleActivo(p)}
+                      style={{background:'none',border:'none',
+                        color: p.isActive === false ? '#10b981' : '#f87171',
+                        cursor:'pointer',fontSize:12}}>
+                      {p.isActive === false ? 'Activar' : 'Desactivar'}
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Modal edición completa */}
+      {editProd && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:560,
+            maxHeight:'85vh', overflowY:'auto', border:'1px solid #334155' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0, color }}>Editar producto</h3>
+              <button onClick={() => setEditProd(null)}
+                style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>SKU</label>
+                <input className="input-base" style={{ fontSize:13 }} value={editProd.sku||''}
+                  onChange={e => setEdit('sku', e.target.value)}/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Nombre</label>
+                <input className="input-base" style={{ fontSize:13 }} value={editProd.name||''}
+                  onChange={e => setEdit('name', e.target.value)}/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Tipo de carne</label>
+                <select className="input-base" style={{ fontSize:13 }} value={editProd.meatType||'RES'}
+                  onChange={e => setEdit('meatType', e.target.value)}>
+                  <option value="RES">Res</option>
+                  <option value="CER">Cerdo</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Sabor</label>
+                <select className="input-base" style={{ fontSize:13 }} value={editProd.flavor||'NAT'}
+                  onChange={e => setEdit('flavor', e.target.value)}>
+                  {FLAVORS.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Presentación</label>
+                <input className="input-base" style={{ fontSize:13 }} value={editProd.presentation||''}
+                  onChange={e => setEdit('presentation', e.target.value)}/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Gramos</label>
+                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
+                  value={editProd.gramsWeight||''} onChange={e => setEdit('gramsWeight', +e.target.value)}/>
+              </div>
+            </div>
+            <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+              letterSpacing:1, margin:'0 0 8px' }}>Precios por canal</p>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+              {PRECIO_COLS.map(({ key, label, col }) => (
+                <div key={key}>
+                  <label style={{ fontSize:11, color:col, display:'block', marginBottom:3 }}>{label}</label>
+                  <input type="number" min="0" step="0.01" className="input-base" style={{ fontSize:13 }}
+                    value={editProd[key]||''} onChange={e => setEdit(key, e.target.value)}/>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <button className="btn-secondary" style={{ fontSize:13 }} onClick={() => setEditProd(null)}>Cancelar</button>
+              <button className="btn-primary" style={{ background:color, fontSize:13 }}
+                onClick={guardarEdicion} disabled={saving}>
+                {saving ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
