@@ -538,14 +538,12 @@ function InsumosTab({ cid, color, qc }: any) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════
-//  TAB CLIENTES (existente sin cambios)
-// ══════════════════════════════════════════════════════════════
 function ClientesTab({ cid, color, qc }: any) {
   const [showNew,    setShowNew]    = useState(false);
   const [selected,   setSelected]   = useState<any>(null);
+  const [editCliente, setEditCliente] = useState<any>(null);
+  const [saving,     setSaving]     = useState(false);
   const [form, setForm] = useState({ name:'', rfc:'', phone:'', email:'', address:'', creditLimit:0, creditDays:30 });
-  const [saving, setSaving] = useState(false);
   const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
 
   const { data: clientes = [] } = useQuery({
@@ -571,8 +569,22 @@ function ClientesTab({ cid, color, qc }: any) {
     } finally { setSaving(false); }
   };
 
+  const guardarEdicion = async () => {
+    if (!editCliente) return;
+    setSaving(true);
+    try {
+      await api.put(`/companies/${cid}/clients/${editCliente.id}`, editCliente);
+      setEditCliente(null);
+      qc.invalidateQueries({ queryKey: ['clients', cid] });
+      qc.invalidateQueries({ queryKey: ['client-detail', editCliente.id] });
+    } finally { setSaving(false); }
+  };
+
+  const setEdit = (k:string, v:any) => setEditCliente((c:any) => ({...c, [k]: v}));
+
   return (
     <div style={{ display:'grid', gridTemplateColumns: selected ? '320px 1fr' : '1fr', gap:16 }}>
+      {/* Lista */}
       <div>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <p style={{fontSize:14,fontWeight:600,margin:0}}>Clientes</p>
@@ -619,13 +631,21 @@ function ClientesTab({ cid, color, qc }: any) {
 
         <div style={{display:'flex',flexDirection:'column',gap:6}}>
           {(clientes as any[]).map((c:any) => (
-            <button key={c.id} onClick={() => setSelected(selected?.id===c.id?null:c)}
-              style={{ textAlign:'left', padding:'10px 12px', borderRadius:8, border:'none', cursor:'pointer',
-                borderLeft:`3px solid ${selected?.id===c.id?color:'#334155'}`,
-                background: selected?.id===c.id?color+'11':'#1e293b' }}>
-              <p style={{fontSize:13,fontWeight:500,margin:'0 0 2px',color:'#f1f5f9'}}>{c.name}</p>
-              <p style={{fontSize:11,color:'#64748b',margin:0}}>{c.rfc||'Sin RFC'} · {c._count?.ordenesCompra||0} OC</p>
-            </button>
+            <div key={c.id} style={{ borderRadius:8, border:'none', overflow:'hidden',
+              borderLeft:`3px solid ${selected?.id===c.id?color:'#334155'}`,
+              background: selected?.id===c.id?color+'11':'#1e293b' }}>
+              <button onClick={() => setSelected(selected?.id===c.id?null:c)}
+                style={{ width:'100%', textAlign:'left', padding:'10px 12px', background:'none', border:'none', cursor:'pointer' }}>
+                <p style={{fontSize:13,fontWeight:500,margin:'0 0 2px',color:'#f1f5f9'}}>{c.name}</p>
+                <p style={{fontSize:11,color:'#64748b',margin:0}}>{c.rfc||'Sin RFC'} · {c._count?.ordenesCompra||0} OC · Límite: {fmt(c.creditLimit)}</p>
+              </button>
+              <div style={{ display:'flex', gap:6, padding:'0 12px 8px' }}>
+                <button onClick={() => setEditCliente({...c})}
+                  style={{background:'none',border:'1px solid #334155',color:'#60a5fa',padding:'2px 8px',borderRadius:5,cursor:'pointer',fontSize:11}}>
+                  Editar
+                </button>
+              </div>
+            </div>
           ))}
           {(clientes as any[]).length===0 && (
             <p style={{color:'#64748b',fontSize:13,textAlign:'center',padding:32}}>Sin clientes registrados</p>
@@ -633,6 +653,7 @@ function ClientesTab({ cid, color, qc }: any) {
         </div>
       </div>
 
+      {/* Detalle cliente */}
       {selected && detalle && (
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
           <div className="card">
@@ -654,7 +675,64 @@ function ClientesTab({ cid, color, qc }: any) {
               </div>
             </div>
           </div>
-          <OCSection cid={cid} clientId={selected.id} color={color} ordenes={detalle.ordenesCompra||[]} qc={qc}/>
+          <div className="card">
+            <p style={{fontSize:13,color:'#64748b',margin:0,textAlign:'center'}}>
+              Las órdenes de compra se gestionan en el módulo <strong style={{color}}>OC</strong> del menú.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal edición de cliente */}
+      {editCliente && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:480, border:'1px solid #334155' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0, color }}>Editar cliente</h3>
+              <button onClick={() => setEditCliente(null)}
+                style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+              {[
+                ['Nombre *', 'name', 'text'],
+                ['RFC', 'rfc', 'text'],
+                ['Teléfono', 'phone', 'text'],
+                ['Email', 'email', 'email'],
+              ].map(([label, key, type]) => (
+                <div key={key}>
+                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>{label}</label>
+                  <input className="input-base" type={type} style={{fontSize:13}}
+                    value={editCliente[key]||''}
+                    onChange={e => setEdit(key, e.target.value)}/>
+                </div>
+              ))}
+              <div style={{ gridColumn:'span 2' }}>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Dirección</label>
+                <input className="input-base" style={{fontSize:13}} value={editCliente.address||''}
+                  onChange={e => setEdit('address', e.target.value)}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Límite de crédito</label>
+                <input type="number" min="0" className="input-base" style={{fontSize:13}}
+                  value={editCliente.creditLimit||0}
+                  onChange={e => setEdit('creditLimit', +e.target.value)}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Días de crédito</label>
+                <input type="number" min="0" className="input-base" style={{fontSize:13}}
+                  value={editCliente.creditDays||30}
+                  onChange={e => setEdit('creditDays', +e.target.value)}/>
+              </div>
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <button className="btn-secondary" style={{fontSize:13}} onClick={() => setEditCliente(null)}>Cancelar</button>
+              <button className="btn-primary" style={{background:color, fontSize:13}}
+                onClick={guardarEdicion} disabled={saving || !editCliente.name}>
+                {saving ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
