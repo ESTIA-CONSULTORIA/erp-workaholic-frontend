@@ -659,19 +659,21 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
   );
 }
 
-// ── REPORTES ──────────────────────────────────────────────────
+// ── ESTADOS FINANCIEROS ───────────────────────────────────────
+// INSTRUCCIONES: Reemplaza todo desde "// ── REPORTES" hasta el cierre
+// de ReportesPage (antes de "// ── Estado de Resultados")
 export function ReportesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
-  const [tab, setTab] = useState<'er'|'ventas'|'cxc'|'cxp'>('er');
+  const [tab, setTab] = useState<'er'>('er');
 
   return (
     <AppLayout>
       <div style={{ maxWidth:1000 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Reportes</h1>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Estados Financieros</h1>
         <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {([['er','Estado de Resultados'],['ventas','Ventas'],['cxc','CxC'],['cxp','CxP']] as const).map(([id,label]) => (
+          {([['er','Estado de Resultados']] as const).map(([id,label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
                 borderBottom: tab===id ? `2px solid ${color}` : '2px solid transparent',
@@ -680,10 +682,7 @@ export function ReportesPage() {
             </button>
           ))}
         </div>
-        {tab === 'er'     && <ERTab     cid={cid!} color={color} activePeriod={activePeriod}/>}
-        {tab === 'ventas' && <VentasTab cid={cid!} color={color}/>}
-        {tab === 'cxc' && <CxCReporteTab cid={cid!} color={color}/>}
-        {tab === 'cxp'    && <CxPReporteTab cid={cid!} color={color}/>}
+        {tab === 'er' && <ERTab cid={cid!} color={color} activePeriod={activePeriod}/>}
       </div>
     </AppLayout>
   );
