@@ -6,6 +6,7 @@ import POSPage from './pages/machete/POS';
 import ProduccionPage from './pages/machete/Produccion';
 import InventarioPage from './pages/machete/Inventario';
 import CatalogoPage from './pages/machete/Catalogo';
+import OrdenesCompraPage from './pages/machete/OrdenesCompra';
 import MacheteReportesPage from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
 import ExpedientePage from './pages/rh/Expediente';
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/pos" element={<POSPage/>}/>
         <Route path="/produccion" element={<ProduccionPage/>}/>
         <Route path="/catalogo" element={<CatalogoPage/>}/>
+        <Route path="/ordenes-compra" element={<OrdenesCompraPage/>}/>
         <Route path="/machete-reportes" element={<MacheteReportesPage/>}/>
         <Route path="/machete/produccion" element={<ProduccionPage/>}/>
         <Route path="/machete/inventario" element={<InventarioPage/>}/>
