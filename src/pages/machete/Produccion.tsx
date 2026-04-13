@@ -265,7 +265,7 @@ export default function ProduccionPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display:'flex', gap:6' }}>
+                      <div style={{ display:'flex', gap:6 }}>
                         {/* Ver detalle siempre */}
                         <button onClick={() => { setLoteActivo(l); setTab('horno'); }}
                           style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
