@@ -480,6 +480,7 @@ export function ReportesPage() {
         </div>
         {tab === 'er'     && <ERTab     cid={cid!} color={color} activePeriod={activePeriod}/>}
         {tab === 'ventas' && <VentasTab cid={cid!} color={color}/>}
+        {tab === 'cxc' && <CxCReporteTab cid={cid!} color={color}/>}
         {tab === 'cxp'    && <CxPReporteTab cid={cid!} color={color}/>}
       </div>
     </AppLayout>
