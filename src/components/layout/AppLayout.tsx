@@ -7,7 +7,7 @@ const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov'
 const NAV_GROUPS = [
   {
     id: 'dashboard',
-    label: null, // sin encabezado
+    label: null,
     items: [
       { to:'/dashboard', icon:'▦', label:'Dashboard', roles:['admin','administrador','gerente','contador','rh','cajero','director'] },
     ]
@@ -29,11 +29,11 @@ const NAV_GROUPS = [
     label: 'Finanzas',
     icon: '💼',
     items: [
-      { to:'/gastos',       icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
-      { to:'/conciliacion', icon:'⊜', label:'Conciliación',  roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/cxc',          icon:'◷', label:'CxC / CxP',     roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/clientes',     icon:'👤', label:'Clientes / OC', roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/documentos',   icon:'⊞', label:'Documentos',    roles:['admin','administrador','gerente','contador','cajero'] },
+      { to:'/gastos',          icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
+      { to:'/conciliacion',    icon:'⊜', label:'Conciliación',  roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/cxc',             icon:'◷', label:'CxC / CxP',     roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/ordenes-compra',  icon:'📋', label:'OC',            companies:['MACHETE'] },
+      { to:'/documentos',      icon:'⊞', label:'Documentos',    roles:['admin','administrador','gerente','contador','cajero'] },
     ]
   },
   {
@@ -50,7 +50,7 @@ const NAV_GROUPS = [
     label: 'Reportes',
     icon: '📊',
     items: [
-      { to:'/machete-reportes', icon:'📊', label:'Ventas',       companies:['MACHETE'] },
+      { to:'/machete-reportes', icon:'📊', label:'Ventas', companies:['MACHETE'] },
     ]
   },
   {
@@ -58,8 +58,8 @@ const NAV_GROUPS = [
     label: 'RH',
     icon: '👥',
     items: [
-      { to:'/rh',       icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
-      { to:'/rh/nomina',icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
+      { to:'/rh',        icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
+      { to:'/rh/nomina', icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
     ]
   },
   {
@@ -85,8 +85,8 @@ function getUltimos12() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, activeCompany, activePeriod, setActiveCompany, setActivePeriod, logout } = useERPStore();
-  const [collapsed,      setCollapsed]      = useState(false);
-  const [openGroups,     setOpenGroups]     = useState<Record<string,boolean>>({
+  const [collapsed,  setCollapsed]  = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string,boolean>>({
     operaciones: true, finanzas: true, estados: false, reportes: false, rh: false,
   });
 
@@ -95,46 +95,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!user || !activeCompany) return null;
 
-  const toggleGroup = (id: string) => {
-    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
 
   const filterItem = (item: any) => {
-    if (item.roles     && !item.roles.includes(activeCompany.roleCode))         return false;
-    if (item.companies && !item.companies.includes(activeCompany.companyCode))  return false;
+    if (item.roles     && !item.roles.includes(activeCompany.roleCode))        return false;
+    if (item.companies && !item.companies.includes(activeCompany.companyCode)) return false;
     return true;
   };
 
   return (
     <div style={{ display:'flex', height:'100vh', overflow:'hidden' }}>
-      {/* Sidebar */}
       <aside style={{
         width: collapsed ? 56 : 220,
         display:'flex', flexDirection:'column',
         background:'#1e293b', borderRight:'1px solid #334155',
         transition:'width 0.2s', flexShrink:0,
       }}>
-        {/* Logo */}
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:16, borderBottom:'1px solid #334155', minHeight:60 }}>
-          <div style={{
-            width:32, height:32, borderRadius:8,
-            background:color, display:'flex', alignItems:'center',
-            justifyContent:'center', color:'#fff', fontWeight:700, fontSize:14, flexShrink:0,
-          }}>GW</div>
+          <div style={{ width:32, height:32, borderRadius:8, background:color,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            color:'#fff', fontWeight:700, fontSize:14, flexShrink:0 }}>GW</div>
           {!collapsed && <span style={{ fontSize:14, fontWeight:600 }}>Grupo Workaholic</span>}
         </div>
 
-        {/* Selectores */}
         {!collapsed && (
           <div style={{ padding:12, borderBottom:'1px solid #334155', display:'flex', flexDirection:'column', gap:8 }}>
-            <select
-              value={activeCompany.companyId}
+            <select value={activeCompany.companyId}
               onChange={e => {
                 const c = user.companies.find(c => c.companyId === e.target.value);
                 if (c) { setActiveCompany(c); navigate('/dashboard'); }
               }}
-              className="input-base"
-              style={{ fontSize:12, borderColor: color + '66' }}>
+              className="input-base" style={{ fontSize:12, borderColor: color + '66' }}>
               {user.companies.map(c => (
                 <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
               ))}
@@ -146,13 +137,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Nav agrupado */}
         <nav style={{ flex:1, overflowY:'auto', paddingTop:8, paddingBottom:8 }}>
           {NAV_GROUPS.map(group => {
             const visibleItems = group.items.filter(filterItem);
             if (visibleItems.length === 0) return null;
 
-            // Grupo sin encabezado — mostrar items directo
             if (!group.label) {
               return (
                 <div key={group.id}>
@@ -178,7 +167,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             return (
               <div key={group.id} style={{ marginBottom:2 }}>
-                {/* Encabezado del grupo */}
                 {!collapsed && (
                   <button onClick={() => toggleGroup(group.id)}
                     style={{ width:'100%', display:'flex', alignItems:'center', gap:8,
@@ -191,8 +179,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
                   </button>
                 )}
-
-                {/* Items del grupo */}
                 {(isOpen || collapsed) && visibleItems.map(item => (
                   <NavLink key={item.to} to={item.to} style={({ isActive }) => ({
                     display:'flex', alignItems:'center', gap:12,
@@ -214,14 +200,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Usuario */}
         <div style={{ padding:12, borderTop:'1px solid #334155' }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{
-              width:28, height:28, borderRadius:'50%', background:'#334155',
+            <div style={{ width:28, height:28, borderRadius:'50%', background:'#334155',
               display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:12, fontWeight:700, flexShrink:0,
-            }}>
+              fontSize:12, fontWeight:700, flexShrink:0 }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
             {!collapsed && (
@@ -237,7 +220,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Toggle */}
         <button onClick={() => setCollapsed(!collapsed)}
           style={{ padding:8, background:'none', border:'none', borderTop:'1px solid #334155',
             color:'#64748b', cursor:'pointer', fontSize:12 }}>
@@ -245,24 +227,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </button>
       </aside>
 
-      {/* Main */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {/* Top bar */}
-        <header style={{
-          height:60, borderBottom:`1px solid ${color}44`,
-          display:'flex', alignItems:'center', padding:'0 24px', gap:12, flexShrink:0,
-        }}>
-          <span style={{
-            padding:'4px 12px', borderRadius:99, fontSize:12, fontWeight:700,
-            background:color, color:'#fff',
-          }}>{activeCompany.companyName}</span>
-          <span style={{
-            padding:'4px 12px', borderRadius:99, fontSize:12,
-            background:'#334155', color:'#94a3b8',
-          }}>{periodos.find(p => p.key === activePeriod)?.label || activePeriod}</span>
+        <header style={{ height:60, borderBottom:`1px solid ${color}44`,
+          display:'flex', alignItems:'center', padding:'0 24px', gap:12, flexShrink:0 }}>
+          <span style={{ padding:'4px 12px', borderRadius:99, fontSize:12, fontWeight:700,
+            background:color, color:'#fff' }}>{activeCompany.companyName}</span>
+          <span style={{ padding:'4px 12px', borderRadius:99, fontSize:12,
+            background:'#334155', color:'#94a3b8' }}>
+            {periodos.find(p => p.key === activePeriod)?.label || activePeriod}
+          </span>
         </header>
-
-        {/* Content */}
         <main style={{ flex:1, overflowY:'auto', padding:24 }}>
           {children}
         </main>
