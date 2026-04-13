@@ -44,6 +44,13 @@ export default function POSPage() {
   const [tiraXGuardada, setTiraXGuardada] = useState(false);
   const [tiraData,     setTiraData]     = useState<any>(null);
 
+  // Depósito / Retiro de caja
+  const [showMovCaja,  setShowMovCaja]  = useState<'deposito'|'retiro'|null>(null);
+  const [movMonto,     setMovMonto]     = useState(0);
+  const [movNota,      setMovNota]      = useState('');
+  const [movMotivo,    setMovMotivo]    = useState('seguridad');
+  const [savingMov,    setSavingMov]    = useState(false);
+
   // Ventana de cobro en efectivo — horizontal
   const [showCobro, setShowCobro] = useState(false);
   const [conCuanto, setConCuanto] = useState(0);
@@ -245,6 +252,16 @@ export default function POSPage() {
           )}
 
           <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
+            <button onClick={() => { setShowMovCaja('deposito'); setMovMonto(0); setMovNota(''); }}
+              style={{ padding:'5px 12px', borderRadius:8, fontSize:11,
+                border:'1px solid #10b981', background:'none', color:'#10b981', cursor:'pointer' }}>
+              ↓ Depósito
+            </button>
+            <button onClick={() => { setShowMovCaja('retiro'); setMovMonto(0); setMovNota(''); setMovMotivo('seguridad'); }}
+              style={{ padding:'5px 12px', borderRadius:8, fontSize:11,
+                border:'1px solid #f87171', background:'none', color:'#f87171', cursor:'pointer' }}>
+              ↑ Retiro
+            </button>
             <button onClick={() => { cargarTira(); setShowTiraX(true); }}
               style={{ padding:'5px 12px', borderRadius:8, fontSize:11,
                 border:`1px solid ${tiraXGuardada?'#10b981':'#334155'}`,
@@ -844,6 +861,88 @@ export default function POSPage() {
                 style={{ padding:'8px 24px', borderRadius:8, border:'none',
                   background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
                 Confirmar Tira Z
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Depósito / Retiro de caja */}
+      {showMovCaja && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:380, border:'1px solid #334155' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0,
+                color: showMovCaja==='deposito' ? '#10b981' : '#f87171' }}>
+                {showMovCaja==='deposito' ? '↓ Depósito en caja' : '↑ Retiro de caja'}
+              </h3>
+              <button onClick={() => setShowMovCaja(null)}
+                style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
+            </div>
+
+            {showMovCaja === 'retiro' && (
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Motivo</label>
+                <div style={{ display:'flex', gap:6 }}>
+                  {[
+                    { id:'seguridad',      label:'Seguridad' },
+                    { id:'compra_express', label:'Compra express' },
+                    { id:'otro',           label:'Otro' },
+                  ].map(m => (
+                    <button key={m.id} onClick={() => setMovMotivo(m.id)}
+                      style={{ flex:1, padding:'6px', borderRadius:6, fontSize:11, cursor:'pointer',
+                        border:`1px solid ${movMotivo===m.id ? '#f87171' : '#334155'}`,
+                        background: movMotivo===m.id ? '#f8717122' : 'transparent',
+                        color: movMotivo===m.id ? '#f87171' : '#64748b' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Monto *</label>
+              <input type="number" min="0" step="0.01" className="input-base" style={{ fontSize:16, fontWeight:700 }}
+                value={movMonto||''} onChange={e => setMovMonto(+e.target.value)} placeholder="0.00"/>
+            </div>
+
+            <div style={{ marginBottom:20 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                Notas {showMovCaja==='deposito' ? '(quién deposita)' : '(detalle)'}
+              </label>
+              <input className="input-base" style={{ fontSize:13 }} value={movNota}
+                onChange={e => setMovNota(e.target.value)}
+                placeholder={showMovCaja==='deposito' ? 'Fondo de cambio, reposición...' : 'Destino del retiro...'}/>
+            </div>
+
+            <div style={{ display:'flex', gap:8 }}>
+              <button className="btn-secondary" style={{ flex:1, fontSize:13 }}
+                onClick={() => setShowMovCaja(null)}>Cancelar</button>
+              <button onClick={async () => {
+                if (!movMonto || movMonto <= 0) { alert('Ingresa un monto válido'); return; }
+                setSavingMov(true);
+                try {
+                  await api.post(`/companies/${cid}/flow/movements`, {
+                    type:       showMovCaja === 'deposito' ? 'ENTRADA' : 'SALIDA',
+                    originType: showMovCaja === 'deposito' ? 'DEPOSITO_CAJA' : movMotivo === 'compra_express' ? 'COMPRA_EXPRESS' : 'RETIRO_CAJA',
+                    amount:     movMonto,
+                    date:       new Date().toISOString().slice(0,10),
+                    notes:      movNota || null,
+                  });
+                  setShowMovCaja(null);
+                  setMovMonto(0);
+                  setMovNota('');
+                  alert(`✓ ${showMovCaja === 'deposito' ? 'Depósito' : 'Retiro'} registrado`);
+                } catch(e:any) {
+                  alert(e.response?.data?.message || 'Error al registrar');
+                } finally { setSavingMov(false); }
+              }}
+                style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
+                  background: showMovCaja==='deposito' ? '#10b981' : '#f87171',
+                  color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}
+                disabled={savingMov || !movMonto}>
+                {savingMov ? 'Registrando…' : showMovCaja==='deposito' ? 'Registrar depósito' : 'Registrar retiro'}
               </button>
             </div>
           </div>
