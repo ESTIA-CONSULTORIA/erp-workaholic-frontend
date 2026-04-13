@@ -8,7 +8,6 @@ type Vista = 'productos' | 'insumos' | 'clientes';
 
 const MEAT_TYPES  = ['RES','CER'];
 const FLAVORS     = ['NAT','CHI','BBQ','MIX'];
-const PRESENTACIONES = ['100G','250G','500G','1KG','2KG','5KG'];
 const UNITS       = ['kg','lt','pza','g','ml','bolsa','caja'];
 const GROUPS      = ['CARNE','CONDIMENTO','EMPAQUE','LIMPIEZA','GENERAL'];
 
@@ -136,13 +135,11 @@ function ProductosTab({ cid, color, qc }: any) {
                 {FLAVORS.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
-            <div>
-              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Presentación</label>
-              <select className="input-base" style={{ fontSize:13 }} value={form.presentation}
-                onChange={e => set('presentation', e.target.value)}>
-                {PRESENTACIONES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
+           <div>
+  <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Presentación</label>
+  <input className="input-base" style={{ fontSize:13 }} value={form.presentation}
+    onChange={e => set('presentation', e.target.value)} placeholder="30G, 250G, 1KG..."/>
+</div>
             <div>
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Gramos</label>
               <input type="number" min="0" className="input-base" style={{ fontSize:13 }} value={form.gramsWeight}
