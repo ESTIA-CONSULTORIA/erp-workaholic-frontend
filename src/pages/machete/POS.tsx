@@ -51,6 +51,11 @@ export default function POSPage() {
   const [movMotivo,    setMovMotivo]    = useState('seguridad');
   const [savingMov,    setSavingMov]    = useState(false);
 
+  // Control de crédito
+  const [showCreditBlock, setShowCreditBlock] = useState(false);
+  const [creditPin,       setCreditPin]       = useState('');
+  const [creditPinError,  setCreditPinError]  = useState('');
+
   // Ventana de cobro en efectivo — horizontal
   const [showCobro, setShowCobro] = useState(false);
   const [conCuanto, setConCuanto] = useState(0);
@@ -142,19 +147,33 @@ export default function POSPage() {
     const today = new Date().toISOString().slice(0,10);
     const { data } = await api.get(`/companies/${cid}/machete/sales?period=${today.slice(0,7)}`);
     const hoy = data.filter((s:any) => s.date.slice(0,10) === today);
-    const porMetodo: Record<string,number> = {};
-    const porCanal:  Record<string,number> = {};
+    const porMetodo:  Record<string,number> = {};
+    const porCanal:   Record<string,number> = {};
+    const porFamilia: Record<string,number> = {};
     let totalBruto = 0;
     let totalCredito = 0;
+
     for (const s of hoy) {
-      const metodo = s.paymentMethod || 'efectivo';
-      porMetodo[metodo] = (porMetodo[metodo]||0) + Number(s.total);
+      const met = s.paymentMethod || 'efectivo';
+      porMetodo[met] = (porMetodo[met]||0) + Number(s.total);
       porCanal[s.channel] = (porCanal[s.channel]||0) + Number(s.total);
       totalBruto += Number(s.total);
-      if (metodo === 'credito') totalCredito += Number(s.total);
+      if (met === 'credito') totalCredito += Number(s.total);
+      for (const l of s.lines || []) {
+        const familia = l.product?.name?.split(' ').slice(0,2).join(' ') || l.product?.sku?.split('-').slice(0,2).join(' ') || 'Otros';
+        porFamilia[familia] = (porFamilia[familia]||0) + Number(l.total);
+      }
     }
+
+    // Cargar movimientos del día (depósitos/retiros)
+    let movimientos: any[] = [];
+    try {
+      const { data: movs } = await api.get(`/companies/${cid}/flow/movements?fecha=${today}`);
+      movimientos = movs || [];
+    } catch(e) {}
+
     const efContado = DENOMINACIONES.reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0);
-    setTiraData({ hoy, porMetodo, porCanal, totalBruto, totalCredito, totalDesc:0, fecha: today, efectivoContado: efContado });
+    setTiraData({ hoy, porMetodo, porCanal, porFamilia, movimientos, totalBruto, totalCredito, totalDesc:0, fecha: today, efectivoContado: efContado });
   };
 
   const saleM = useMutation({
@@ -179,8 +198,26 @@ export default function POSPage() {
     onError: (e:any) => setError(e.response?.data?.message || 'Error'),
   });
 
-  const cobrar = () => {
+  const cobrar = async () => {
     if (esCredito && !clienteId) { setError('Selecciona un cliente'); return; }
+
+    // Verificar límite de crédito
+    if (esCredito && clienteId) {
+      const cliente = (clientes as any[]).find((c:any) => c.id === clienteId);
+      if (cliente?.creditLimit > 0) {
+        try {
+          const { data: summary } = await api.get(`/companies/${cid}/cxc/summary?clientId=${clienteId}`);
+          const saldoPendiente = summary?.totalPending || 0;
+          if (Number(saldoPendiente) + total > Number(cliente.creditLimit)) {
+            setShowCreditBlock(true);
+            setCreditPin('');
+            setCreditPinError('');
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+
     setError('');
     if (!esCredito && metodo === 'efectivo') {
       setConCuanto(0);
@@ -765,99 +802,177 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* Modal Tira Z — HORIZONTAL */}
+      {/* Modal Tira Z — REDISEÑADO */}
       {showTiraZ && tiraData && tiraXGuardada && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', display:'flex',
-          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:640,
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:20, width:'90vw', maxWidth:820,
             border:'1px solid #334155' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
-              <h3 style={{ fontSize:16, fontWeight:700, margin:0, color:'#f59e0b' }}>Tira Z — Corte de caja</h3>
+
+            {/* Header */}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14,
+              borderBottom:'1px solid #334155', paddingBottom:10 }}>
+              <div>
+                <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 2px', color:'#f59e0b' }}>
+                  Tira Z — Corte de caja
+                </h3>
+                <p style={{ fontSize:11, color:'#64748b', margin:0 }}>
+                  {tiraData.fecha} · {tiraData.hoy?.length || 0} ventas
+                </p>
+              </div>
               <button onClick={() => setShowTiraZ(false)}
                 style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-              {/* Sistema */}
-              <div>
-                <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 8px' }}>
-                  Sistema registró
-                </p>
-                <div style={{ background:'#0f172a', borderRadius:8, padding:12 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                    <span style={{ fontSize:12, color:'#64748b' }}>Total ventas</span>
-                    <span style={{ fontSize:14, fontWeight:700, color:'#f59e0b' }}>{fmt(tiraData.totalBruto)}</span>
+            {/* Fila 1: Ventas por familia | Formas de pago */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:10 }}>
+
+              {/* Ventas por familia */}
+              <div style={{ background:'#0f172a', borderRadius:8, padding:10 }}>
+                <p style={{ fontSize:10, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+                  letterSpacing:1, margin:'0 0 8px' }}>Ventas por familia</p>
+                {Object.entries(tiraData.porFamilia || {}).map(([fam, monto]: any) => (
+                  <div key={fam} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                    <span style={{ fontSize:11, color:'#94a3b8' }}>{fam}</span>
+                    <span style={{ fontSize:11, fontWeight:600, color:'#f1f5f9' }}>{fmt(monto)}</span>
                   </div>
-                  {Object.entries(tiraData.porMetodo).map(([k,v]:any) => (
-                    <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <span style={{ fontSize:11, color: k==='credito'?'#f59e0b':'#94a3b8', textTransform:'capitalize' }}>{k}</span>
-                      <span style={{ fontSize:12, color: k==='credito'?'#f59e0b':'#94a3b8' }}>{fmt(v)}</span>
-                    </div>
-                  ))}
+                ))}
+                <div style={{ borderTop:'1px solid #334155', marginTop:6, paddingTop:6,
+                  display:'flex', justifyContent:'space-between' }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#64748b' }}>Total</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:'#f59e0b' }}>{fmt(tiraData.totalBruto)}</span>
                 </div>
               </div>
 
-              {/* Cajero */}
-              <div>
-                <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 8px' }}>
-                  Cajero reportó (Tira X)
-                </p>
-                <div style={{ background:'#0f172a', borderRadius:8, padding:12 }}>
-                  {[
-                    { label:'Efectivo', valor: DENOMINACIONES.reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0), esperado: tiraData.porMetodo['efectivo']||0 },
-                    { label:'Terminal', valor: ['debito','credito','transferencia'].reduce((t,k) => t + (efectivoCaja?.[`term_${k}`]||0), 0), esperado: (tiraData.porMetodo['tarjeta']||0)+(tiraData.porMetodo['transferencia']||0) },
-                    { label:'Delivery', valor: ['rappi','ubereats','didi','pedidosya'].reduce((t,k) => t + (efectivoCaja?.[`del_${k}`]||0), 0), esperado: tiraData.porMetodo['rappi']||0 },
-                  ].map(r => {
-                    const dif = r.valor - r.esperado;
-                    return (
-                      <div key={r.label} style={{ marginBottom:8 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                          <span style={{ fontSize:11, color:'#94a3b8' }}>{r.label}</span>
-                          <span style={{ fontSize:12, color:'#f1f5f9' }}>{fmt(r.valor)}</span>
-                        </div>
-                        <div style={{ display:'flex', justifyContent:'space-between' }}>
-                          <span style={{ fontSize:10, color:'#64748b' }}>Diferencia</span>
-                          <span style={{ fontSize:12, fontWeight:700, color: dif>=0?'#10b981':'#f87171' }}>
-                            {dif>=0?'+':''}{fmt(dif)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Formas de pago */}
+              <div style={{ background:'#0f172a', borderRadius:8, padding:10 }}>
+                <p style={{ fontSize:10, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+                  letterSpacing:1, margin:'0 0 8px' }}>Formas de pago</p>
+                {[
+                  { key:'efectivo',      label:'Efectivo',         col:'#10b981' },
+                  { key:'tarjeta',       label:'Terminal débito',   col:'#3b82f6' },
+                  { key:'credito',       label:'Terminal crédito',  col:'#8b5cf6' },
+                  { key:'transferencia', label:'Transferencia',     col:'#06b6d4' },
+                  { key:'credito_cliente', label:'Crédito cliente', col:'#f59e0b' },
+                  { key:'rappi',         label:'Rappi',             col:'#f97316' },
+                  { key:'ubereats',      label:'Uber Eats',         col:'#84cc16' },
+                  { key:'didi',          label:'DiDi Food',         col:'#facc15' },
+                  { key:'pedidosya',     label:'Pedidos Ya',        col:'#f43f5e' },
+                ].filter(fp => (tiraData.porMetodo[fp.key]||0) > 0).map(fp => (
+                  <div key={fp.key} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                    <span style={{ fontSize:11, color:fp.col }}>{fp.label}</span>
+                    <span style={{ fontSize:11, fontWeight:600, color:'#f1f5f9' }}>{fmt(tiraData.porMetodo[fp.key]||0)}</span>
+                  </div>
+                ))}
+                {Object.keys(tiraData.porMetodo).length === 0 && (
+                  <p style={{ fontSize:11, color:'#475569' }}>Sin ventas registradas</p>
+                )}
               </div>
             </div>
 
-            <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
+            {/* Fila 2: Movimientos de caja */}
+            {(tiraData.movimientos || []).length > 0 && (
+              <div style={{ background:'#0f172a', borderRadius:8, padding:10, marginBottom:10 }}>
+                <p style={{ fontSize:10, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+                  letterSpacing:1, margin:'0 0 8px' }}>Movimientos de caja</p>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                  {(() => {
+                    const deps = (tiraData.movimientos||[]).filter((m:any) => m.type==='ENTRADA').reduce((t:number,m:any) => t+Number(m.amount),0);
+                    const rets = (tiraData.movimientos||[]).filter((m:any) => m.type==='SALIDA').reduce((t:number,m:any) => t+Number(m.amount),0);
+                    return [
+                      { label:'Depósitos', value:deps, col:'#10b981' },
+                      { label:'Retiros',   value:rets, col:'#f87171' },
+                      { label:'Neto',      value:deps-rets, col: deps-rets>=0?'#10b981':'#f87171' },
+                    ].map(r => (
+                      <div key={r.label} style={{ textAlign:'center' }}>
+                        <p style={{ fontSize:10, color:'#64748b', margin:'0 0 2px' }}>{r.label}</p>
+                        <p style={{ fontSize:14, fontWeight:700, color:r.col, margin:0 }}>{fmt(r.value)}</p>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Fila 3: Declarado por cajero vs sistema */}
+            <div style={{ background:'#0f172a', borderRadius:8, padding:10, marginBottom:14 }}>
+              <p style={{ fontSize:10, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+                letterSpacing:1, margin:'0 0 8px' }}>Cajero declaró vs sistema</p>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                {[
+                  {
+                    label:    'Efectivo',
+                    declarado: DENOMINACIONES.reduce((t,d) => t + d*(efectivoCaja?.[`den_${d}`]||0), 0),
+                    esperado:  tiraData.porMetodo['efectivo']||0,
+                  },
+                  {
+                    label:    'Terminal',
+                    declarado: ['debito','credito','transferencia'].reduce((t,k) => t+(efectivoCaja?.[`term_${k}`]||0), 0),
+                    esperado:  (tiraData.porMetodo['tarjeta']||0)+(tiraData.porMetodo['transferencia']||0),
+                  },
+                  {
+                    label:    'Delivery',
+                    declarado: ['rappi','ubereats','didi','pedidosya'].reduce((t,k) => t+(efectivoCaja?.[`del_${k}`]||0), 0),
+                    esperado:  ['rappi','ubereats','didi','pedidosya'].reduce((t,k) => t+(tiraData.porMetodo[k]||0), 0),
+                  },
+                ].map(r => {
+                  const dif = r.declarado - r.esperado;
+                  return (
+                    <div key={r.label} style={{ background:'#1e293b', borderRadius:6, padding:8 }}>
+                      <p style={{ fontSize:10, fontWeight:700, color:'#64748b', margin:'0 0 6px',
+                        textTransform:'uppercase', letterSpacing:0.5 }}>{r.label}</p>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
+                        <span style={{ fontSize:10, color:'#64748b' }}>Declarado</span>
+                        <span style={{ fontSize:12, color:'#f1f5f9', fontWeight:600 }}>{fmt(r.declarado)}</span>
+                      </div>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:10, color:'#64748b' }}>Esperado</span>
+                        <span style={{ fontSize:12, color:'#94a3b8' }}>{fmt(r.esperado)}</span>
+                      </div>
+                      <div style={{ borderTop:'1px solid #334155', paddingTop:4,
+                        display:'flex', justifyContent:'space-between' }}>
+                        <span style={{ fontSize:10, color:'#64748b' }}>Diferencia</span>
+                        <span style={{ fontSize:13, fontWeight:700, color: dif===0?'#10b981':dif>0?'#3b82f6':'#f87171' }}>
+                          {dif>0?'+':''}{fmt(dif)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
               <button onClick={() => setShowTiraZ(false)}
                 style={{ padding:'8px 20px', borderRadius:8, border:'1px solid #334155',
                   background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
                 Cancelar
               </button>
               <button onClick={async () => {
-                  try {
-                    await api.post(`/companies/${cid}/corte-caja`, {
-                      fecha:                  tiraData.fecha,
-                      totalVentas:            tiraData.totalBruto,
-                      totalEfectivo:          tiraData.porMetodo['efectivo']||0,
-                      totalTarjeta:           tiraData.porMetodo['tarjeta']||0,
-                      totalTransfer:          tiraData.porMetodo['transferencia']||0,
-                      totalCredito:           tiraData.porMetodo['credito']||0,
-                      totalDelivery:          ['rappi','ubereats','didi','pedidosya'].reduce((t:number,k:string) => t+(efectivoCaja?.[`del_${k}`]||0),0),
-                      totalTerminal:          ['debito','credito','transferencia'].reduce((t:number,k:string) => t+(efectivoCaja?.[`term_${k}`]||0),0),
-                      efectivoContado:        DENOMINACIONES.reduce((t,d) => t+d*(efectivoCaja?.[`den_${d}`]||0),0),
-                      desgloseDenominaciones: efectivoCaja,
-                      desgloseTerminales:     efectivoCaja,
-                      desgloseDelivery:       efectivoCaja,
-                    });
-                    setShowTiraZ(false);
-                    setTiraXGuardada(false);
-                    setEfectivoCaja({});
-                    alert('✓ Corte enviado al contador para validación');
-                  } catch(e:any) {
-                    alert(e.response?.data?.message || 'Error al crear corte');
-                  }
-                }}
+                try {
+                  await api.post(`/companies/${cid}/corte-caja`, {
+                    fecha:                  tiraData.fecha,
+                    totalVentas:            tiraData.totalBruto,
+                    totalEfectivo:          tiraData.porMetodo['efectivo']||0,
+                    totalTarjeta:           tiraData.porMetodo['tarjeta']||0,
+                    totalTransfer:          tiraData.porMetodo['transferencia']||0,
+                    totalCredito:           tiraData.porMetodo['credito']||0,
+                    totalDelivery:          ['rappi','ubereats','didi','pedidosya'].reduce((t:number,k:string) => t+(efectivoCaja?.[`del_${k}`]||0),0),
+                    totalTerminal:          ['debito','credito','transferencia'].reduce((t:number,k:string) => t+(efectivoCaja?.[`term_${k}`]||0),0),
+                    efectivoContado:        DENOMINACIONES.reduce((t,d) => t+d*(efectivoCaja?.[`den_${d}`]||0),0),
+                    desgloseDenominaciones: efectivoCaja,
+                    desgloseTerminales:     efectivoCaja,
+                    desgloseDelivery:       efectivoCaja,
+                  });
+                  setShowTiraZ(false);
+                  setTiraXGuardada(false);
+                  setEfectivoCaja({});
+                  alert('✓ Corte enviado al contador para validación');
+                } catch(e:any) {
+                  alert(e.response?.data?.message || 'Error al crear corte');
+                }
+              }}
                 style={{ padding:'8px 24px', borderRadius:8, border:'none',
                   background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
                 Confirmar Tira Z
@@ -866,6 +981,53 @@ export default function POSPage() {
           </div>
         </div>
       )}
+      {/* Modal bloqueo de crédito */}
+      {showCreditBlock && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:380, border:'1px solid #f87171' }}>
+            <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 8px', color:'#f87171' }}>
+              ⚠ Límite de crédito excedido
+            </h3>
+            <p style={{ fontSize:13, color:'#94a3b8', margin:'0 0 16px' }}>
+              Este cliente ha alcanzado su límite de crédito. Se requiere autorización de un gerente o administrador.
+            </p>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>PIN de autorización</label>
+              <input type="password" className="input-base" style={{ fontSize:16, letterSpacing:4, textAlign:'center' }}
+                value={creditPin} onChange={e => { setCreditPin(e.target.value); setCreditPinError(''); }}
+                placeholder="● ● ● ●"/>
+              {creditPinError && <p style={{ fontSize:12, color:'#f87171', margin:'4px 0 0' }}>{creditPinError}</p>}
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button className="btn-secondary" style={{ flex:1, fontSize:13 }}
+                onClick={() => { setShowCreditBlock(false); setCreditPin(''); }}>
+                Cancelar
+              </button>
+              <button onClick={async () => {
+                try {
+                  await api.post('/auth/verify-pin', { companyId: cid, pin: creditPin });
+                  setShowCreditBlock(false);
+                  setCreditPin('');
+                  setError('');
+                  if (!esCredito && metodo === 'efectivo') {
+                    setConCuanto(0); setShowCobro(true);
+                  } else {
+                    saleM.mutate();
+                  }
+                } catch {
+                  setCreditPinError('PIN incorrecto');
+                }
+              }}
+                style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
+                  background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                Autorizar venta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Depósito / Retiro de caja */}
       {showMovCaja && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex',
