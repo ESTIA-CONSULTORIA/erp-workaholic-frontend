@@ -315,7 +315,7 @@ export default function OrdenesCompraPage() {
                   {[
                     { label:'Total OC',  value:fmt(ocActiva.montoTotal),  col:'#94a3b8' },
                     { label:'Surtido',   value:fmt(ocActiva.montoSurtido), col:'#10b981' },
-                    { label:'Saldo',     value:fmt(ocActiva.saldo),        col },
+                    { label:'Saldo',     value:fmt(ocActiva.saldo),        col:color },
                   ].map(k => (
                     <div key={k.label} style={{ background:'#0f172a', borderRadius:8, padding:'8px 10px' }}>
                       <p style={{ fontSize:10, color:'#64748b', margin:'0 0 2px' }}>{k.label}</p>
