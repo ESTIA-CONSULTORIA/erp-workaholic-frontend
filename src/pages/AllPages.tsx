@@ -392,7 +392,6 @@ export function GastosPage() {
   );
 }
 
-
 export function ConciliacionPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
