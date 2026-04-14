@@ -25,6 +25,8 @@ export default function CorteCajaPage() {
   const [efectivoReal, setEfectivoReal]   = useState(0);
   const [notasValid,   setNotasValid]     = useState('');
   const [saving,       setSaving]         = useState(false);
+  const [corteRespuesta, setCorteRespuesta] = useState<any>(null);
+  const [respuestaTexto, setRespuestaTexto] = useState('');
 
   const set = (k: string, v: any) => setForm(f => ({...f, [k]: v}));
 
@@ -186,6 +188,12 @@ export default function CorteCajaPage() {
                           Validar
                         </button>
                       )}
+                      {c.status === 'RECHAZADO' && (
+                        <button onClick={() => { setCorteRespuesta(c); setRespuestaTexto(''); }}
+                          style={{ background:'none', border:'none', color:'#f59e0b', cursor:'pointer', fontSize:12 }}>
+                          Responder
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -252,6 +260,50 @@ export default function CorteCajaPage() {
           </div>
         )}
       </div>
+      {/* Modal respuesta cajero a corte rechazado */}
+      {corteRespuesta && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:420, border:'1px solid #f59e0b' }}>
+            <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 8px', color:'#f59e0b' }}>
+              Responder al contador
+            </h3>
+            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+              <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Motivo de rechazo:</p>
+              <p style={{ fontSize:13, color:'#f87171', margin:0 }}>
+                {corteRespuesta.notasValidador || 'Sin nota del validador'}
+              </p>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                Tu respuesta *
+              </label>
+              <textarea className="input-base" style={{ fontSize:13, height:80, resize:'none' }}
+                value={respuestaTexto} onChange={e => setRespuestaTexto(e.target.value)}
+                placeholder="Explica la diferencia o adjunta el ticket del gasto..."/>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button className="btn-secondary" style={{ flex:1, fontSize:13 }}
+                onClick={() => setCorteRespuesta(null)}>Cancelar</button>
+              <button onClick={async () => {
+                if (!respuestaTexto.trim()) return;
+                setSaving(true);
+                try {
+                  await api.put(`/companies/${cid}/corte-caja/${corteRespuesta.id}/responder`,
+                    { respuesta: respuestaTexto });
+                  setCorteRespuesta(null);
+                  qc.invalidateQueries({ queryKey: ['cortes-caja', cid] });
+                } finally { setSaving(false); }
+              }}
+                style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
+                  background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}
+                disabled={saving || !respuestaTexto.trim()}>
+                {saving ? 'Enviando…' : 'Enviar respuesta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
