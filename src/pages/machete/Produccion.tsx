@@ -419,51 +419,78 @@ export default function ProduccionPage() {
                   {/* Tab Horno */}
                   {tab === 'horno' && (
                     <div>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-                        <div>
-                          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Kg carne seca salida</label>
-                          <input type="number" min="0" step="0.1" className="input-base" style={{ fontSize:13 }}
-                            value={hornoForm.kgSalida||''} onChange={e => setHornoForm(f=>({...f,kgSalida:+e.target.value}))}/>
-                        </div>
-                        {tipoConfig?.hasGrasa && (
-                          <div>
-                            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Kg grasa eliminada</label>
-                            <input type="number" min="0" step="0.1" className="input-base" style={{ fontSize:13 }}
-                              value={hornoForm.kgGrasa||''} onChange={e => setHornoForm(f=>({...f,kgGrasa:+e.target.value}))}/>
-                          </div>
-                        )}
-                        <div>
-                          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Kg escarchado (del scrap)</label>
-                          <input type="number" min="0" step="0.1" className="input-base" style={{ fontSize:13 }}
-                            value={hornoForm.kgEscarchado||''} onChange={e => setHornoForm(f=>({...f,kgEscarchado:+e.target.value}))}/>
-                        </div>
-                      </div>
-
-                      {hornoForm.kgSalida > 0 && (
-                        <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+                      {loteActivo.kgSalida > 0 ? (
+                        // Ya tiene salida registrada — solo lectura
+                        <div style={{ background:'#0f172a', borderRadius:8, padding:12 }}>
+                          <p style={{ fontSize:11, color:'#64748b', margin:'0 0 10px', textTransform:'uppercase', letterSpacing:1 }}>
+                            Salida registrada
+                          </p>
                           {[
-                            { label:'Kg carne seca',  value:`${hornoForm.kgSalida} kg`,     col:color },
-                            { label:'Kg grasa',        value:`${hornoForm.kgGrasa} kg`,      col:'#f87171' },
-                            { label:'Kg escarchado',   value:`${hornoForm.kgEscarchado} kg`, col:'#f59e0b' },
-                            { label:'Kg merma',
-                              value:`${Math.max(0, Number(loteActivo.kgEntrada) - hornoForm.kgSalida - hornoForm.kgGrasa - hornoForm.kgEscarchado).toFixed(2)} kg`,
-                              col:'#64748b' },
-                            { label:'Rendimiento',
-                              value:`${((hornoForm.kgSalida / Number(loteActivo.kgEntrada)) * 100).toFixed(1)}%`,
-                              col:'#10b981' },
+                            { label:'Kg carne seca',  value:`${loteActivo.kgSalida} kg`,     col:color },
+                            { label:'Kg grasa',        value:`${loteActivo.kgGrasa||0} kg`,   col:'#f87171' },
+                            { label:'Kg escarchado',   value:`${loteActivo.kgEscarchado||0} kg`, col:'#f59e0b' },
+                            { label:'Kg merma',        value:`${Number(loteActivo.kgMerma||0).toFixed(2)} kg`, col:'#64748b' },
+                            { label:'Rendimiento',     value:`${Number(loteActivo.rendimiento||0).toFixed(1)}%`, col:'#10b981' },
                           ].map(r => (
-                            <div key={r.label} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                            <div key={r.label} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                               <span style={{ fontSize:12, color:'#64748b' }}>{r.label}</span>
                               <span style={{ fontSize:13, fontWeight:600, color:r.col }}>{r.value}</span>
                             </div>
                           ))}
+                          <p style={{ fontSize:11, color:'#475569', margin:'10px 0 0', textAlign:'center' }}>
+                            La salida del horno ya fue registrada y no puede modificarse.
+                          </p>
                         </div>
-                      )}
+                      ) : (
+                        // Sin salida — formulario editable
+                        <>
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+                            <div>
+                              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Kg carne seca salida</label>
+                              <input type="number" min="0" step="0.1" className="input-base" style={{ fontSize:13 }}
+                                value={hornoForm.kgSalida||''} onChange={e => setHornoForm(f=>({...f,kgSalida:+e.target.value}))}/>
+                            </div>
+                            {tipoConfig?.hasGrasa && (
+                              <div>
+                                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Kg grasa eliminada</label>
+                                <input type="number" min="0" step="0.1" className="input-base" style={{ fontSize:13 }}
+                                  value={hornoForm.kgGrasa||''} onChange={e => setHornoForm(f=>({...f,kgGrasa:+e.target.value}))}/>
+                              </div>
+                            )}
+                            <div>
+                              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Kg escarchado (del scrap)</label>
+                              <input type="number" min="0" step="0.1" className="input-base" style={{ fontSize:13 }}
+                                value={hornoForm.kgEscarchado||''} onChange={e => setHornoForm(f=>({...f,kgEscarchado:+e.target.value}))}/>
+                            </div>
+                          </div>
 
-                      <button className="btn-primary" style={{ width:'100%', background:color, fontSize:13 }}
-                        onClick={() => hornoM.mutate()} disabled={hornoM.isPending || !hornoForm.kgSalida}>
-                        {hornoM.isPending ? 'Guardando…' : 'Registrar salida del horno'}
-                      </button>
+                          {hornoForm.kgSalida > 0 && (
+                            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+                              {[
+                                { label:'Kg carne seca',  value:`${hornoForm.kgSalida} kg`,     col:color },
+                                { label:'Kg grasa',        value:`${hornoForm.kgGrasa} kg`,      col:'#f87171' },
+                                { label:'Kg escarchado',   value:`${hornoForm.kgEscarchado} kg`, col:'#f59e0b' },
+                                { label:'Kg merma',
+                                  value:`${Math.max(0, Number(loteActivo.kgEntrada) - hornoForm.kgSalida - hornoForm.kgGrasa - hornoForm.kgEscarchado).toFixed(2)} kg`,
+                                  col:'#64748b' },
+                                { label:'Rendimiento',
+                                  value:`${((hornoForm.kgSalida / Number(loteActivo.kgEntrada)) * 100).toFixed(1)}%`,
+                                  col:'#10b981' },
+                              ].map(r => (
+                                <div key={r.label} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                                  <span style={{ fontSize:12, color:'#64748b' }}>{r.label}</span>
+                                  <span style={{ fontSize:13, fontWeight:600, color:r.col }}>{r.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <button className="btn-primary" style={{ width:'100%', background:color, fontSize:13 }}
+                            onClick={() => hornoM.mutate()} disabled={hornoM.isPending || !hornoForm.kgSalida}>
+                            {hornoM.isPending ? 'Guardando…' : 'Registrar salida del horno'}
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 
