@@ -323,7 +323,7 @@ export default function ProduccionPage() {
               <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
                 {[
                   { label:'Kg entrada', value:`${loteActivo.kgEntrada} kg`, col:'#94a3b8' },
-                  { label:'Kg salida',  value: loteActivo.kgSalida > 0 ? `${loteActivo.kgSalida} kg` : '—', col },
+                  { label:'Kg salida', value: loteActivo.kgSalida > 0 ? `${loteActivo.kgSalida} kg` : '—', col:'#94a3b8' },
                   { label:'Rendimiento',value: loteActivo.rendimiento > 0 ? `${Number(loteActivo.rendimiento).toFixed(1)}%` : '—', col:'#10b981' },
                 ].map(k => (
                   <div key={k.label} style={{ background:'#0f172a', borderRadius:8, padding:'8px 10px' }}>
