@@ -1,191 +1,171 @@
-import { useQuery } from '@tanstack/react-query';
-import { useERPStore } from '../store/erp.store';
-import { api, fmt } from '../lib/api';
-import AppLayout from '../components/layout/AppLayout';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma/prisma.service';
 
-const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+@Injectable()
+export class CorteCajaService {
+  constructor(private prisma: PrismaService) {}
 
-export default function DashboardPage() {
-  const { activeCompany, activePeriod } = useERPStore();
-  const cid   = activeCompany?.companyId;
-  const color = activeCompany?.color || '#3b82f6';
-
-  // Ventas del período activo
-  const { data: ventasPeriodo } = useQuery({
-    queryKey: ['dashboard-ventas', cid, activePeriod],
-    queryFn:  () => api.get(`/companies/${cid}/machete/sales?period=${activePeriod}`).then(r => r.data),
-    enabled:  !!cid,
-  });
-
-  // Estado de resultados del período
-  const { data: er } = useQuery({
-    queryKey: ['income-statement', cid, activePeriod],
-    queryFn:  () => api.get(`/reports/companies/${cid}/income-statement?period=${activePeriod}`).then(r => r.data),
-    enabled:  !!cid,
-  });
-
-  // CxC summary
-  const { data: cxcSummary } = useQuery({
-    queryKey: ['cxc-summary', cid],
-    queryFn:  () => api.get(`/companies/${cid}/cxc/summary`).then(r => r.data),
-    enabled:  !!cid,
-  });
-
-  // Inventario PT
-  const { data: inventory = [] } = useQuery({
-    queryKey: ['pt-inventory', cid],
-    queryFn:  () => api.get(`/companies/${cid}/machete/inventory/pt`).then(r => r.data),
-    enabled:  !!cid,
-  });
-
-  // Ventas últimos 6 meses
-  const { data: ventasMeses = [] } = useQuery({
-    queryKey: ['dashboard-ventas-meses', cid],
-    queryFn:  async () => {
-      const now = new Date();
-      const results = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const period = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const label  = `${MESES[d.getMonth()]}`;
-        try {
-          const { data } = await api.get(`/companies/${cid}/machete/sales?period=${period}`);
-          const total = (data as any[]).reduce((t:number, s:any) => t + Number(s.total), 0);
-          results.push({ period, label, total });
-        } catch {
-          results.push({ period, label, total: 0 });
-        }
-      }
-      return results;
-    },
-    enabled: !!cid,
-  });
-
-  // Calcular KPIs
-  const ventas = (ventasPeriodo as any[] || []);
-  const totalVentas    = ventas.reduce((t, s) => t + Number(s.total), 0);
-  const totalDesc      = ventas.reduce((t, s) => t + Number(s.discount || 0), 0);
-  const ventasEfectivo = ventas.filter(s => s.paymentMethod === 'efectivo').reduce((t, s) => t + Number(s.total), 0);
-  const ventasCredito  = ventas.filter(s => s.paymentMethod === 'credito').reduce((t, s) => t + Number(s.total), 0);
-  const numTransacciones = ventas.length;
-
-  const resultado    = er?.resultadoEjercicio || 0;
-  const totalGastos  = er?.totalGastos        || 0;
-  const cxcPendiente = cxcSummary?.totalPending || 0;
-
-  // Productos con stock bajo
-  const stockBajo = (inventory as any[]).filter(p => Number(p.stock || 0) <= Number(p.minStock || 5) && p.isActive);
-
-  // Máximo para la gráfica de barras
-  const maxVenta = Math.max(...(ventasMeses as any[]).map((m:any) => m.total), 1);
-
-  // Ventas por canal
-  const porCanal: Record<string,number> = {};
-  for (const s of ventas) {
-    porCanal[s.channel] = (porCanal[s.channel] || 0) + Number(s.total);
+  async getCortes(companyId: string, status?: string) {
+    const where: any = { companyId };
+    if (status) where.status = status;
+    return this.prisma.corteCaja.findMany({
+      where,
+      include: {
+        cajero:    { select: { id: true, name: true } },
+        validador: { select: { id: true, name: true } },
+      },
+      orderBy: { fecha: 'desc' },
+    });
   }
-  const CANAL_LABELS: Record<string,string> = { MOSTRADOR:'Tienda', MAYOREO:'Mayoreo', ONLINE:'Distribuidor', ML:'Online' };
-  const CANAL_COLORS: Record<string,string> = { MOSTRADOR:'#3b82f6', MAYOREO:'#f59e0b', ONLINE:'#8b5cf6', ML:'#10b981' };
 
-  return (
-    <AppLayout>
-      <div style={{ maxWidth:1100 }}>
-        <h1 style={{ fontSize:22, fontWeight:700, marginBottom:20 }}>Dashboard</h1>
+  async getVentasDelDia(companyId: string, fecha: string) {
+    const start = new Date(fecha);
+    start.setHours(0,0,0,0);
+    const end = new Date(fecha);
+    end.setHours(23,59,59,999);
 
-        {/* KPIs principales */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
-          {[
-            { label:'Venta del período',   value:fmt(totalVentas),    color, sub:`${numTransacciones} transacciones` },
-            { label:'Resultado neto',       value:fmt(resultado),      color:resultado>=0?'#10b981':'#f87171', sub: resultado>=0?'Utilidad':'Pérdida' },
-            { label:'Gastos del período',   value:fmt(totalGastos),    color:'#8b5cf6', sub:`Desc: ${fmt(totalDesc)}` },
-            { label:'CxC pendiente',        value:fmt(cxcPendiente),   color:'#f59e0b', sub:'Por cobrar' },
-          ].map(k => (
-            <div key={k.label} className="card-sm" style={{ borderLeft:`3px solid ${k.color}` }}>
-              <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
-              <p style={{ fontSize:20, fontWeight:700, color:k.color, margin:'0 0 2px' }}>{k.value}</p>
-              <p style={{ fontSize:10, color:'#475569', margin:0 }}>{k.sub}</p>
-            </div>
-          ))}
-        </div>
+    const ventas = await this.prisma.sale.findMany({
+      where: { companyId, date: { gte: start, lte: end } },
+    });
 
-        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16, marginBottom:16 }}>
-          {/* Gráfica de barras — ventas últimos 6 meses */}
-          <div className="card">
-            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 16px' }}>
-              Ventas últimos 6 meses
-            </p>
-            <div style={{ display:'flex', alignItems:'flex-end', gap:8, height:140 }}>
-              {(ventasMeses as any[]).map((m:any) => {
-                const pct = maxVenta > 0 ? (m.total / maxVenta) * 100 : 0;
-                const esPeriodoActivo = m.period === activePeriod;
-                return (
-                  <div key={m.period} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                    <p style={{ fontSize:9, color:esPeriodoActivo?color:'#64748b', fontWeight:esPeriodoActivo?700:400, margin:0 }}>
-                      {fmt(m.total)}
-                    </p>
-                    <div style={{ width:'100%', borderRadius:'4px 4px 0 0',
-                      height:`${Math.max(pct, 2)}%`,
-                      background: esPeriodoActivo ? color : color+'44',
-                      transition:'height 0.3s', minHeight:4 }}/>
-                    <p style={{ fontSize:10, color:esPeriodoActivo?color:'#64748b',
-                      fontWeight:esPeriodoActivo?700:400, margin:0 }}>{m.label}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+    const resumen = {
+      totalVentas:   0,
+      totalEfectivo: 0,
+      totalTarjeta:  0,
+      totalTransfer: 0,
+      totalCredito:  0,
+      totalDelivery: 0,
+      porMetodo:     {} as Record<string,number>,
+    };
 
-          {/* Ventas por canal */}
-          <div className="card">
-            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 16px' }}>
-              Por canal
-            </p>
-            {Object.keys(porCanal).length === 0
-              ? <p style={{ color:'#64748b', fontSize:13 }}>Sin ventas</p>
-              : Object.entries(porCanal).sort((a,b) => b[1]-a[1]).map(([canal, monto]) => {
-                  const pct = totalVentas > 0 ? (monto / totalVentas) * 100 : 0;
-                  const c   = CANAL_COLORS[canal] || '#64748b';
-                  return (
-                    <div key={canal} style={{ marginBottom:10 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
-                        <span style={{ fontSize:12, color:'#94a3b8' }}>{CANAL_LABELS[canal]||canal}</span>
-                        <span style={{ fontSize:12, fontWeight:600, color:c }}>{fmt(monto)}</span>
-                      </div>
-                      <div style={{ height:6, borderRadius:99, background:'#1e293b', overflow:'hidden' }}>
-                        <div style={{ height:'100%', width:`${pct}%`, background:c, borderRadius:99 }}/>
-                      </div>
-                    </div>
-                  );
-                })
-            }
-            <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8, display:'flex', justifyContent:'space-between' }}>
-              <span style={{ fontSize:11, color:'#64748b' }}>Efectivo</span>
-              <span style={{ fontSize:12, fontWeight:600, color:'#10b981' }}>{fmt(ventasEfectivo)}</span>
-            </div>
-            <div style={{ display:'flex', justifyContent:'space-between' }}>
-              <span style={{ fontSize:11, color:'#64748b' }}>Crédito</span>
-              <span style={{ fontSize:12, fontWeight:600, color:'#f59e0b' }}>{fmt(ventasCredito)}</span>
-            </div>
-          </div>
-        </div>
+    for (const v of ventas) {
+      const total = Number(v.total);
+      resumen.totalVentas += total;
+      const metodo = v.paymentMethod?.toLowerCase() || 'efectivo';
+      resumen.porMetodo[metodo] = (resumen.porMetodo[metodo] || 0) + total;
 
-        {/* Stock bajo */}
-        {stockBajo.length > 0 && (
-          <div className="card" style={{ borderLeft:'3px solid #f87171' }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'#f87171', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>
-              ⚠ Stock bajo ({stockBajo.length} productos)
-            </p>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-              {stockBajo.slice(0,8).map((p:any) => (
-                <div key={p.id} style={{ background:'#0f172a', borderRadius:8, padding:'8px 10px' }}>
-                  <p style={{ fontSize:11, fontWeight:500, margin:'0 0 2px', color:'#f1f5f9' }}>{p.name}</p>
-                  <p style={{ fontSize:12, fontWeight:700, color:'#f87171', margin:0 }}>{p.stock} pzas</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </AppLayout>
-  );
+      if (metodo === 'efectivo')       resumen.totalEfectivo += total;
+      else if (metodo === 'tarjeta')   resumen.totalTarjeta  += total;
+      else if (metodo === 'transferencia') resumen.totalTransfer += total;
+      else if (metodo === 'credito')   resumen.totalCredito  += total;
+      else if (['rappi','ubereats','didi','pedidosya'].includes(metodo)) resumen.totalDelivery += total;
+    }
+
+    return resumen;
+  }
+
+  async crearCorte(companyId: string, cajeroId: string, data: any) {
+    const fecha = new Date(data.fecha);
+    fecha.setHours(0, 0, 0, 0);
+
+    // Calcular diferencias
+    const efectivoEsperado = data.totalEfectivo || 0;
+    const efectivoContado  = data.efectivoContado || 0;
+    const terminalEsperada = (data.totalTarjeta || 0) + (data.totalTransfer || 0);
+    const terminalReportada = data.totalTerminal || 0;
+
+    const diferenciaEfectivo  = efectivoContado  - efectivoEsperado;
+    const diferenciaTerminal   = terminalReportada - terminalEsperada;
+    const diferencia = diferenciaEfectivo + diferenciaTerminal;
+
+    return this.prisma.corteCaja.create({
+      data: {
+        companyId,
+        cajeroId,
+        fecha,
+        status:                'PENDIENTE',
+        totalVentas:           data.totalVentas     || 0,
+        totalEfectivo:         data.totalEfectivo   || 0,
+        totalTarjeta:          data.totalTarjeta    || 0,
+        totalTransfer:         data.totalTransfer   || 0,
+        totalCredito:          data.totalCredito    || 0,
+        totalDelivery:         data.totalDelivery   || 0,
+        totalTerminal:         terminalReportada,
+        efectivoContado:       efectivoContado,
+        diferenciEfectivo:     diferenciaEfectivo,
+        diferenciaTerminal,
+        diferencia,
+        notasCajero:           data.notasCajero     || null,
+        detalleVentas:         data.detalleVentas   || null,
+        desgloseDenominaciones: data.desgloseDenominaciones || null,
+        desgloseTerminales:    data.desgloseTerminales     || null,
+        desgloseDelivery:      data.desgloseDelivery       || null,
+      },
+      include: { cajero: { select: { id: true, name: true } } },
+    });
+  }
+
+  async validarCorte(corteId: string, validadorId: string, data: any) {
+    const corte = await this.prisma.corteCaja.findUnique({ where: { id: corteId } });
+    if (!corte) throw new Error('Corte no encontrado');
+
+    const efectivoFinal = data.efectivoReal !== undefined ? Number(data.efectivoReal) : Number(corte.efectivoContado);
+    const diferencia = efectivoFinal - Number(corte.totalEfectivo);
+
+    const updatedCorte = await this.prisma.corteCaja.update({
+      where: { id: corteId },
+      data: {
+        status:         'VALIDADO',
+        efectivoReal:   efectivoFinal,
+        diferencia,
+        notasValidador: data.notasValidador || null,
+        validadoPor:    validadorId,
+        validadoAt:     new Date(),
+      },
+    });
+
+    // Generar flujo bancario
+    const branch = await this.prisma.branch.findFirst({ where: { companyId: corte.companyId } });
+    const cajaCuenta = await this.prisma.cashAccount.findFirst({
+      where: { companyId: corte.companyId, type: 'EFECTIVO', isActive: true },
+    });
+
+    if (cajaCuenta && efectivoFinal > 0 && branch) {
+      await this.prisma.flowMovement.create({
+        data: {
+          companyId:     corte.companyId,
+          branchId:      branch.id,
+          cashAccountId: cajaCuenta.id,
+          date:          corte.fecha,
+          type:          'ENTRADA',
+          originType:    'CORTE',
+          originId:      corteId,
+          amount:        efectivoFinal,
+          currency:      'MXN',
+          exchangeRate:  1,
+          amountMxn:     efectivoFinal,
+          notes:         `Corte de caja ${corte.fecha.toISOString().slice(0,10)}`,
+        },
+      });
+    }
+
+    return updatedCorte;
+  }
+
+  async responderCorte(corteId: string, cajeroId: string, respuesta: string) {
+    const corte = await this.prisma.corteCaja.findUnique({ where: { id: corteId } });
+    if (!corte) throw new Error("Corte no encontrado");
+    const notasActualizadas = corte.notasCajero
+      ? `${corte.notasCajero} | RESPUESTA: ${respuesta}`
+      : `RESPUESTA: ${respuesta}`;
+    return this.prisma.corteCaja.update({
+      where: { id: corteId },
+      data: {
+        status:      "PENDIENTE",
+        notasCajero: notasActualizadas,
+      },
+    });
+  }
+
+  async rechazarCorte(corteId: string, validadorId: string, notas: string) {
+    return this.prisma.corteCaja.update({
+      where: { id: corteId },
+      data: {
+        status:         'RECHAZADO',
+        notasValidador: notas,
+        validadoPor:    validadorId,
+        validadoAt:     new Date(),
+      },
+    });
+  }
 }
