@@ -145,6 +145,8 @@ export function CortesPage() {
 // ── GASTOS ────────────────────────────────────────────────────
 // INSTRUCCIONES: Reemplaza todo desde "// ── GASTOS" hasta el "}"
 // que cierra GastosPage (justo antes de "// ── CONCILIACIÓN")
+// ── GASTOS REPLACEMENT ────────────────────────────────────────
+// Reemplaza desde "export function GastosPage()" hasta el "}" que cierra GastosPage
 export function GastosPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -162,8 +164,9 @@ export function GastosPage() {
     date:          new Date().toISOString().slice(0,10),
     concept:       '',
     subtotal:      '',
+    ivaPct:        '0',
     tax:           '0',
-    paymentMethod: 'efectivo',
+    paymentMethod: 'EFECTIVO_MXN',
     paymentStatus: 'PAGADO',
     supplierId:    '',
     rubricId:      '',
@@ -176,7 +179,6 @@ export function GastosPage() {
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
   const total = (Number(form.subtotal) || 0) + (Number(form.tax) || 0);
 
-  // Catálogos
   const { data: gastos = [], isLoading } = useQuery({
     queryKey: ['expenses', cid, activePeriod],
     queryFn:  () => api.get(`/companies/${cid}/expenses?period=${activePeriod}`).then(r => r.data),
@@ -189,19 +191,35 @@ export function GastosPage() {
     enabled:  !!cid && vista === 'nuevo',
   });
 
-  const { data: cuentas = [] } = useQuery({
+  const { data: rawBalances } = useQuery({
     queryKey: ['balances', cid],
-    queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data?.accounts || []),
+    queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid && vista === 'nuevo' && esContador,
   });
+  const cuentas = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
 
   const totalGastos = (gastos as any[]).reduce((t:number,g:any) => t + Number(g.total||0), 0);
+
+  const handleSubtotalChange = (val: string) => {
+    const sub = Number(val) || 0;
+    const tax = (sub * Number(form.ivaPct) / 100).toFixed(2);
+    setForm(f => ({ ...f, subtotal: val, tax }));
+  };
+
+  const handleIvaChange = (pct: string) => {
+    const tax = ((Number(form.subtotal)||0) * Number(pct) / 100).toFixed(2);
+    setForm(f => ({ ...f, ivaPct: pct, tax }));
+  };
 
   const guardar = async () => {
     if (!form.concept || !form.subtotal) { setError('Concepto y monto son obligatorios'); return; }
     setError(''); setSaving(true);
     try {
-      await api.post(`/companies/${cid}/expenses`, { ...form, subtotal: Number(form.subtotal), tax: Number(form.tax) });
+      await api.post(`/companies/${cid}/expenses`, {
+        ...form,
+        subtotal: Number(form.subtotal),
+        tax:      Number(form.tax),
+      });
       qc.invalidateQueries({ queryKey: ['expenses', cid] });
       setVista('lista');
       setForm(initForm);
@@ -227,18 +245,17 @@ export function GastosPage() {
           </button>
         </div>
 
-        {/* Formulario nuevo gasto */}
         {vista === 'nuevo' && (
           <div className="card" style={{ marginBottom:24 }}>
             <h3 style={{ fontSize:14, fontWeight:600, margin:'0 0 16px' }}>Nuevo gasto</h3>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:12, marginBottom:12 }}>
               <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Fecha *</label>
                 <input type="date" className="input-base" style={{ fontSize:13 }}
                   value={form.date} onChange={e => set('date', e.target.value)}/>
               </div>
-              <div style={{ gridColumn:'span 2' }}>
+              <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Concepto *</label>
                 <input className="input-base" style={{ fontSize:13 }} value={form.concept}
                   onChange={e => set('concept', e.target.value)} placeholder="Descripción del gasto"/>
@@ -249,20 +266,42 @@ export function GastosPage() {
               <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Subtotal *</label>
                 <input type="number" min="0" step="0.01" className="input-base" style={{ fontSize:13 }}
-                  value={form.subtotal} onChange={e => set('subtotal', e.target.value)} placeholder="0.00"/>
+                  value={form.subtotal} onChange={e => handleSubtotalChange(e.target.value)} placeholder="0.00"/>
               </div>
               <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>IVA</label>
-                <input type="number" min="0" step="0.01" className="input-base" style={{ fontSize:13 }}
-                  value={form.tax} onChange={e => set('tax', e.target.value)} placeholder="0.00"/>
+                <select className="input-base" style={{ fontSize:13 }} value={form.ivaPct}
+                  onChange={e => handleIvaChange(e.target.value)}>
+                  <option value="0">Sin IVA (0%)</option>
+                  <option value="8">8% — Frontera</option>
+                  <option value="16">16% — General</option>
+                </select>
               </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Monto IVA</label>
+                <div style={{ background:'#0f172a', borderRadius:8, padding:'8px 12px', fontSize:13,
+                  color: Number(form.tax) > 0 ? '#f59e0b' : '#475569', border:'1px solid #334155' }}>
+                  {fmt(Number(form.tax))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Total</label>
+                <div style={{ background:'#0f172a', borderRadius:8, padding:'8px 12px', fontSize:14,
+                  fontWeight:700, color, border:'1px solid #334155' }}>
+                  {fmt(total)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:12 }}>
               <div>
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Método de pago</label>
                 <select className="input-base" style={{ fontSize:13 }} value={form.paymentMethod}
                   onChange={e => set('paymentMethod', e.target.value)}>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta">Tarjeta</option>
+                  <option value="EFECTIVO_MXN">Efectivo MXN</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="TARJETA">Tarjeta</option>
+                  <option value="CHEQUE">Cheque</option>
                 </select>
               </div>
               <div>
@@ -270,37 +309,27 @@ export function GastosPage() {
                 <select className="input-base" style={{ fontSize:13 }} value={form.paymentStatus}
                   onChange={e => set('paymentStatus', e.target.value)}>
                   <option value="PAGADO">Pagado</option>
-                  <option value="PENDIENTE">Pendiente</option>
+                  <option value="PENDIENTE">Pendiente (CxP)</option>
                 </select>
               </div>
-            </div>
-
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
               <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>
-                  Proveedor <span style={{ color:'#475569' }}>(opcional)</span>
-                </label>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Proveedor</label>
                 <select className="input-base" style={{ fontSize:13 }} value={form.supplierId}
                   onChange={e => set('supplierId', e.target.value)}>
-                  <option value="">— Proveedor desconocido —</option>
+                  <option value="">— Sin proveedor —</option>
                   {(proveedores as any[]).map((p:any) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Notas</label>
-                <input className="input-base" style={{ fontSize:13 }} value={form.notes}
-                  onChange={e => set('notes', e.target.value)} placeholder="Observaciones"/>
-              </div>
             </div>
 
-            {/* Campos avanzados solo para contador */}
+            {/* Campos contables para contador */}
             {esContador && (
               <>
                 <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase',
-                  letterSpacing:1, margin:'16px 0 8px' }}>Campos contables</p>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:16 }}>
+                  letterSpacing:1, margin:'8px 0 8px' }}>Campos contables</p>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:12 }}>
                   <div>
                     <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Cuenta bancaria</label>
                     <select className="input-base" style={{ fontSize:13 }} value={form.cashAccountId}
@@ -316,27 +345,21 @@ export function GastosPage() {
                     <input className="input-base" style={{ fontSize:13 }} value={form.invoiceRef}
                       onChange={e => set('invoiceRef', e.target.value)} placeholder="A-001"/>
                   </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:20 }}>
-                    <input type="checkbox" id="isExternal" checked={form.isExternal}
-                      onChange={e => set('isExternal', e.target.checked)}
-                      style={{ width:16, height:16, cursor:'pointer' }}/>
-                    <label htmlFor="isExternal" style={{ fontSize:12, color:'#94a3b8', cursor:'pointer' }}>
-                      Operación externa (no afecta resultado operativo)
-                    </label>
+                  <div>
+                    <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Notas</label>
+                    <input className="input-base" style={{ fontSize:13 }} value={form.notes}
+                      onChange={e => set('notes', e.target.value)} placeholder="Observaciones"/>
                   </div>
                 </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                  <input type="checkbox" id="isExternal" checked={form.isExternal}
+                    onChange={e => set('isExternal', e.target.checked)}
+                    style={{ width:16, height:16, cursor:'pointer' }}/>
+                  <label htmlFor="isExternal" style={{ fontSize:12, color:'#94a3b8', cursor:'pointer' }}>
+                    Operación externa (no afecta resultado operativo)
+                  </label>
+                </div>
               </>
-            )}
-
-            {/* Resumen */}
-            {Number(form.subtotal) > 0 && (
-              <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16,
-                display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:13, color:'#64748b' }}>
-                  Total: subtotal {fmt(Number(form.subtotal))} + IVA {fmt(Number(form.tax))}
-                </span>
-                <span style={{ fontSize:18, fontWeight:700, color }}>{fmt(total)}</span>
-              </div>
             )}
 
             {error && <p style={{ color:'#f87171', fontSize:13, margin:'0 0 12px' }}>{error}</p>}
@@ -352,30 +375,30 @@ export function GastosPage() {
           </div>
         )}
 
-        {/* Lista de gastos */}
         {vista === 'lista' && (
           <div className="card" style={{ padding:0, overflow:'hidden' }}>
             <table className="table-base">
               <thead><tr>
                 <th>Fecha</th><th>Concepto</th><th>Proveedor</th>
-                <th>Rubro</th><th style={{textAlign:'right'}}>Monto</th><th>Estado</th>
+                <th style={{textAlign:'right'}}>Subtotal</th>
+                <th style={{textAlign:'right'}}>IVA</th>
+                <th style={{textAlign:'right'}}>Total</th>
+                <th>Método</th><th>Estado</th>
               </tr></thead>
               <tbody>
-                {isLoading && <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
+                {isLoading && <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
                 {!isLoading && (gastos as any[]).length===0 && (
-                  <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin gastos registrados</td></tr>
+                  <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin gastos registrados</td></tr>
                 )}
                 {(gastos as any[]).map((g:any) => (
                   <tr key={g.id}>
                     <td>{fmtDate(g.date)}</td>
-                    <td style={{maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.concept}</td>
-                    <td style={{color:'#94a3b8'}}>{g.supplier?.name||'—'}</td>
-                    <td>
-                      {g.rubric?.name
-                        ? <span style={{fontSize:11,background:'#334155',padding:'2px 6px',borderRadius:4}}>{g.rubric.name}</span>
-                        : <span style={{fontSize:11,color:'#475569'}}>—</span>}
-                    </td>
+                    <td style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.concept}</td>
+                    <td style={{color:'#94a3b8',fontSize:12}}>{g.supplier?.name||'—'}</td>
+                    <td style={{textAlign:'right',fontSize:12}}>{fmt(g.subtotal)}</td>
+                    <td style={{textAlign:'right',fontSize:12,color:'#f59e0b'}}>{fmt(g.tax)}</td>
                     <td style={{textAlign:'right',fontWeight:600,color}}>{fmt(g.total)}</td>
+                    <td style={{fontSize:11,color:'#64748b'}}>{g.paymentMethod||'—'}</td>
                     <td>
                       <span className={g.paymentStatus==='PAGADO'?'badge-green':'badge-amber'}>
                         {g.paymentStatus}
@@ -521,14 +544,18 @@ export function ConciliacionPage() {
   );
 }
 
-// ── CxC ───────────────────────────────────────────────────────
+// ── CxC REPLACEMENT ───────────────────────────────────────────
+// Reemplaza desde "export function CxCPage()" hasta el "}" que cierra CxCPage
 export function CxCPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#f59e0b';
   const [filterCliente, setFilterCliente] = useState('');
-  const [pagoModal, setPagoModal] = useState<any>(null);
-  const [pagoForm, setPagoForm] = useState({ amount:0, paymentMethod:'EFECTIVO_MXN', date:new Date().toISOString().slice(0,10), reference:'' });
+  const [pagoModal,     setPagoModal]     = useState<any>(null);
+  const [pagoForm,      setPagoForm]      = useState({
+    amount: 0, paymentMethod: 'EFECTIVO_MXN',
+    date: new Date().toISOString().slice(0,10), reference: '',
+  });
   const qc = useQueryClient();
 
   const { data: clientes = [] } = useQuery({
@@ -538,15 +565,22 @@ export function CxCPage() {
   });
 
   const { data: summary } = useQuery({
-queryKey:['cxc-summary',cid,filterCliente],
-queryFn: ()=>api.get(`/companies/${cid}/cxc/summary${filterCliente?`?clientId=${filterCliente}`:''}`).then(r=>r.data),
-    enabled:!!cid,
+    queryKey: ['cxc-summary', cid, filterCliente],
+    queryFn:  () => api.get(`/companies/${cid}/cxc/summary${filterCliente?`?clientId=${filterCliente}`:''}`).then(r => r.data),
+    enabled:  !!cid,
   });
 
-  const { data: cxcs=[] } = useQuery({
-    queryKey:['cxc',cid,activePeriod,filterCliente],
-queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterCliente?`&clientId=${filterCliente}`:''}`).then(r=>r.data),
-    enabled:!!cid,
+  const { data: cxcs = [] } = useQuery({
+    queryKey: ['cxc', cid, activePeriod, filterCliente],
+    queryFn:  () => api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterCliente?`&clientId=${filterCliente}`:''}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  // Ordenar por fecha de pago más reciente primero
+  const cxcsOrdenadas = [...(cxcs as any[])].sort((a, b) => {
+    const fechaA = a.payments?.[0]?.date || a.date;
+    const fechaB = b.payments?.[0]?.date || b.date;
+    return new Date(fechaB).getTime() - new Date(fechaA).getTime();
   });
 
   const registrarPago = async () => {
@@ -557,12 +591,13 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
     qc.invalidateQueries({ queryKey: ['cxc', cid] });
     qc.invalidateQueries({ queryKey: ['cxc-summary', cid] });
   };
-  
+
   return (
     <AppLayout>
-      <div style={{ maxWidth:900 }}>
+      <div style={{ maxWidth:1000 }}>
         <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Cuentas por Cobrar</h1>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:24 }}>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:16 }}>
           <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
             <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total pendiente</p>
             <p style={{ fontSize:20, fontWeight:700, color, margin:0 }}>{fmt(summary?.totalPending||0)}</p>
@@ -576,49 +611,73 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
             <p style={{ fontSize:20, fontWeight:700, color:'#94a3b8', margin:0 }}>{summary?.pendingCount||0}</p>
           </div>
         </div>
-        <select style={{padding:'6px 12px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:13,marginBottom:16}}
-  value={filterCliente} onChange={e=>setFilterCliente(e.target.value)}>
-  <option value="">Todos los clientes</option>
-  {(clientes as any[]).map((c:any)=>(
-    <option key={c.id} value={c.id}>{c.name}</option>
-  ))}
-</select>
+
+        <select style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #334155',
+          background:'#1e293b', color:'#f1f5f9', fontSize:13, marginBottom:16 }}
+          value={filterCliente} onChange={e => setFilterCliente(e.target.value)}>
+          <option value="">Todos los clientes</option>
+          {(clientes as any[]).map((c:any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
             <thead><tr>
-              <th>Cliente</th><th>Fecha</th>
+              <th>Cliente</th>
+              <th>Fecha venta</th>
+              <th>Último pago</th>
               <th style={{textAlign:'right'}}>Original</th>
-              <th style={{textAlign:'right'}}>Saldo</th><th>Estado</th><th>Acción</th>
+              <th style={{textAlign:'right'}}>Pagado</th>
+              <th style={{textAlign:'right'}}>Saldo</th>
+              <th>Estado</th>
+              <th>Acción</th>
             </tr></thead>
             <tbody>
-              
-              {cxcs.length===0 && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>}
-              {cxcs.map((c:any) => (
-                <tr key={c.id}>
-                  <td style={{fontWeight:500}}>{c.client?.name}</td>
-                  <td>{fmtDate(c.date)}</td>
-                  <td style={{textAlign:'right'}}>{fmt(c.originalAmount)}</td>
-                  <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.balance)}</td>
-                  <td><span className={c.status==='PAGADO'?'badge-green':c.status==='VENCIDO'?'badge-red':'badge-amber'}>{c.status}</span></td>
-                  <td>
-                    {c.status !== 'PAGADO' && (
-                      <button onClick={() => setPagoModal(c)}
-                        style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                        Registrar pago
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {(cxcsOrdenadas as any[]).length===0 && (
+                <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
+              )}
+              {cxcsOrdenadas.map((c:any) => {
+                const ultimoPago = c.payments?.[0];
+                return (
+                  <tr key={c.id}>
+                    <td style={{fontWeight:500}}>{c.client?.name}</td>
+                    <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
+                    <td style={{fontSize:12,color: ultimoPago ? '#10b981' : '#475569'}}>
+                      {ultimoPago ? fmtDate(ultimoPago.date) : '—'}
+                    </td>
+                    <td style={{textAlign:'right',fontSize:12}}>{fmt(c.originalAmount)}</td>
+                    <td style={{textAlign:'right',fontSize:12,color:'#10b981'}}>{fmt(c.paidAmount)}</td>
+                    <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.balance)}</td>
+                    <td>
+                      <span className={c.status==='PAGADO'?'badge-green':c.status==='VENCIDO'?'badge-red':'badge-amber'}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td>
+                      {c.status !== 'PAGADO' && (
+                        <button onClick={() => setPagoModal(c)}
+                          style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                          Registrar pago
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+
       {pagoModal && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:380}}>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:380,border:'1px solid #334155'}}>
             <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 4px'}}>Registrar pago</h3>
-            <p style={{fontSize:12,color:'#64748b',margin:'0 0 16px'}}>{pagoModal.client?.name} — Saldo: {fmt(pagoModal.balance)}</p>
+            <p style={{fontSize:12,color:'#64748b',margin:'0 0 16px'}}>
+              {pagoModal.client?.name} — Saldo: {fmt(pagoModal.balance)}
+            </p>
             <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
               <div>
                 <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Monto *</label>
@@ -642,7 +701,7 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
               <div>
                 <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Referencia</label>
                 <input className="input-base" style={{fontSize:13}} value={pagoForm.reference}
-                  onChange={e=>setPagoForm(f=>({...f,reference:e.target.value}))} placeholder="Número de transferencia, etc."/>
+                  onChange={e=>setPagoForm(f=>({...f,reference:e.target.value}))} placeholder="No. de transferencia, etc."/>
               </div>
             </div>
             <div style={{display:'flex',gap:8}}>
@@ -650,6 +709,279 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
               <button onClick={registrarPago} className="btn-primary"
                 style={{flex:1,fontSize:13,background:color}} disabled={!pagoForm.amount}>
                 Registrar pago
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  );
+}
+
+// ── CxP PAGE (NUEVO) ──────────────────────────────────────────
+// Agrega esto DESPUÉS de CxCPage y ANTES de ConciliacionPage
+export function CxPPage() {
+  const { activeCompany, activePeriod } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#f59e0b';
+  const qc    = useQueryClient();
+
+  const [filterProv,  setFilterProv]  = useState('');
+  const [pagoModal,   setPagoModal]   = useState<any>(null);
+  const [nuevaModal,  setNuevaModal]  = useState(false);
+  const [pagoForm,    setPagoForm]    = useState({
+    amount: 0, paymentMethod: 'EFECTIVO_MXN',
+    date: new Date().toISOString().slice(0,10), reference: '',
+  });
+  const [nuevaForm, setNuevaForm] = useState({
+    supplierId: '', concept: '', date: new Date().toISOString().slice(0,10),
+    dueDate: '', originalAmount: '', notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const { data: proveedores = [] } = useQuery({
+    queryKey: ['suppliers', cid],
+    queryFn:  () => api.get(`/companies/${cid}/suppliers`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const { data: summary } = useQuery({
+    queryKey: ['cxp-summary', cid],
+    queryFn:  () => api.get(`/companies/${cid}/cxp/summary`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const { data: cxps = [] } = useQuery({
+    queryKey: ['cxp-gestion', cid, activePeriod, filterProv],
+    queryFn:  () => {
+      let url = `/companies/${cid}/cxp?period=${activePeriod}`;
+      if (filterProv) url += `&supplierId=${filterProv}`;
+      return api.get(url).then(r => r.data);
+    },
+    enabled: !!cid,
+  });
+
+  // Ordenar por fecha de vencimiento más próxima
+  const cxpsOrdenadas = [...(cxps as any[])].sort((a, b) => {
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
+
+  const registrarPago = async () => {
+    if (!pagoModal || !pagoForm.amount) return;
+    setSaving(true);
+    try {
+      await api.post(`/companies/${cid}/cxp/${pagoModal.id}/payments`, pagoForm);
+      setPagoModal(null);
+      setPagoForm({ amount:0, paymentMethod:'EFECTIVO_MXN', date:new Date().toISOString().slice(0,10), reference:'' });
+      qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] });
+      qc.invalidateQueries({ queryKey: ['cxp-summary', cid] });
+    } finally { setSaving(false); }
+  };
+
+  const crearCxP = async () => {
+    if (!nuevaForm.concept || !nuevaForm.originalAmount) return;
+    setSaving(true);
+    try {
+      await api.post(`/companies/${cid}/cxp`, {
+        ...nuevaForm,
+        originalAmount: Number(nuevaForm.originalAmount),
+      });
+      setNuevaModal(false);
+      setNuevaForm({ supplierId:'', concept:'', date: new Date().toISOString().slice(0,10), dueDate:'', originalAmount:'', notes:'' });
+      qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] });
+      qc.invalidateQueries({ queryKey: ['cxp-summary', cid] });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1000 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Cuentas por Pagar</h1>
+          <button className="btn-primary" style={{ background:color, fontSize:13 }}
+            onClick={() => setNuevaModal(true)}>
+            + Nueva CxP
+          </button>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:16 }}>
+          <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Total por pagar</p>
+            <p style={{ fontSize:20, fontWeight:700, color, margin:0 }}>{fmt(summary?.totalPending||0)}</p>
+          </div>
+          <div className="card-sm" style={{ borderLeft:'3px solid #f87171' }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Vencido</p>
+            <p style={{ fontSize:20, fontWeight:700, color:'#f87171', margin:0 }}>{fmt(summary?.totalOverdue||0)}</p>
+          </div>
+          <div className="card-sm" style={{ borderLeft:'3px solid #64748b' }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Cuentas abiertas</p>
+            <p style={{ fontSize:20, fontWeight:700, color:'#94a3b8', margin:0 }}>{summary?.pendingCount||0}</p>
+          </div>
+        </div>
+
+        <select style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #334155',
+          background:'#1e293b', color:'#f1f5f9', fontSize:13, marginBottom:16 }}
+          value={filterProv} onChange={e => setFilterProv(e.target.value)}>
+          <option value="">Todos los proveedores</option>
+          {(proveedores as any[]).map((p:any) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <table className="table-base">
+            <thead><tr>
+              <th>Proveedor</th>
+              <th>Concepto</th>
+              <th>Fecha</th>
+              <th>Vencimiento</th>
+              <th style={{textAlign:'right'}}>Original</th>
+              <th style={{textAlign:'right'}}>Pagado</th>
+              <th style={{textAlign:'right'}}>Saldo</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr></thead>
+            <tbody>
+              {(cxpsOrdenadas as any[]).length===0 && (
+                <tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por pagar</td></tr>
+              )}
+              {cxpsOrdenadas.map((c:any) => {
+                const vencida = c.dueDate && new Date(c.dueDate) < new Date() && c.status !== 'PAGADO';
+                return (
+                  <tr key={c.id}>
+                    <td style={{fontWeight:500}}>{c.supplier?.name||'—'}</td>
+                    <td style={{fontSize:12,color:'#94a3b8',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.concept}</td>
+                    <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
+                    <td style={{fontSize:12,color: vencida?'#f87171':'#64748b'}}>
+                      {c.dueDate ? fmtDate(c.dueDate) : '—'}
+                      {vencida && <span style={{marginLeft:4,fontSize:10}}>⚠</span>}
+                    </td>
+                    <td style={{textAlign:'right',fontSize:12}}>{fmt(c.originalAmount)}</td>
+                    <td style={{textAlign:'right',fontSize:12,color:'#10b981'}}>{fmt(c.paidAmount)}</td>
+                    <td style={{textAlign:'right',fontWeight:700,color:vencida?'#f87171':color}}>{fmt(c.balance)}</td>
+                    <td>
+                      <span className={c.status==='PAGADO'?'badge-green':vencida?'badge-red':'badge-amber'}>
+                        {c.status==='PAGADO'?'Pagado':vencida?'Vencido':c.status==='PARCIAL'?'Parcial':'Pendiente'}
+                      </span>
+                    </td>
+                    <td>
+                      {c.status !== 'PAGADO' && (
+                        <button onClick={() => setPagoModal(c)}
+                          style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                          Abonar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal pago */}
+      {pagoModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:380,border:'1px solid #334155'}}>
+            <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 4px'}}>Registrar abono</h3>
+            <p style={{fontSize:12,color:'#64748b',margin:'0 0 16px'}}>
+              {pagoModal.supplier?.name||pagoModal.concept} — Saldo: {fmt(pagoModal.balance)}
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Monto *</label>
+                <input type="number" min="0" max={pagoModal.balance} className="input-base" style={{fontSize:13}}
+                  value={pagoForm.amount||''} onChange={e=>setPagoForm(f=>({...f,amount:+e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Método</label>
+                <select className="input-base" style={{fontSize:13}} value={pagoForm.paymentMethod}
+                  onChange={e=>setPagoForm(f=>({...f,paymentMethod:e.target.value}))}>
+                  <option value="EFECTIVO_MXN">Efectivo MXN</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="TARJETA">Tarjeta</option>
+                  <option value="CHEQUE">Cheque</option>
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha</label>
+                <input type="date" className="input-base" style={{fontSize:13}} value={pagoForm.date}
+                  onChange={e=>setPagoForm(f=>({...f,date:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Referencia</label>
+                <input className="input-base" style={{fontSize:13}} value={pagoForm.reference}
+                  onChange={e=>setPagoForm(f=>({...f,reference:e.target.value}))} placeholder="No. de transferencia"/>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setPagoModal(null)} className="btn-secondary" style={{flex:1,fontSize:13}}>Cancelar</button>
+              <button onClick={registrarPago} className="btn-primary"
+                style={{flex:1,fontSize:13,background:color}} disabled={saving||!pagoForm.amount}>
+                {saving?'…':'Registrar abono'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nueva CxP */}
+      {nuevaModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:460,border:'1px solid #334155'}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
+              <h3 style={{fontSize:15,fontWeight:700,margin:0,color}}>Nueva cuenta por pagar</h3>
+              <button onClick={()=>setNuevaModal(false)}
+                style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+              <div style={{gridColumn:'span 2'}}>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Concepto *</label>
+                <input className="input-base" style={{fontSize:13}} value={nuevaForm.concept}
+                  onChange={e=>setNuevaForm(f=>({...f,concept:e.target.value}))} placeholder="Factura proveedor, renta, etc."/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Proveedor</label>
+                <select className="input-base" style={{fontSize:13}} value={nuevaForm.supplierId}
+                  onChange={e=>setNuevaForm(f=>({...f,supplierId:e.target.value}))}>
+                  <option value="">— Sin proveedor —</option>
+                  {(proveedores as any[]).map((p:any)=>(
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Monto *</label>
+                <input type="number" min="0" className="input-base" style={{fontSize:13}}
+                  value={nuevaForm.originalAmount}
+                  onChange={e=>setNuevaForm(f=>({...f,originalAmount:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha</label>
+                <input type="date" className="input-base" style={{fontSize:13}} value={nuevaForm.date}
+                  onChange={e=>setNuevaForm(f=>({...f,date:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha vencimiento</label>
+                <input type="date" className="input-base" style={{fontSize:13}} value={nuevaForm.dueDate}
+                  onChange={e=>setNuevaForm(f=>({...f,dueDate:e.target.value}))}/>
+              </div>
+              <div style={{gridColumn:'span 2'}}>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Notas</label>
+                <input className="input-base" style={{fontSize:13}} value={nuevaForm.notes}
+                  onChange={e=>setNuevaForm(f=>({...f,notes:e.target.value}))} placeholder="Observaciones"/>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+              <button className="btn-secondary" style={{fontSize:13}} onClick={()=>setNuevaModal(false)}>Cancelar</button>
+              <button className="btn-primary" style={{background:color,fontSize:13}}
+                onClick={crearCxP} disabled={saving||!nuevaForm.concept||!nuevaForm.originalAmount}>
+                {saving?'Guardando…':'Registrar CxP'}
               </button>
             </div>
           </div>
