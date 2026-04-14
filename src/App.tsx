@@ -11,7 +11,7 @@ import MacheteReportesPage from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
-import { CortesPage, GastosPage, ConciliacionPage, CxCPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage } from './pages/AllPages';
+import { CortesPage, GastosPage, ConciliacionPage, CxCPage, CxPPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage } from './pages/AllPages';
 import CorteCajaPage from './pages/CorteCaja';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -31,6 +31,7 @@ export default function App() {
         <Route path="/gastos" element={<GastosPage/>}/>
         <Route path="/conciliacion" element={<ConciliacionPage/>}/>
         <Route path="/cxc" element={<CxCPage/>}/>
+        <Route path="/cxp" element={<CxPPage/>}/>
         <Route path="/reportes" element={<ReportesPage/>}/>
         <Route path="/documentos" element={<DocumentosPage/>}/>
         <Route path="/consolidado" element={<ConsolidadoPage/>}/>
