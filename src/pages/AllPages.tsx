@@ -905,6 +905,14 @@ function ERTab({ cid, color, activePeriod }: any) {
         <ERRow label="= Total ventas"             value={ventas.total    || 0} color={color} bold/>
       </div>
 
+      {edo?.costoVentas > 0 && (
+        <div className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Costo de ventas</p>
+          <ERRow label="(-) Costo de producción" value={-(edo.costoVentas || 0)} color='#f87171'/>
+          <ERRow label="= Utilidad bruta"        value={edo.utilidadBruta || 0} color={positivo(edo.utilidadBruta)} bold/>
+        </div>
+      )}
+
       {Object.entries(gastos).filter(([k]) => k !== 'CONTRIBUCIONES').map(([secCode, sec]: any) => (
         <div key={secCode} className="card" style={{ marginBottom:16 }}>
           <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>{sec.name}</p>
