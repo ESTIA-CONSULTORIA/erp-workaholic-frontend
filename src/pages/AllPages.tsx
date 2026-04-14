@@ -662,31 +662,218 @@ queryFn: ()=>api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterClient
 // ── ESTADOS FINANCIEROS ───────────────────────────────────────
 // INSTRUCCIONES: Reemplaza todo desde "// ── REPORTES" hasta el cierre
 // de ReportesPage (antes de "// ── Estado de Resultados")
+// ── ESTADOS FINANCIEROS ───────────────────────────────────────
+// REEMPLAZA todo desde "export function ReportesPage()" hasta antes de "function ERTab("
 export function ReportesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
-  const [tab, setTab] = useState<'er'>('er');
+  const [tab, setTab] = useState<'er'|'flujo'|'balance'>('er');
+
+  const TABS = [
+    { id:'er',      label:'Estado de Resultados' },
+    { id:'flujo',   label:'Flujo de Efectivo' },
+    { id:'balance', label:'Balance General' },
+  ] as const;
 
   return (
     <AppLayout>
       <div style={{ maxWidth:1000 }}>
         <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Estados Financieros</h1>
         <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {([['er','Estado de Resultados']] as const).map(([id,label]) => (
-            <button key={id} onClick={() => setTab(id)}
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
               style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
-                borderBottom: tab===id ? `2px solid ${color}` : '2px solid transparent',
-                color: tab===id ? color : '#64748b', cursor:'pointer' }}>
-              {label}
+                borderBottom: tab===t.id ? `2px solid ${color}` : '2px solid transparent',
+                color: tab===t.id ? color : '#64748b', cursor:'pointer' }}>
+              {t.label}
             </button>
           ))}
         </div>
-        {tab === 'er' && <ERTab cid={cid!} color={color} activePeriod={activePeriod}/>}
+        {tab === 'er'      && <ERTab      cid={cid!} color={color} activePeriod={activePeriod}/>}
+        {tab === 'flujo'   && <FlujoTab   cid={cid!} color={color} activePeriod={activePeriod}/>}
+        {tab === 'balance' && <BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/>}
       </div>
     </AppLayout>
   );
 }
+
+// ── Flujo de Efectivo ─────────────────────────────────────────
+function FlujoTab({ cid, color, activePeriod }: any) {
+  const { data: flujo, isLoading } = useQuery({
+    queryKey: ['cash-flow', cid, activePeriod],
+    queryFn:  () => api.get(`/reports/companies/${cid}/cash-flow?period=${activePeriod}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  if (isLoading) return <p style={{color:'#64748b'}}>Cargando...</p>;
+  if (!flujo)    return <p style={{color:'#64748b'}}>Sin datos para este período</p>;
+
+  const positivo = (n: number) => n >= 0 ? '#10b981' : '#f87171';
+
+  return (
+    <div>
+      {/* Resumen */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+        {[
+          { label:'Saldo inicial',      value: flujo.saldoInicial,   col:'#94a3b8' },
+          { label:'Flujo operativo',    value: flujo.operativos?.total||0,  col: positivo(flujo.operativos?.total||0) },
+          { label:'Flujo financiero',   value: flujo.financieros?.total||0, col: positivo(flujo.financieros?.total||0) },
+          { label:'Saldo final',        value: flujo.saldoFinal,     col: positivo(flujo.saldoFinal) },
+        ].map(k => (
+          <div key={k.label} className="card-sm" style={{ borderLeft:`3px solid ${k.col}` }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
+            <p style={{ fontSize:18, fontWeight:700, color:k.col, margin:0 }}>{fmt(k.value)}</p>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+        {/* Actividades operativas */}
+        <div className="card">
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+            letterSpacing:1, margin:'0 0 12px' }}>Actividades operativas</p>
+          {(flujo.operativos?.entradas||[]).map((e:any, i:number) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#94a3b8' }}>{e.label}</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#10b981' }}>+{fmt(e.monto)}</span>
+            </div>
+          ))}
+          {(flujo.operativos?.salidas||[]).map((e:any, i:number) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#94a3b8' }}>{e.label}</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#f87171' }}>-{fmt(e.monto)}</span>
+            </div>
+          ))}
+          <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8,
+            display:'flex', justifyContent:'space-between' }}>
+            <span style={{ fontSize:13, fontWeight:700 }}>Neto operativo</span>
+            <span style={{ fontSize:14, fontWeight:700, color: positivo(flujo.operativos?.total||0) }}>
+              {fmt(flujo.operativos?.total||0)}
+            </span>
+          </div>
+        </div>
+
+        {/* Actividades financieras */}
+        <div className="card">
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+            letterSpacing:1, margin:'0 0 12px' }}>Actividades de financiamiento</p>
+          {(flujo.financieros?.entradas||[]).map((e:any, i:number) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#94a3b8' }}>{e.label}</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#10b981' }}>+{fmt(e.monto)}</span>
+            </div>
+          ))}
+          {(flujo.financieros?.salidas||[]).map((e:any, i:number) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#94a3b8' }}>{e.label}</span>
+              <span style={{ fontSize:12, fontWeight:600, color:'#f87171' }}>-{fmt(e.monto)}</span>
+            </div>
+          ))}
+          {(flujo.financieros?.entradas||[]).length === 0 && (flujo.financieros?.salidas||[]).length === 0 && (
+            <p style={{ fontSize:12, color:'#475569' }}>Sin movimientos financieros</p>
+          )}
+          <div style={{ borderTop:'1px solid #334155', marginTop:8, paddingTop:8,
+            display:'flex', justifyContent:'space-between' }}>
+            <span style={{ fontSize:13, fontWeight:700 }}>Neto financiero</span>
+            <span style={{ fontSize:14, fontWeight:700, color: positivo(flujo.financieros?.total||0) }}>
+              {fmt(flujo.financieros?.total||0)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Saldos por cuenta */}
+      {(flujo.saldosPorCuenta||[]).length > 0 && (
+        <div className="card">
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+            letterSpacing:1, margin:'0 0 12px' }}>Saldos por cuenta</p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+            {(flujo.saldosPorCuenta||[]).map((c:any, i:number) => (
+              <div key={i} style={{ background:'#0f172a', borderRadius:8, padding:'8px 10px' }}>
+                <p style={{ fontSize:11, color:'#64748b', margin:'0 0 2px' }}>{c.cuenta}</p>
+                <p style={{ fontSize:14, fontWeight:700, margin:0,
+                  color: c.saldo >= 0 ? color : '#f87171' }}>
+                  {fmt(c.saldo)}
+                </p>
+                <p style={{ fontSize:10, color:'#475569', margin:0 }}>{c.moneda}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Balance General ───────────────────────────────────────────
+function BalanceTab({ cid, color, activePeriod }: any) {
+  const { data: balance, isLoading } = useQuery({
+    queryKey: ['balance-sheet', cid, activePeriod],
+    queryFn:  () => api.get(`/reports/companies/${cid}/balance-sheet?period=${activePeriod}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  if (isLoading) return <p style={{color:'#64748b'}}>Cargando...</p>;
+  if (!balance)  return <p style={{color:'#64748b'}}>Sin datos para este período</p>;
+
+  const BalRow = ({ label, value, bold, indent, col }: any) => (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+      padding: indent ? '3px 0 3px 16px' : '4px 0',
+      borderBottom: bold ? '1px solid #334155' : 'none',
+      marginBottom: bold ? 8 : 0 }}>
+      <span style={{ fontSize: bold?13:12, fontWeight: bold?700:400,
+        color: bold?'#f1f5f9':'#94a3b8' }}>{label}</span>
+      <span style={{ fontSize: bold?14:12, fontWeight: bold?700:500,
+        color: col || (bold ? color : '#94a3b8') }}>
+        {fmt(value)}
+      </span>
+    </div>
+  );
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+      {/* ACTIVOS */}
+      <div>
+        <div className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+            letterSpacing:1, margin:'0 0 12px' }}>Activos</p>
+          <BalRow label="Efectivo y bancos" value={balance.activos?.totalEfectivo||0} color={color}/>
+          {(balance.activos?.efectivoYBancos||[]).map((c:any,i:number) => (
+            <BalRow key={i} label={c.nombre} value={c.saldo} indent/>
+          ))}
+          <BalRow label="Cuentas por cobrar" value={balance.activos?.cuentasPorCobrar||0}/>
+          {balance.activos?.inventario > 0 && (
+            <BalRow label="Inventario" value={balance.activos?.inventario||0}/>
+          )}
+          <BalRow label="= Total activos" value={balance.activos?.total||0} bold col={color}/>
+        </div>
+      </div>
+
+      {/* PASIVOS Y PATRIMONIO */}
+      <div>
+        <div className="card" style={{ marginBottom:16 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+            letterSpacing:1, margin:'0 0 12px' }}>Pasivos</p>
+          <BalRow label="Cuentas por pagar" value={balance.pasivos?.cuentasPorPagar||0} col='#f87171'/>
+          <BalRow label="= Total pasivos" value={balance.pasivos?.total||0} bold col='#f87171'/>
+        </div>
+
+        <div className="card" style={{ borderLeft:`3px solid ${color}` }}>
+          <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
+            letterSpacing:1, margin:'0 0 12px' }}>Patrimonio</p>
+          <BalRow label="Resultado del período"
+            value={balance.patrimonio?.resultadoPeriodo||0}
+            col={balance.patrimonio?.resultadoPeriodo>=0?'#10b981':'#f87171'}/>
+          <BalRow label="= Patrimonio neto" value={balance.patrimonio?.total||0} bold
+            col={balance.patrimonio?.total>=0?color:'#f87171'}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 // ── Estado de Resultados ──────────────────────────────────────
 function ERTab({ cid, color, activePeriod }: any) {
