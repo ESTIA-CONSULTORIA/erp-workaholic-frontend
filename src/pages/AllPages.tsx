@@ -191,7 +191,11 @@ export function GastosPage() {
     enabled:  !!cid && vista === 'nuevo',
   });
 
-  const { data: rawBalances } = useQuery({
+  const { data: rubros = [] } = useQuery({
+    queryKey: ['rubrics', cid],
+    queryFn:  () => api.get(`/companies/${cid}/financial-rubrics`).then(r => r.data),
+    enabled:  !!cid && vista === 'nuevo',
+  });
     queryKey: ['balances', cid],
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid && vista === 'nuevo' && esContador,
@@ -319,6 +323,16 @@ export function GastosPage() {
                   <option value="">— Sin proveedor —</option>
                   {(proveedores as any[]).map((p:any) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Subcuenta contable *</label>
+                <select className="input-base" style={{ fontSize:13 }} value={form.rubricId}
+                  onChange={e => set('rubricId', e.target.value)}>
+                  <option value="">— Selecciona rubro —</option>
+                  {(rubros as any[]).map((r:any) => (
+                    <option key={r.id} value={r.id}>{r.label}</option>
                   ))}
                 </select>
               </div>
@@ -1240,7 +1254,7 @@ function ERTab({ cid, color, activePeriod }: any) {
       {edo?.costoVentas > 0 && (
         <div className="card" style={{ marginBottom:16 }}>
           <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Costo de ventas</p>
-          <ERRow label="(-) Costo de producción" value={-(edo.costoVentas || 0)} color='#f87171'/>
+          <ERRow label="(-) Costo de venta" value={-(edo.costoVentas || 0)} color='#f87171'/>
           <ERRow label="= Utilidad bruta"        value={edo.utilidadBruta || 0} color={positivo(edo.utilidadBruta)} bold/>
         </div>
       )}
