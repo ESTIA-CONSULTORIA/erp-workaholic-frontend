@@ -12,21 +12,18 @@ export default function CorteCajaPage() {
 
   const [vista, setVista] = useState<'nuevo'|'historial'>('historial');
   const [form, setForm] = useState({
-    fecha:           new Date().toISOString().slice(0,10),
-    efectivoContado: 0,
-    totalEfectivo:   0,
-    totalTarjeta:    0,
-    totalTransfer:   0,
-    totalCredito:    0,
-    totalVentas:     0,
-    notasCajero:     '',
+    fecha: new Date().toISOString().slice(0,10),
+    efectivoContado: 0, totalEfectivo: 0, totalTarjeta: 0,
+    totalTransfer: 0, totalCredito: 0, totalVentas: 0, notasCajero: '',
   });
   const [corteSeleccionado, setCorteSeleccionado] = useState<any>(null);
-  const [efectivoReal, setEfectivoReal]   = useState(0);
-  const [notasValid,   setNotasValid]     = useState('');
-  const [saving,       setSaving]         = useState(false);
-  const [corteRespuesta, setCorteRespuesta] = useState<any>(null);
-  const [respuestaTexto, setRespuestaTexto] = useState('');
+  const [efectivoReal,  setEfectivoReal]  = useState(0);
+  const [notasValid,    setNotasValid]    = useState('');
+  const [saving,        setSaving]        = useState(false);
+  const [corteRespuesta,  setCorteRespuesta]  = useState<any>(null);
+  const [respuestaTexto,  setRespuestaTexto]  = useState('');
+  const [ticketImg,       setTicketImg]       = useState<string|null>(null);
+  const [ticketNombre,    setTicketNombre]    = useState('');
 
   const set = (k: string, v: any) => setForm(f => ({...f, [k]: v}));
 
@@ -38,32 +35,28 @@ export default function CorteCajaPage() {
 
   const crearM = useMutation({
     mutationFn: () => api.post(`/companies/${cid}/corte-caja`, form),
-    onSuccess: () => {
-      setVista('historial');
-      qc.invalidateQueries({ queryKey: ['cortes-caja', cid] });
-    },
+    onSuccess: () => { setVista('historial'); qc.invalidateQueries({ queryKey: ['cortes-caja', cid] }); },
   });
 
   const validarM = useMutation({
     mutationFn: (corteId: string) => api.put(`/companies/${cid}/corte-caja/${corteId}/validar`, {
-      efectivoReal: efectivoReal || null,
-      notasValidador: notasValid,
+      efectivoReal: efectivoReal || null, notasValidador: notasValid,
     }),
-    onSuccess: () => {
-      setCorteSeleccionado(null);
-      qc.invalidateQueries({ queryKey: ['cortes-caja', cid] });
-    },
+    onSuccess: () => { setCorteSeleccionado(null); qc.invalidateQueries({ queryKey: ['cortes-caja', cid] }); },
   });
 
   const rechazarM = useMutation({
-    mutationFn: (corteId: string) => api.put(`/companies/${cid}/corte-caja/${corteId}/rechazar`, {
-      notas: notasValid,
-    }),
-    onSuccess: () => {
-      setCorteSeleccionado(null);
-      qc.invalidateQueries({ queryKey: ['cortes-caja', cid] });
-    },
+    mutationFn: (corteId: string) => api.put(`/companies/${cid}/corte-caja/${corteId}/rechazar`, { notas: notasValid }),
+    onSuccess: () => { setCorteSeleccionado(null); qc.invalidateQueries({ queryKey: ['cortes-caja', cid] }); },
   });
+
+  const handleTicketUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setTicketImg(reader.result as string); setTicketNombre(file.name); };
+    reader.readAsDataURL(file);
+  };
 
   const STATUS_COLOR: Record<string,string> = {
     PENDIENTE:'#f59e0b', VALIDADO:'#10b981', RECHAZADO:'#f87171'
@@ -80,41 +73,24 @@ export default function CorteCajaPage() {
           </button>
         </div>
 
-        {/* Formulario nuevo corte */}
         {vista === 'nuevo' && (
           <div className="card" style={{ marginBottom:24 }}>
             <h3 style={{ fontSize:14, fontWeight:600, margin:'0 0 16px' }}>Nuevo corte de caja</h3>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha</label>
-                <input type="date" className="input-base" style={{ fontSize:13 }}
-                  value={form.fecha} onChange={e => set('fecha', e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Efectivo contado en caja</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={form.efectivoContado||''} onChange={e => set('efectivoContado', +e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Total efectivo (ventas)</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={form.totalEfectivo||''} onChange={e => set('totalEfectivo', +e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Total tarjeta</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={form.totalTarjeta||''} onChange={e => set('totalTarjeta', +e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Total transferencia</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={form.totalTransfer||''} onChange={e => set('totalTransfer', +e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Total crédito</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={form.totalCredito||''} onChange={e => set('totalCredito', +e.target.value)}/>
-              </div>
+              {[
+                ['Fecha', 'fecha', 'date'],
+                ['Efectivo contado', 'efectivoContado', 'number'],
+                ['Total efectivo (ventas)', 'totalEfectivo', 'number'],
+                ['Total tarjeta', 'totalTarjeta', 'number'],
+                ['Total transferencia', 'totalTransfer', 'number'],
+                ['Total crédito', 'totalCredito', 'number'],
+              ].map(([label, key, type]) => (
+                <div key={key}>
+                  <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>{label}</label>
+                  <input type={type} min={type==='number'?'0':undefined} className="input-base" style={{ fontSize:13 }}
+                    value={(form as any)[key]||''} onChange={e => set(key, type==='number'?+e.target.value:e.target.value)}/>
+                </div>
+              ))}
             </div>
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Notas</label>
@@ -122,14 +98,15 @@ export default function CorteCajaPage() {
                 onChange={e => set('notasCajero', e.target.value)} placeholder="Observaciones del cajero"/>
             </div>
             <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                <span style={{ fontSize:12, color:'#64748b' }}>Efectivo esperado</span>
-                <span style={{ fontSize:13, color:'#94a3b8' }}>{fmt(form.totalEfectivo)}</span>
-              </div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                <span style={{ fontSize:12, color:'#64748b' }}>Efectivo contado</span>
-                <span style={{ fontSize:13, color:'#94a3b8' }}>{fmt(form.efectivoContado)}</span>
-              </div>
+              {[
+                ['Efectivo esperado', form.totalEfectivo, '#94a3b8'],
+                ['Efectivo contado',  form.efectivoContado, '#94a3b8'],
+              ].map(([label, val, col]) => (
+                <div key={label as string} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ fontSize:12, color:'#64748b' }}>{label}</span>
+                  <span style={{ fontSize:13, color: col as string }}>{fmt(val as number)}</span>
+                </div>
+              ))}
               <div style={{ display:'flex', justifyContent:'space-between' }}>
                 <span style={{ fontSize:13, fontWeight:700 }}>Diferencia</span>
                 <span style={{ fontSize:16, fontWeight:700,
@@ -148,7 +125,6 @@ export default function CorteCajaPage() {
           </div>
         )}
 
-        {/* Historial */}
         {vista === 'historial' && (
           <div className="card" style={{ padding:0, overflow:'hidden' }}>
             <table className="table-base">
@@ -189,7 +165,7 @@ export default function CorteCajaPage() {
                         </button>
                       )}
                       {c.status === 'RECHAZADO' && (
-                        <button onClick={() => { setCorteRespuesta(c); setRespuestaTexto(''); }}
+                        <button onClick={() => { setCorteRespuesta(c); setRespuestaTexto(''); setTicketImg(null); setTicketNombre(''); }}
                           style={{ background:'none', border:'none', color:'#f59e0b', cursor:'pointer', fontSize:12 }}>
                           Responder
                         </button>
@@ -211,14 +187,15 @@ export default function CorteCajaPage() {
                 Validar corte — {fmtDate(corteSeleccionado.fecha)}
               </h3>
               <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:'#64748b' }}>Efectivo esperado</span>
-                  <span style={{ fontSize:13 }}>{fmt(corteSeleccionado.totalEfectivo)}</span>
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:'#64748b' }}>Efectivo contado por cajero</span>
-                  <span style={{ fontSize:13 }}>{fmt(corteSeleccionado.efectivoContado)}</span>
-                </div>
+                {[
+                  ['Efectivo esperado', corteSeleccionado.totalEfectivo],
+                  ['Efectivo contado por cajero', corteSeleccionado.efectivoContado],
+                ].map(([label, val]) => (
+                  <div key={label as string} style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                    <span style={{ fontSize:12, color:'#64748b' }}>{label}</span>
+                    <span style={{ fontSize:13 }}>{fmt(val as number)}</span>
+                  </div>
+                ))}
                 <div style={{ display:'flex', justifyContent:'space-between' }}>
                   <span style={{ fontSize:12, color:'#64748b' }}>Diferencia reportada</span>
                   <span style={{ fontSize:14, fontWeight:700,
@@ -242,68 +219,105 @@ export default function CorteCajaPage() {
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={() => setCorteSeleccionado(null)}
                   style={{ flex:1, padding:'10px', borderRadius:8, border:'1px solid #334155',
-                    background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
-                  Cancelar
-                </button>
+                    background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>Cancelar</button>
                 <button onClick={() => rechazarM.mutate(corteSeleccionado.id)}
                   style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
-                    background:'#f87171', color:'#fff', cursor:'pointer', fontSize:13 }}>
-                  Rechazar
-                </button>
+                    background:'#f87171', color:'#fff', cursor:'pointer', fontSize:13 }}>Rechazar</button>
                 <button onClick={() => validarM.mutate(corteSeleccionado.id)}
                   style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
-                    background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                  Aprobar
+                    background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>Aprobar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal respuesta cajero */}
+        {corteRespuesta && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex',
+            alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+            <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:440, border:'1px solid #f59e0b' }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 8px', color:'#f59e0b' }}>
+                Responder al contador
+              </h3>
+              <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
+                <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Motivo de rechazo:</p>
+                <p style={{ fontSize:13, color:'#f87171', margin:0 }}>
+                  {corteRespuesta.notasValidador || 'Sin nota del validador'}
+                </p>
+              </div>
+
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                  Tu respuesta *
+                </label>
+                <textarea className="input-base" style={{ fontSize:13, height:80, resize:'none' }}
+                  value={respuestaTexto} onChange={e => setRespuestaTexto(e.target.value)}
+                  placeholder="Explica la diferencia o el motivo del ajuste..."/>
+              </div>
+
+              {/* Upload ticket */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                  Adjuntar ticket o comprobante (opcional)
+                </label>
+                {ticketImg ? (
+                  <div style={{ background:'#0f172a', borderRadius:8, padding:10,
+                    display:'flex', alignItems:'center', gap:10 }}>
+                    {ticketImg.startsWith('data:image') ? (
+                      <img src={ticketImg} alt="ticket"
+                        style={{ width:48, height:48, objectFit:'cover', borderRadius:6 }}/>
+                    ) : (
+                      <span style={{ fontSize:28 }}>📄</span>
+                    )}
+                    <div style={{ flex:1 }}>
+                      <p style={{ fontSize:12, color:'#f1f5f9', margin:'0 0 2px',
+                        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {ticketNombre}
+                      </p>
+                      <p style={{ fontSize:11, color:'#10b981', margin:0 }}>✓ Listo para enviar</p>
+                    </div>
+                    <button onClick={() => { setTicketImg(null); setTicketNombre(''); }}
+                      style={{ background:'none', border:'none', color:'#f87171', cursor:'pointer', fontSize:18 }}>✕</button>
+                  </div>
+                ) : (
+                  <label style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px',
+                    borderRadius:8, border:'1px dashed #334155', cursor:'pointer',
+                    background:'#0f172a', fontSize:13, color:'#64748b' }}>
+                    📎 Seleccionar imagen o PDF
+                    <input type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display:'none' }}
+                      onChange={handleTicketUpload}/>
+                  </label>
+                )}
+              </div>
+
+              <div style={{ display:'flex', gap:8 }}>
+                <button className="btn-secondary" style={{ flex:1, fontSize:13 }}
+                  onClick={() => { setCorteRespuesta(null); setTicketImg(null); }}>
+                  Cancelar
+                </button>
+                <button onClick={async () => {
+                  if (!respuestaTexto.trim()) return;
+                  setSaving(true);
+                  try {
+                    const payload: any = { respuesta: respuestaTexto };
+                    if (ticketImg) { payload.ticketUrl = ticketImg; payload.ticketNombre = ticketNombre; }
+                    await api.put(`/companies/${cid}/corte-caja/${corteRespuesta.id}/responder`, payload);
+                    setCorteRespuesta(null);
+                    setTicketImg(null);
+                    setTicketNombre('');
+                    qc.invalidateQueries({ queryKey: ['cortes-caja', cid] });
+                  } finally { setSaving(false); }
+                }}
+                  style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
+                    background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}
+                  disabled={saving || !respuestaTexto.trim()}>
+                  {saving ? 'Enviando…' : 'Enviar respuesta'}
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
-      {/* Modal respuesta cajero a corte rechazado */}
-      {corteRespuesta && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex',
-          alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:420, border:'1px solid #f59e0b' }}>
-            <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 8px', color:'#f59e0b' }}>
-              Responder al contador
-            </h3>
-            <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16 }}>
-              <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Motivo de rechazo:</p>
-              <p style={{ fontSize:13, color:'#f87171', margin:0 }}>
-                {corteRespuesta.notasValidador || 'Sin nota del validador'}
-              </p>
-            </div>
-            <div style={{ marginBottom:16 }}>
-              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
-                Tu respuesta *
-              </label>
-              <textarea className="input-base" style={{ fontSize:13, height:80, resize:'none' }}
-                value={respuestaTexto} onChange={e => setRespuestaTexto(e.target.value)}
-                placeholder="Explica la diferencia o adjunta el ticket del gasto..."/>
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <button className="btn-secondary" style={{ flex:1, fontSize:13 }}
-                onClick={() => setCorteRespuesta(null)}>Cancelar</button>
-              <button onClick={async () => {
-                if (!respuestaTexto.trim()) return;
-                setSaving(true);
-                try {
-                  await api.put(`/companies/${cid}/corte-caja/${corteRespuesta.id}/responder`,
-                    { respuesta: respuestaTexto });
-                  setCorteRespuesta(null);
-                  qc.invalidateQueries({ queryKey: ['cortes-caja', cid] });
-                } finally { setSaving(false); }
-              }}
-                style={{ flex:1, padding:'10px', borderRadius:8, border:'none',
-                  background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}
-                disabled={saving || !respuestaTexto.trim()}>
-                {saving ? 'Enviando…' : 'Enviar respuesta'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AppLayout>
   );
 }
