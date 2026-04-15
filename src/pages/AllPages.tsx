@@ -195,7 +195,9 @@ export function GastosPage() {
     queryKey: ['rubrics', cid],
     queryFn:  () => api.get(`/companies/${cid}/financial-rubrics`).then(r => r.data),
     enabled:  !!cid && vista === 'nuevo',
- const { data: rawBalances } = useQuery({
+  });
+
+  const { data: rawBalances } = useQuery({
     queryKey: ['balances', cid],
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid && vista === 'nuevo' && esContador,
