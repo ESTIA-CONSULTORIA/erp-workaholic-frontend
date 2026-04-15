@@ -138,7 +138,7 @@ export default function CorteCajaPage() {
                 {msg.ticketUrl.startsWith('data:image') ? (
                   <img src={msg.ticketUrl} alt="ticket"
                     style={{ maxWidth:'100%', maxHeight:200, borderRadius:6, cursor:'pointer' }}
-                    onClick={() => window.open(msg.ticketUrl)}/>
+                    onClick={() => { const w = window.open(); w!.document.write(`<img src="${msg.ticketUrl}" style="max-width:100%">`); }}/>
                 ) : (
                   <a href={msg.ticketUrl} download={msg.ticketNombre} target="_blank" rel="noreferrer"
                     style={{ display:'flex', alignItems:'center', gap:6, fontSize:12,
