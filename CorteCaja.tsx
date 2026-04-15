@@ -78,9 +78,28 @@ export default function CorteCajaPage() {
   const handleTicketUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { setTicketImg(reader.result as string); setTicketNombre(file.name); };
-    reader.readAsDataURL(file);
+    setTicketNombre(file.name);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 800;
+          const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.width  * ratio);
+          canvas.height = Math.round(img.height * ratio);
+          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          setTicketImg(canvas.toDataURL('image/jpeg', 0.65));
+        };
+        img.src = ev.target!.result as string;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => setTicketImg(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
   const STATUS_COLOR: Record<string,string> = {
