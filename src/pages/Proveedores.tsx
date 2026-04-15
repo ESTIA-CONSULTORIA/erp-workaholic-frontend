@@ -1,4 +1,4 @@
-import AppLayout from '../../components/layout/AppLayout';
+import AppLayout from '../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
