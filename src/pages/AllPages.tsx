@@ -166,7 +166,7 @@ export function GastosPage() {
     subtotal:      '',
     ivaPct:        '0',
     tax:           '0',
-    paymentMethod: 'EFECTIVO_MXN',
+    paymentMethod: 'EFECTIVO',
     paymentStatus: 'PAGADO',
     supplierId:    '',
     rubricId:      '',
@@ -304,9 +304,10 @@ export function GastosPage() {
                 <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Método de pago</label>
                 <select className="input-base" style={{ fontSize:13 }} value={form.paymentMethod}
                   onChange={e => set('paymentMethod', e.target.value)}>
-                  <option value="EFECTIVO_MXN">Efectivo MXN</option>
+                  <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
-                  <option value="TARJETA">Tarjeta</option>
+                  <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                  <option value="TARJETA_CREDITO">Tarjeta crédito</option>
                   <option value="CHEQUE">Cheque</option>
                 </select>
               </div>
@@ -393,37 +394,71 @@ export function GastosPage() {
 
         {vista === 'lista' && (
           <div className="card" style={{ padding:0, overflow:'hidden' }}>
-            <table className="table-base">
+            <div style={{ overflowX:'auto' }}>
+            <table className="table-base" style={{ minWidth:900 }}>
               <thead><tr>
-                <th>Fecha</th><th>Concepto</th><th>Proveedor</th>
+                <th>Mes</th>
+                <th>Fecha</th>
+                <th>Cuenta</th>
+                <th>Subcuenta</th>
+                <th>Proveedor</th>
+                <th>Descripción</th>
                 <th style={{textAlign:'right'}}>Subtotal</th>
                 <th style={{textAlign:'right'}}>IVA</th>
                 <th style={{textAlign:'right'}}>Total</th>
-                <th>Método</th><th>Estado</th>
+                <th>Método</th>
+                <th>Estatus</th>
               </tr></thead>
               <tbody>
-                {isLoading && <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
+                {isLoading && <tr><td colSpan={11} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
                 {!isLoading && (gastos as any[]).length===0 && (
-                  <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin gastos registrados</td></tr>
+                  <tr><td colSpan={11} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin gastos registrados</td></tr>
                 )}
-                {(gastos as any[]).map((g:any) => (
-                  <tr key={g.id}>
-                    <td>{fmtDate(g.date)}</td>
-                    <td style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.concept}</td>
-                    <td style={{color:'#94a3b8',fontSize:12}}>{g.supplier?.name||'—'}</td>
-                    <td style={{textAlign:'right',fontSize:12}}>{fmt(g.subtotal)}</td>
-                    <td style={{textAlign:'right',fontSize:12,color:'#f59e0b'}}>{fmt(g.tax)}</td>
-                    <td style={{textAlign:'right',fontWeight:600,color}}>{fmt(g.total)}</td>
-                    <td style={{fontSize:11,color:'#64748b'}}>{g.paymentMethod||'—'}</td>
-                    <td>
-                      <span className={g.paymentStatus==='PAGADO'?'badge-green':'badge-amber'}>
-                        {g.paymentStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {(gastos as any[]).map((g:any) => {
+                  const fecha = g.date ? new Date(g.date) : null;
+                  const mes = fecha ? fecha.toLocaleDateString('es-MX',{month:'short',year:'2-digit'}).toUpperCase() : '—';
+                  const fechaCorta = fecha ? fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'}) : '—';
+                  const METODO_LABELS: Record<string,string> = {
+                    EFECTIVO:'Efectivo', EFECTIVO_MXN:'Efectivo',
+                    TRANSFERENCIA:'Transfer.', TARJETA:'Tarjeta',
+                    TARJETA_DEBITO:'T. Débito', TARJETA_CREDITO:'T. Crédito',
+                    CHEQUE:'Cheque',
+                  };
+                  return (
+                    <tr key={g.id}>
+                      <td style={{fontSize:11,color:'#64748b',whiteSpace:'nowrap'}}>{mes}</td>
+                      <td style={{fontSize:12,whiteSpace:'nowrap'}}>{fechaCorta}</td>
+                      <td style={{fontSize:11,color:'#94a3b8',maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {g.rubric?.group?.section?.name || '—'}
+                      </td>
+                      <td style={{fontSize:11,color:'#94a3b8',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {g.rubric?.name || '—'}
+                      </td>
+                      <td style={{fontSize:11,color:'#94a3b8',maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {g.supplier?.name||'—'}
+                      </td>
+                      <td style={{fontSize:12,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {g.concept}
+                      </td>
+                      <td style={{textAlign:'right',fontSize:12}}>{fmt(g.subtotal)}</td>
+                      <td style={{textAlign:'right',fontSize:12,color: Number(g.tax)>0 ? '#f59e0b':'#475569'}}>
+                        {Number(g.tax)>0 ? fmt(g.tax) : '—'}
+                      </td>
+                      <td style={{textAlign:'right',fontWeight:600,color}}>{fmt(g.total)}</td>
+                      <td style={{fontSize:11,color:'#64748b',whiteSpace:'nowrap'}}>
+                        {METODO_LABELS[g.paymentMethod||''] || g.paymentMethod || '—'}
+                      </td>
+                      <td>
+                        <span className={g.paymentStatus==='PAGADO'?'badge-green':'badge-amber'}>
+                          {g.paymentStatus==='PAGADO'?'Pagado':'Pendiente'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
@@ -569,7 +604,7 @@ export function CxCPage() {
   const [filterCliente, setFilterCliente] = useState('');
   const [pagoModal,     setPagoModal]     = useState<any>(null);
   const [pagoForm,      setPagoForm]      = useState({
-    amount: 0, paymentMethod: 'EFECTIVO_MXN',
+    amount: 0, paymentMethod: 'EFECTIVO',
     date: new Date().toISOString().slice(0,10), reference: '',
   });
   const qc = useQueryClient();
@@ -746,7 +781,7 @@ export function CxPPage() {
   const [pagoModal,   setPagoModal]   = useState<any>(null);
   const [nuevaModal,  setNuevaModal]  = useState(false);
   const [pagoForm,    setPagoForm]    = useState({
-    amount: 0, paymentMethod: 'EFECTIVO_MXN',
+    amount: 0, paymentMethod: 'EFECTIVO',
     date: new Date().toISOString().slice(0,10), reference: '',
   });
   const [nuevaForm, setNuevaForm] = useState({
@@ -917,9 +952,10 @@ export function CxPPage() {
                 <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Método</label>
                 <select className="input-base" style={{fontSize:13}} value={pagoForm.paymentMethod}
                   onChange={e=>setPagoForm(f=>({...f,paymentMethod:e.target.value}))}>
-                  <option value="EFECTIVO_MXN">Efectivo MXN</option>
+                  <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
-                  <option value="TARJETA">Tarjeta</option>
+                  <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                  <option value="TARJETA_CREDITO">Tarjeta crédito</option>
                   <option value="CHEQUE">Cheque</option>
                 </select>
               </div>
