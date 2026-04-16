@@ -426,7 +426,7 @@ export default function ComprasPage() {
                   <p style={{fontSize:14,fontWeight:700,color,margin:0}}>{fmt(l.total)}</p>
                 </div>
               ))}
-              )}{compraDetalle.notas && (
+              {compraDetalle.notas && (
                 <div style={{background:'#1e293b',borderRadius:6,padding:'8px 12px',marginTop:8}}>
                   <p style={{fontSize:10,color:'#64748b',margin:'0 0 2px'}}>Notas</p>
                   <p style={{fontSize:12,color:'#94a3b8',margin:0}}>{compraDetalle.notas}</p>
