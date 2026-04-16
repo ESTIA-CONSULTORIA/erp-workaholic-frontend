@@ -312,7 +312,7 @@ export default function ComprasPage() {
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
               {[
                 { label:'Compras en período', value: comprasFiltradas.length, fmt: (v:any) => v, col:'#94a3b8' },
-                { label:'Total comprado',     value: totalFiltrado,           fmt: fmt,            col },
+                { label:'Total comprado',     value: totalFiltrado,           fmt: fmt,            col: color },
                 { label:'Proveedores únicos', value: new Set(comprasFiltradas.map(c=>c.supplier?.name||'—')).size, fmt:(v:any)=>v, col:'#64748b' },
               ].map(k => (
                 <div key={k.label} style={{ background:'#1e293b', borderRadius:8, padding:12, border:'1px solid #334155' }}>
