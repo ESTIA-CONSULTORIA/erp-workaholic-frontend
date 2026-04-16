@@ -20,6 +20,7 @@ const NAV_GROUPS = [
       { to:'/pos',                icon:'🏪', label:'POS',          companies:['MACHETE'] },
       { to:'/corte-caja',         icon:'🏧', label:'Corte de Caja',roles:['admin','administrador','gerente','contador','cajero'] },
       { to:'/machete/inventario', icon:'📦', label:'Inventario',   companies:['MACHETE'] },
+      { to:'/machete/compras',    icon:'🛒', label:'Compras',      companies:['MACHETE'] },
       { to:'/machete/produccion', icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
       { to:'/catalogo',           icon:'≋',  label:'Catálogo',     companies:['MACHETE'] },
       { to:'/proveedores',        icon:'🏭', label:'Proveedores',  roles:['admin','administrador','gerente','contador'] },
