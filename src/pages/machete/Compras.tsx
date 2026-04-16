@@ -121,8 +121,8 @@ export default function ComprasPage() {
   // Filtrar compras
   const comprasFiltradas = (compras as any[]).filter(c => {
     if (filtroProveedor && !c.supplier?.name?.toLowerCase().includes(filtroProveedor.toLowerCase())) return false;
-    if (filtroFechaIni && c.date < filtroFechaIni) return false;
-    if (filtroFechaFin && c.date > filtroFechaFin) return false;
+    if (filtroFechaIni && new Date(c.date) < new Date(filtroFechaIni)) return false;
+    if (filtroFechaFin && new Date(c.date) > new Date(filtroFechaFin)) return false;
     if (filtroEstado && c.status !== filtroEstado) return false;
     return true;
   });
@@ -351,13 +351,13 @@ export default function ComprasPage() {
                           {c.folio || `COM-${c.id?.slice(-6).toUpperCase()}`}
                         </code>
                       </td>
-                      <td>{fmtDate(c.date)}</td>
+                      <td>{c.date ? fmtDate(c.date) : '—'}</td>
                       <td style={{fontWeight:500}}>{c.supplier?.name || '—'}</td>
                       <td style={{color:'#64748b',fontSize:12}}>
-                        {c.items?.length || 0} {c.items?.length === 1 ? 'insumo' : 'insumos'}
+                        {(c.items?.length || 0)} {(c.items?.length || 0) === 1 ? 'insumo' : 'insumos'}
                       </td>
                       <td style={{fontSize:12,color:'#64748b'}}>
-                        {METODOS_PAGO.find(m=>m.id===c.metodoPago)?.label || c.metodoPago}
+                        {c.metodoPago ? (METODOS_PAGO.find(m=>m.id===c.metodoPago)?.label || c.metodoPago) : (c.paymentStatus || '—')}
                       </td>
                       <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.total)}</td>
                       <td>
@@ -393,7 +393,7 @@ export default function ComprasPage() {
                   {compraDetalle.folio || `COM-${compraDetalle.id?.slice(-6).toUpperCase()}`}
                 </h3>
                 <p style={{fontSize:12,color:'#64748b',margin:0}}>
-                  {fmtDate(compraDetalle.date)} · {compraDetalle.supplier?.name || 'Sin proveedor'}
+                  {(compraDetalle.date ? fmtDate(compraDetalle.date) : '—')} · {compraDetalle.supplier?.name || 'Sin proveedor'}
                 </p>
               </div>
               <button onClick={()=>setCompraDetalle(null)}
@@ -403,7 +403,7 @@ export default function ComprasPage() {
             {/* Info */}
             <div style={{padding:'12px 20px',borderBottom:'1px solid #1e293b',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
               {[
-                {label:'Método',  value: METODOS_PAGO.find(m=>m.id===compraDetalle.metodoPago)?.label || compraDetalle.metodoPago},
+                {label:'Método',  value: compraDetalle.metodoPago ? (METODOS_PAGO.find(m=>m.id===compraDetalle.metodoPago)?.label || compraDetalle.metodoPago) : (compraDetalle.paymentStatus || '—')},
                 {label:'Referencia', value: compraDetalle.referencia || '—'},
                 {label:'Estado', value: compraDetalle.status || 'RECIBIDA'},
               ].map(k=>(
@@ -417,7 +417,7 @@ export default function ComprasPage() {
             {/* Líneas */}
             <div style={{flex:1,overflowY:'auto',padding:'12px 20px'}}>
               <p style={{fontSize:10,color:'#64748b',margin:'0 0 8px',textTransform:'uppercase',letterSpacing:1}}>Insumos comprados</p>
-              {(compraDetalle.items||[]).map((l:any,i:number)=>(
+              {(compraDetalle.items||[]).length === 0 ? (<p style={{color:'#64748b',fontSize:13}}>Sin detalle de insumos</p>) : (compraDetalle.items||[]).map((l:any,i:number)=>(
                 <div key={i} style={{background:'#1e293b',borderRadius:8,padding:'8px 12px',marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <p style={{fontSize:13,fontWeight:500,color:'#f1f5f9',margin:'0 0 2px'}}>{l.description}</p>
@@ -426,7 +426,7 @@ export default function ComprasPage() {
                   <p style={{fontSize:14,fontWeight:700,color,margin:0}}>{fmt(l.total)}</p>
                 </div>
               ))}
-              {compraDetalle.notas && (
+              )}{compraDetalle.notas && (
                 <div style={{background:'#1e293b',borderRadius:6,padding:'8px 12px',marginTop:8}}>
                   <p style={{fontSize:10,color:'#64748b',margin:'0 0 2px'}}>Notas</p>
                   <p style={{fontSize:12,color:'#94a3b8',margin:0}}>{compraDetalle.notas}</p>
