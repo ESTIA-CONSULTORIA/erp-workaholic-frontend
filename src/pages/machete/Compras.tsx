@@ -176,7 +176,7 @@ export default function ComprasPage() {
                     onChange={e => setF('cuentaId', e.target.value)}>
                     <option value="">— Seleccionar —</option>
                     {(Array.isArray(cuentas) ? cuentas as any[] : []).map((c:any) => (
-                      <option key={c.id} value={c.code}>{c.name}</option>
+                      <option key={c.accountId||c.id} value={c.accountCode||c.code}>{c.accountName||c.name}</option>
                     ))}
                   </select>
                 </div>
