@@ -21,6 +21,115 @@ const METODOS_PAGO = [
   { id:'TRANSFERENCIA',   label:'Transferencia',   color:'#06b6d4' },
 ];
 
+// SVG ilustrativo de voucher de tarjeta
+const VoucherTarjetaSVG = () => (
+  <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style={{width:180,height:230}}>
+    <rect x="10" y="10" width="180" height="240" rx="6" fill="#1e293b" stroke="#334155" strokeWidth="1.5"/>
+    <rect x="10" y="10" width="180" height="36" rx="6" fill="#0f172a"/>
+    <rect x="10" y="34" width="180" height="12" fill="#0f172a"/>
+    <text x="100" y="32" textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="monospace">COMPROBANTE DE PAGO</text>
+    <text x="100" y="58" textAnchor="middle" fill="#94a3b8" fontSize="8" fontFamily="monospace">TARJETA DÉBITO/CRÉDITO</text>
+    <line x1="25" y1="68" x2="175" y2="68" stroke="#334155" strokeWidth="0.8"/>
+    <text x="25" y="82" fill="#64748b" fontSize="7" fontFamily="monospace">FECHA</text>
+    <text x="130" y="82" fill="#94a3b8" fontSize="7" fontFamily="monospace">16/04/2026  11:32</text>
+    <text x="25" y="96" fill="#64748b" fontSize="7" fontFamily="monospace">COMERCIO</text>
+    <text x="130" y="96" fill="#94a3b8" fontSize="7" fontFamily="monospace">MACHETE SA</text>
+    <text x="25" y="110" fill="#64748b" fontSize="7" fontFamily="monospace">TARJETA</text>
+    <text x="130" y="110" fill="#94a3b8" fontSize="7" fontFamily="monospace">**** **** **** 4821</text>
+    <text x="25" y="124" fill="#64748b" fontSize="7" fontFamily="monospace">TIPO</text>
+    <text x="130" y="124" fill="#94a3b8" fontSize="7" fontFamily="monospace">CHIP</text>
+    <line x1="25" y1="132" x2="175" y2="132" stroke="#334155" strokeWidth="0.8"/>
+    <text x="25" y="146" fill="#64748b" fontSize="7" fontFamily="monospace">MONTO</text>
+    <text x="130" y="146" fill="#f1f5f9" fontSize="9" fontFamily="monospace" fontWeight="bold">$800.00 MXN</text>
+    <line x1="25" y1="154" x2="175" y2="154" stroke="#334155" strokeWidth="0.8"/>
+    {/* Highlight box for NO. AUTORIZACIÓN */}
+    <rect x="20" y="160" width="160" height="28" rx="4" fill="#B5451B22" stroke="#B5451B" strokeWidth="1.5"/>
+    <text x="28" y="171" fill="#B5451B" fontSize="7" fontFamily="monospace" fontWeight="bold">NO. AUTORIZACIÓN</text>
+    <text x="28" y="182" fill="#f97316" fontSize="11" fontFamily="monospace" fontWeight="bold">123456</text>
+    {/* Arrow pointing to it */}
+    <path d="M 155 145 L 165 158 L 155 158" fill="none" stroke="#B5451B" strokeWidth="1.5"/>
+    <text x="158" y="153" fill="#B5451B" fontSize="7" fontFamily="monospace">←</text>
+    <text x="25" y="205" fill="#64748b" fontSize="7" fontFamily="monospace">NO. REFERENCIA</text>
+    <text x="130" y="205" fill="#94a3b8" fontSize="8" fontFamily="monospace">78901234</text>
+    <text x="25" y="219" fill="#64748b" fontSize="7" fontFamily="monospace">RESPUESTA</text>
+    <text x="130" y="219" fill="#10b981" fontSize="7" fontFamily="monospace">APROBADO</text>
+    <line x1="25" y1="228" x2="175" y2="228" stroke="#334155" strokeWidth="0.8"/>
+    <text x="100" y="240" textAnchor="middle" fill="#475569" fontSize="6" fontFamily="monospace">CONSERVE ESTE COMPROBANTE</text>
+    {/* Label */}
+    <text x="100" y="258" textAnchor="middle" fill="#B5451B" fontSize="7" fontFamily="monospace" fontWeight="bold">↑ Ingresa el No. Autorización</text>
+  </svg>
+);
+
+// SVG ilustrativo de comprobante SPEI
+const VoucherSPEISVG = () => (
+  <svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg" style={{width:180,height:250}}>
+    <rect x="10" y="10" width="180" height="260" rx="6" fill="#1e293b" stroke="#334155" strokeWidth="1.5"/>
+    <rect x="10" y="10" width="180" height="36" rx="6" fill="#0f172a"/>
+    <rect x="10" y="34" width="180" height="12" fill="#0f172a"/>
+    <text x="100" y="30" textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="monospace">COMPROBANTE SPEI</text>
+    <text x="100" y="54" textAnchor="middle" fill="#94a3b8" fontSize="7" fontFamily="monospace">TRANSFERENCIA ELECTRÓNICA</text>
+    <line x1="25" y1="64" x2="175" y2="64" stroke="#334155" strokeWidth="0.8"/>
+    <text x="25" y="76" fill="#64748b" fontSize="7" fontFamily="monospace">FECHA</text>
+    <text x="115" y="76" fill="#94a3b8" fontSize="7" fontFamily="monospace">16/04/2026  11:32</text>
+    <text x="25" y="88" fill="#64748b" fontSize="7" fontFamily="monospace">BANCO ORIGEN</text>
+    <text x="115" y="88" fill="#94a3b8" fontSize="7" fontFamily="monospace">BBVA MEXICO</text>
+    <text x="25" y="100" fill="#64748b" fontSize="7" fontFamily="monospace">CUENTA ORIGEN</text>
+    <text x="115" y="100" fill="#94a3b8" fontSize="7" fontFamily="monospace">**** 4821</text>
+    <text x="25" y="112" fill="#64748b" fontSize="7" fontFamily="monospace">BANCO DESTINO</text>
+    <text x="115" y="112" fill="#94a3b8" fontSize="7" fontFamily="monospace">BANAMEX</text>
+    <text x="25" y="124" fill="#64748b" fontSize="7" fontFamily="monospace">CUENTA DESTINO</text>
+    <text x="115" y="124" fill="#94a3b8" fontSize="7" fontFamily="monospace">**** 9032</text>
+    <line x1="25" y1="132" x2="175" y2="132" stroke="#334155" strokeWidth="0.8"/>
+    <text x="25" y="144" fill="#64748b" fontSize="7" fontFamily="monospace">MONTO</text>
+    <text x="115" y="144" fill="#f1f5f9" fontSize="9" fontFamily="monospace" fontWeight="bold">$800.00 MXN</text>
+    <line x1="25" y1="152" x2="175" y2="152" stroke="#334155" strokeWidth="0.8"/>
+    <text x="25" y="164" fill="#64748b" fontSize="7" fontFamily="monospace">CONCEPTO</text>
+    <text x="115" y="164" fill="#94a3b8" fontSize="7" fontFamily="monospace">PAGO MACHETE</text>
+    {/* Highlight box for CLAVE RASTREO */}
+    <rect x="20" y="170" width="160" height="32" rx="4" fill="#06b6d422" stroke="#06b6d4" strokeWidth="1.5"/>
+    <text x="28" y="181" fill="#06b6d4" fontSize="7" fontFamily="monospace" fontWeight="bold">CLAVE DE RASTREO</text>
+    <text x="28" y="195" fill="#67e8f9" fontSize="9" fontFamily="monospace" fontWeight="bold">2024041600123456</text>
+    <path d="M 158 162 L 168 174 L 158 174" fill="none" stroke="#06b6d4" strokeWidth="1.5"/>
+    <text x="161" y="170" fill="#06b6d4" fontSize="7" fontFamily="monospace">←</text>
+    <text x="25" y="222" fill="#64748b" fontSize="7" fontFamily="monospace">FOLIO</text>
+    <text x="115" y="222" fill="#94a3b8" fontSize="7" fontFamily="monospace">987654321</text>
+    <text x="25" y="234" fill="#64748b" fontSize="7" fontFamily="monospace">ESTATUS</text>
+    <text x="115" y="234" fill="#10b981" fontSize="7" fontFamily="monospace">LIQUIDADO</text>
+    <line x1="25" y1="242" x2="175" y2="242" stroke="#334155" strokeWidth="0.8"/>
+    <text x="100" y="252" textAnchor="middle" fill="#475569" fontSize="6" fontFamily="monospace">ESTE COMPROBANTE NO ES CFDi</text>
+    <text x="100" y="270" textAnchor="middle" fill="#06b6d4" fontSize="7" fontFamily="monospace" fontWeight="bold">↑ Ingresa la Clave de Rastreo</text>
+  </svg>
+);
+
+// Tooltip de referencia
+const RefTooltip = ({method}:{method:string}) => {
+  const [show, setShow] = useState(false);
+  const isTransfer = method === 'TRANSFERENCIA';
+  return(
+    <div style={{position:'relative',display:'inline-block'}}>
+      <button onClick={()=>setShow(s=>!s)}
+        style={{width:18,height:18,borderRadius:'50%',border:`1px solid ${isTransfer?'#06b6d4':'#8b5cf6'}`,
+          background:'none',color:isTransfer?'#06b6d4':'#8b5cf6',cursor:'pointer',fontSize:11,
+          display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,padding:0}}>
+        ?
+      </button>
+      {show&&(
+        <div style={{position:'absolute',bottom:24,right:0,zIndex:2000,background:'#0f172a',
+          border:'1px solid #334155',borderRadius:10,padding:12,boxShadow:'0 8px 32px rgba(0,0,0,0.6)',
+          minWidth:200}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <span style={{fontSize:10,color:'#64748b',fontWeight:600}}>
+              {isTransfer?'¿Dónde está la clave?':'¿Dónde está el No. Autorización?'}
+            </span>
+            <button onClick={()=>setShow(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:14,padding:0}}>✕</button>
+          </div>
+          {isTransfer ? <VoucherSPEISVG/> : <VoucherTarjetaSVG/>}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function POSPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -34,7 +143,7 @@ export default function POSPage() {
   const [exito,     setExito]     = useState(false);
   const [error,     setError]     = useState('');
 
-  const [pagos, setPagos] = useState<{method:string, amount:number}[]>([{ method:'EFECTIVO', amount:0 }]);
+  const [pagos, setPagos] = useState<{method:string, amount:number, reference?:string}[]>([{ method:'EFECTIVO', amount:0 }]);
   const [showDescuento, setShowDescuento] = useState(false);
   const [tipoDesc,      setTipoDesc]      = useState<'descuento'|'cortesia'>('descuento');
   const [descValor,     setDescValor]     = useState(0);
@@ -106,6 +215,7 @@ export default function POSPage() {
   const agregarMetodo=(method:string)=>{if(pagos.find(p=>p.method===method))return;setPagos(ps=>[...ps,{method,amount:0}]);};
   const quitarMetodo=(method:string)=>{if(pagos.length<=1)return;setPagos(ps=>ps.filter(p=>p.method!==method));};
   const actualizarMonto=(method:string,amount:number)=>setPagos(ps=>ps.map(p=>p.method===method?{...p,amount}:p));
+  const actualizarReferencia=(method:string,reference:string)=>setPagos(ps=>ps.map(p=>p.method===method?{...p,reference}:p));
   const distribuirResto=(method:string)=>{
     const resto=Math.max(0,total-pagos.filter(p=>p.method!==method).reduce((t,p)=>t+(Number(p.amount)||0),0));
     actualizarMonto(method,resto);
@@ -139,7 +249,7 @@ export default function POSPage() {
     mutationFn:()=>api.post(`/companies/${cid}/machete/sales`,{
       date:new Date().toISOString().slice(0,10),channel:canal,
       paymentMethod:esCredito?'CREDITO_CLIENTE':metodoPrincipal,
-      paymentSplits:esCredito?null:(esMixto?pagos.filter(p=>Number(p.amount)>0):null),
+      paymentSplits:esCredito?null:(esMixto?pagos.filter(p=>Number(p.amount)>0).map(p=>({method:p.method,amount:p.amount,reference:p.reference||null})):pagos.map(p=>({method:p.method,amount:Number(p.amount)||total,reference:p.reference||null}))[0]?[{method:metodoPrincipal,amount:total,reference:pagos[0]?.reference||null}]:null),
       clientId:esCredito?clienteId:null,ocId:ocId||null,isCredit:esCredito,
       discount:descAuth?descMonto:0,discountType:descAuth?tipoDesc:null,authorizedBy:descAuth?.authorizedBy||null,
       lines:carrito.map(i=>({productId:i.id,quantity:i.cantidad,unitPrice:i.precio})),
@@ -399,6 +509,24 @@ export default function POSPage() {
                           Exacto
                         </button>
                       </div>
+                      {pago.method!=='EFECTIVO'&&(
+                        <div style={{marginTop:6}}>
+                          <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                            <input type="text"
+                              style={{flex:1,padding:'5px 8px',borderRadius:6,border:'1px solid #334155',background:'#1e293b',color:'#94a3b8',fontSize:11}}
+                              placeholder={pago.method==='TRANSFERENCIA'?'Clave de rastreo SPEI':'Últimos 4 dígitos / No. autorización'}
+                              value={pago.reference||''}
+                              onChange={e=>actualizarReferencia(pago.method,e.target.value)}/>
+                            <RefTooltip method={pago.method}/>
+                            {pago.method==='TRANSFERENCIA'&&pago.reference&&pago.reference.length>=10&&(
+                              <button onClick={()=>window.open(`https://www.banxico.org.mx/cep/?i=90646&s=20${new Date().toISOString().slice(0,10).replace(/-/g,'')}&n=${encodeURIComponent(pago.reference||'')}`, '_blank')}
+                                style={{padding:'5px 8px',borderRadius:6,border:'1px solid #06b6d4',background:'none',color:'#06b6d4',cursor:'pointer',fontSize:10,whiteSpace:'nowrap'}}>
+                                Verificar CEP
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
