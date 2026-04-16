@@ -121,8 +121,8 @@ export default function ComprasPage() {
   // Filtrar compras
   const comprasFiltradas = (compras as any[]).filter(c => {
     if (filtroProveedor && !c.supplier?.name?.toLowerCase().includes(filtroProveedor.toLowerCase())) return false;
-    if (filtroFechaIni && new Date(c.date) < new Date(filtroFechaIni)) return false;
-    if (filtroFechaFin && new Date(c.date) > new Date(filtroFechaFin)) return false;
+    if (filtroFechaIni && c.date && new Date(c.date) < new Date(filtroFechaIni)) return false;
+    if (filtroFechaFin && c.date && new Date(c.date) > new Date(filtroFechaFin+'T23:59:59')) return false;
     if (filtroEstado && c.status !== filtroEstado) return false;
     return true;
   });
@@ -348,16 +348,16 @@ export default function ComprasPage() {
                     <tr key={c.id} style={{cursor:'pointer'}} onClick={() => setCompraDetalle(c)}>
                       <td>
                         <code style={{fontSize:11,background:'#334155',padding:'2px 6px',borderRadius:4,color:'#94a3b8'}}>
-                          {c.folio || `COM-${c.id?.slice(-6).toUpperCase()}`}
+                          {(c.concept?.match(/COM-\d{6}-\d{4}/)?.[0] || `COM-${c.id?.slice(-6).toUpperCase()}`)}
                         </code>
                       </td>
-                      <td>{c.date ? fmtDate(c.date) : '—'}</td>
+                      <td>{c.date ? new Date(c.date).toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'}</td>
                       <td style={{fontWeight:500}}>{c.supplier?.name || '—'}</td>
                       <td style={{color:'#64748b',fontSize:12}}>
-                        {(c.items?.length || 0)} {(c.items?.length || 0) === 1 ? 'insumo' : 'insumos'}
+                        {c.items?.length ?? 0} {c.items?.length === 1 ? 'insumo' : 'insumos'}
                       </td>
                       <td style={{fontSize:12,color:'#64748b'}}>
-                        {c.metodoPago ? (METODOS_PAGO.find(m=>m.id===c.metodoPago)?.label || c.metodoPago) : (c.paymentStatus || '—')}
+                        {c.paymentStatus === 'PAGADO' ? 'Pagado' : c.paymentStatus === 'PENDIENTE' ? 'Pendiente' : (c.paymentStatus || '—')}
                       </td>
                       <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.total)}</td>
                       <td>
@@ -390,10 +390,10 @@ export default function ComprasPage() {
             <div style={{padding:'16px 20px',borderBottom:'1px solid #334155',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 2px'}}>
-                  {compraDetalle.folio || `COM-${compraDetalle.id?.slice(-6).toUpperCase()}`}
+                  {(compraDetalle.concept?.match(/COM-\d{6}-\d{4}/)?.[0] || `COM-${compraDetalle.id?.slice(-6).toUpperCase()}`)}
                 </h3>
                 <p style={{fontSize:12,color:'#64748b',margin:0}}>
-                  {(compraDetalle.date ? fmtDate(compraDetalle.date) : '—')} · {compraDetalle.supplier?.name || 'Sin proveedor'}
+                  {(compraDetalle.date ? new Date(compraDetalle.date).toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—')} · {compraDetalle.supplier?.name || 'Sin proveedor'}
                 </p>
               </div>
               <button onClick={()=>setCompraDetalle(null)}
@@ -403,8 +403,8 @@ export default function ComprasPage() {
             {/* Info */}
             <div style={{padding:'12px 20px',borderBottom:'1px solid #1e293b',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
               {[
-                {label:'Método',  value: compraDetalle.metodoPago ? (METODOS_PAGO.find(m=>m.id===compraDetalle.metodoPago)?.label || compraDetalle.metodoPago) : (compraDetalle.paymentStatus || '—')},
-                {label:'Referencia', value: compraDetalle.referencia || '—'},
+                {label:'Método',  value: compraDetalle.paymentStatus === 'PAGADO' ? 'Pagado' : compraDetalle.paymentStatus === 'PENDIENTE' ? 'Pendiente' : (compraDetalle.paymentStatus || '—')},
+                {label:'Referencia / Factura', value: compraDetalle.invoiceRef || compraDetalle.referencia || '—'},
                 {label:'Estado', value: compraDetalle.status || 'RECIBIDA'},
               ].map(k=>(
                 <div key={k.label} style={{background:'#1e293b',borderRadius:6,padding:'6px 10px'}}>
