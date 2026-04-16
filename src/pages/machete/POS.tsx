@@ -56,6 +56,7 @@ export default function POSPage() {
   const [creditPinError,  setCreditPinError]  = useState('');
   const [showCobro,     setShowCobro]     = useState(false);
   const [conCuanto,     setConCuanto]     = useState(0);
+  const [efectivoCobro, setEfectivoCobro] = useState<any>({});
 
   const canalConfig = CANALES.find(c => c.id === canal)!;
   const canalColor  = canalConfig.color;
@@ -146,7 +147,7 @@ export default function POSPage() {
     onSuccess:()=>{
       setCarrito([]);setDescAuth(null);setDescValor(0);setDescPin('');
       setOcId('');setClienteId('');setEsCredito(false);
-      setPagos([{method:'EFECTIVO',amount:0}]);setConCuanto(0);setShowCobro(false);
+      setPagos([{method:'EFECTIVO',amount:0}]);setConCuanto(0);setShowCobro(false);setEfectivoCobro({});
       setExito(true);setTimeout(()=>setExito(false),3000);
     },
     onError:(e:any)=>setError(e.response?.data?.message||'Error'),
@@ -418,39 +419,68 @@ export default function POSPage() {
                   </div>
                 )}
               </div>
-              {/* Cambio efectivo */}
+              {/* Cambio efectivo — desglose de denominaciones */}
               <div>
-                {tieneEfectivo?(
-                  <>
-                    <p style={{fontSize:10,color:'#64748b',margin:'0 0 8px',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Efectivo recibido</p>
-                    <div style={{background:'#0f172a',borderRadius:8,padding:12,marginBottom:12}}>
+                {tieneEfectivo?(()=>{
+                  const BILLETES = [500,200,100,50,20];
+                  const MONEDAS  = [10,5,2,1,0.5];
+                  const [cobDen, setCobDen] = [efectivoCobro, setEfectivoCobro];
+                  const totalDen = DENOMINACIONES.reduce((t,d)=>t+(d*(cobDen?.[`den_${d}`]||0)),0);
+                  const montoEfectivo = totalDen > 0 ? totalDen : Number(pagos.find(p=>p.method==='EFECTIVO')?.amount||0);
+                  const cambio = Math.max(0, montoEfectivo - faltaEfectivo);
+                  const suficiente = montoEfectivo >= faltaEfectivo && montoEfectivo > 0;
+                  // Sync to pagos when totalDen changes
+                  if(totalDen>0 && Number(pagos.find(p=>p.method==='EFECTIVO')?.amount||0)!==totalDen){
+                    setTimeout(()=>actualizarMonto('EFECTIVO',totalDen),0);
+                  }
+                  return(
+                    <>
+                      <p style={{fontSize:10,color:'#64748b',margin:'0 0 6px',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Efectivo recibido</p>
                       {esMixto&&(
-                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,paddingBottom:8,borderBottom:'1px solid #334155'}}>
-                          <span style={{fontSize:12,color:'#64748b'}}>Resta en efectivo</span>
-                          <span style={{fontSize:14,fontWeight:700,color:'#10b981'}}>{fmt(faltaEfectivo)}</span>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,padding:'6px 10px',background:'#0f172a',borderRadius:6}}>
+                          <span style={{fontSize:12,color:'#64748b'}}>Debe cubrir en efectivo</span>
+                          <span style={{fontSize:13,fontWeight:700,color:'#10b981'}}>{fmt(faltaEfectivo)}</span>
                         </div>
                       )}
-                      <input type="number" min={faltaEfectivo} step="10"
-                        style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1px solid #10b98144',background:'#1e293b',color:'#f1f5f9',fontSize:20,fontWeight:700,textAlign:'right',marginBottom:8,boxSizing:'border-box'}}
-                        value={conCuanto||''} onChange={e=>{const v=+e.target.value;setConCuanto(v);actualizarMonto('EFECTIVO',v);}} placeholder="0.00"/>
-                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                        {[50,100,200,500].map(b=>(
-                          <button key={b} onClick={()=>setConCuanto(c=>c+b)}
-                            style={{padding:'4px 10px',borderRadius:6,fontSize:12,border:`1px solid ${color}`,background:color+'22',color,cursor:'pointer'}}>
-                            +${b}
-                          </button>
+                      <div style={{background:'#0f172a',borderRadius:8,padding:10,marginBottom:8,maxHeight:200,overflowY:'auto'}}>
+                        <p style={{fontSize:9,color:'#64748b',margin:'0 0 6px',textTransform:'uppercase',letterSpacing:1}}>Billetes</p>
+                        {BILLETES.map(d=>(
+                          <div key={d} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                            <span style={{fontSize:11,color:'#94a3b8',width:38,textAlign:'right'}}>${d}</span>
+                            <span style={{fontSize:10,color:'#475569'}}>×</span>
+                            <input type="number" min="0"
+                              style={{width:44,padding:'2px 5px',borderRadius:5,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:11,textAlign:'center'}}
+                              value={cobDen?.[`den_${d}`]||''}
+                              onChange={e=>{const v={...cobDen,[`den_${d}`]:+e.target.value};setCobDen(v);const tot=DENOMINACIONES.reduce((t,dd)=>t+(dd*(v?.[`den_${dd}`]||0)),0);actualizarMonto('EFECTIVO',tot);}}/>
+                            <span style={{fontSize:11,color,fontWeight:600,marginLeft:'auto'}}>{fmt(d*(cobDen?.[`den_${d}`]||0))}</span>
+                          </div>
                         ))}
-                        <button onClick={()=>setConCuanto(faltaEfectivo)} style={{padding:'4px 10px',borderRadius:6,fontSize:12,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer'}}>Exacto</button>
+                        <p style={{fontSize:9,color:'#64748b',margin:'8px 0 6px',textTransform:'uppercase',letterSpacing:1}}>Monedas</p>
+                        {MONEDAS.map(d=>(
+                          <div key={d} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                            <span style={{fontSize:11,color:'#94a3b8',width:38,textAlign:'right'}}>${d}</span>
+                            <span style={{fontSize:10,color:'#475569'}}>×</span>
+                            <input type="number" min="0"
+                              style={{width:44,padding:'2px 5px',borderRadius:5,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:11,textAlign:'center'}}
+                              value={cobDen?.[`den_${d}`]||''}
+                              onChange={e=>{const v={...cobDen,[`den_${d}`]:+e.target.value};setCobDen(v);const tot=DENOMINACIONES.reduce((t,dd)=>t+(dd*(v?.[`den_${dd}`]||0)),0);actualizarMonto('EFECTIVO',tot);}}/>
+                            <span style={{fontSize:11,color,fontWeight:600,marginLeft:'auto'}}>{fmt(d*(cobDen?.[`den_${d}`]||0))}</span>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <div style={{background:'#0f172a',borderRadius:8,padding:16,textAlign:'center'}}>
-                      <p style={{fontSize:11,color:'#64748b',margin:'0 0 4px'}}>Cambio</p>
-                      <p style={{fontSize:36,fontWeight:700,margin:0,color:conCuanto>=faltaEfectivo?'#10b981':'#475569'}}>
-                        {conCuanto>=faltaEfectivo?fmt(Math.max(0,conCuanto-faltaEfectivo)):'—'}
-                      </p>
-                    </div>
-                  </>
-                ):(
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#0f172a',borderRadius:8,padding:'8px 12px',marginBottom:8}}>
+                        <span style={{fontSize:12,color:'#64748b'}}>Total contado</span>
+                        <span style={{fontSize:16,fontWeight:700,color:suficiente?'#10b981':'#f59e0b'}}>{fmt(montoEfectivo)}</span>
+                      </div>
+                      <div style={{background:'#0f172a',borderRadius:8,padding:12,textAlign:'center'}}>
+                        <p style={{fontSize:11,color:'#64748b',margin:'0 0 4px'}}>Cambio</p>
+                        <p style={{fontSize:32,fontWeight:700,margin:0,color:suficiente?'#10b981':'#475569'}}>
+                          {suficiente?fmt(cambio):'—'}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })():(
                   <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',background:'#0f172a',borderRadius:8,padding:24}}>
                     <div style={{textAlign:'center'}}>
                       <p style={{fontSize:32,margin:'0 0 8px'}}>💳</p>
@@ -462,13 +492,22 @@ export default function POSPage() {
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
-              <button onClick={()=>setShowCobro(false)} style={{flex:1,padding:'11px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>Cancelar</button>
-              <button onClick={()=>saleM.mutate()}
-                disabled={saleM.isPending||(esMixto&&totalPagado<total)||(!esMixto&&tieneEfectivo&&conCuanto<total)||(esMixto&&tieneEfectivo&&conCuanto<faltaEfectivo)}
-                style={{flex:2,padding:'11px',borderRadius:8,border:'none',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer',
-                  background:saleM.isPending||(esMixto&&totalPagado<total)||(!esMixto&&tieneEfectivo&&conCuanto<total)||(esMixto&&tieneEfectivo&&conCuanto<faltaEfectivo)?'#334155':color}}>
-                {saleM.isPending?'Procesando…':tieneEfectivo?`Confirmar — Cambio ${fmt(Math.max(0,conCuanto-(esMixto?faltaEfectivo:total)))}`:`Confirmar — ${fmt(total)}`}
-              </button>
+              <button onClick={()=>{setShowCobro(false);setEfectivoCobro({});}} style={{flex:1,padding:'11px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>Cancelar</button>
+              {(()=>{
+                const montoEfectivo = Number(pagos.find(p=>p.method==='EFECTIVO')?.amount||0);
+                const cambio = Math.max(0, montoEfectivo - faltaEfectivo);
+                const efectivoOk = !tieneEfectivo || montoEfectivo >= faltaEfectivo;
+                const totalOk = !esMixto || totalPagado >= total;
+                const pureEfectivoOk = !esMixto && tieneEfectivo ? montoEfectivo >= total : true;
+                const canConfirm = !saleM.isPending && efectivoOk && totalOk && pureEfectivoOk;
+                return(
+                  <button onClick={()=>saleM.mutate()} disabled={!canConfirm}
+                    style={{flex:2,padding:'11px',borderRadius:8,border:'none',fontSize:13,fontWeight:700,color:'#fff',cursor:canConfirm?'pointer':'not-allowed',
+                      background:canConfirm?color:'#334155'}}>
+                    {saleM.isPending?'Procesando…':tieneEfectivo?`Confirmar — Cambio ${fmt(cambio)}`:`Confirmar — ${fmt(total)}`}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
