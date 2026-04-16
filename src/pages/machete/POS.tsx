@@ -432,7 +432,7 @@ export default function POSPage() {
                       )}
                       <input type="number" min={faltaEfectivo} step="10"
                         style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1px solid #10b98144',background:'#1e293b',color:'#f1f5f9',fontSize:20,fontWeight:700,textAlign:'right',marginBottom:8,boxSizing:'border-box'}}
-                        value={conCuanto||''} onChange={e=>setConCuanto(+e.target.value)} placeholder="0.00"/>
+                        value={conCuanto||''} onChange={e=>{const v=+e.target.value;setConCuanto(v);actualizarMonto('EFECTIVO',v);}} placeholder="0.00"/>
                       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                         {[50,100,200,500].map(b=>(
                           <button key={b} onClick={()=>setConCuanto(c=>c+b)}
@@ -463,7 +463,7 @@ export default function POSPage() {
             </div>
             <div style={{display:'flex',gap:8,marginTop:20}}>
               <button onClick={()=>setShowCobro(false)} style={{flex:1,padding:'11px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>Cancelar</button>
-              <button onClick={()=>{if(tieneEfectivo&&conCuanto>0)actualizarMonto('EFECTIVO',conCuanto);saleM.mutate();}}
+              <button onClick={()=>saleM.mutate()}
                 disabled={saleM.isPending||(esMixto&&totalPagado<total)||(!esMixto&&tieneEfectivo&&conCuanto<total)||(esMixto&&tieneEfectivo&&conCuanto<faltaEfectivo)}
                 style={{flex:2,padding:'11px',borderRadius:8,border:'none',fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer',
                   background:saleM.isPending||(esMixto&&totalPagado<total)||(!esMixto&&tieneEfectivo&&conCuanto<total)||(esMixto&&tieneEfectivo&&conCuanto<faltaEfectivo)?'#334155':color}}>
