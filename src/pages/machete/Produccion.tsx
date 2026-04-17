@@ -237,7 +237,10 @@ export default function ProduccionPage() {
             <table className="table-base">
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Tipo</th>
+                  <th>No. Lote</th>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Producto(s)</th>
                   <th style={{textAlign:'right'}}>Kg entrada</th>
                   <th style={{textAlign:'right'}}>Kg salida</th>
                   <th style={{textAlign:'right'}}>Rendimiento</th>
@@ -246,15 +249,37 @@ export default function ProduccionPage() {
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>
+                  <tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>
                 )}
                 {(lotes as any[]).length === 0 && !isLoading && (
-                  <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin lotes registrados</td></tr>
+                  <tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin lotes registrados</td></tr>
                 )}
-                {(lotes as any[]).map((l: any) => (
+                {(lotes as any[]).map((l: any, idx: number) => {
+                  // Número de lote: TIPO-YYYYMMDD-NNN
+                  const tipo = TIPOS.find(t=>t.id===l.tipo);
+                  const tipoCode = l.tipo?.split('_')[0] || 'LOT';
+                  const fechaCode = l.fecha ? new Date(l.fecha).toISOString().slice(0,10).replace(/-/g,'') : '000000';
+                  const numLote = `${tipoCode}-${fechaCode.slice(2)}-${String(idx+1).padStart(3,'0')}`;
+                  // Productos empacados únicos
+                  const productosEmpacados = (l.empaques||[])
+                    .map((e:any) => e.product?.name)
+                    .filter((n:any,i:number,arr:any[]) => n && arr.indexOf(n)===i)
+                    .slice(0,2);
+                  return (
                   <tr key={l.id}>
-                    <td>{fmtDate(l.fecha)}</td>
-                    <td style={{fontSize:12}}>{TIPOS.find(t=>t.id===l.tipo)?.label||l.tipo}</td>
+                    <td>
+                      <code style={{fontSize:10,background:'#1e293b',padding:'2px 6px',borderRadius:4,color:'#94a3b8',whiteSpace:'nowrap'}}>
+                        {numLote}
+                      </code>
+                    </td>
+                    <td style={{whiteSpace:'nowrap'}}>{fmtDate(l.fecha)}</td>
+                    <td style={{fontSize:12}}>{tipo?.label||l.tipo}</td>
+                    <td style={{fontSize:11,maxWidth:160}}>
+                      {productosEmpacados.length > 0
+                        ? <span style={{color:'#94a3b8'}}>{productosEmpacados.join(', ')}{(l.empaques||[]).length > 2 ? ` +${(l.empaques||[]).length-2}` : ''}</span>
+                        : <span style={{color:'#475569'}}>—</span>
+                      }
+                    </td>
                     <td style={{textAlign:'right'}}>{l.kgEntrada} kg</td>
                     <td style={{textAlign:'right'}}>{l.kgSalida > 0 ? `${l.kgSalida} kg` : '—'}</td>
                     <td style={{textAlign:'right',color}}>
@@ -294,7 +319,8 @@ export default function ProduccionPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
