@@ -2369,7 +2369,7 @@ export function DocumentosPage() {
   const STATUS_LABEL: Record<string,string> = {
     CARGADO: 'Cargado', PROCESANDO: 'Procesando',
     PENDIENTE_VALIDACION: 'Pendiente', VALIDADO: 'Validado',
-    RECHAZADO: 'Rechazado', ARCHIVADO: 'Archivado',
+    RECHAZADO: 'Rechazado', ARCHIVADO: 'Archivado', CANCELADO: 'Cancelado',
   };
 
   return (
@@ -2434,7 +2434,9 @@ export function DocumentosPage() {
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span className={
                   doc.status==='VALIDADO'?'badge-green':
-                  doc.status==='PENDIENTE_VALIDACION'?'badge-amber':'badge-gray'
+                  doc.status==='PENDIENTE_VALIDACION'?'badge-amber':
+                  doc.status==='RECHAZADO'?'badge-red':
+                  doc.status==='CANCELADO'?'badge-gray':'badge-gray'
                 }>
                   {STATUS_LABEL[doc.status] || doc.status?.replace(/_/g,' ')}
                 </span>
@@ -2457,6 +2459,34 @@ export function DocumentosPage() {
                     style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #f59e0b',
                       background:'#f59e0b22', color:'#f59e0b', cursor:'pointer', fontWeight:600 }}>
                     📋 Clasificar
+                  </button>
+                )}
+                {/* Rechazar — disponible en CARGADO o PENDIENTE_VALIDACION */}
+                {(doc.status === 'CARGADO' || doc.status === 'PENDIENTE_VALIDACION') && (
+                  <button onClick={async () => {
+                    if (!confirm('¿Rechazar este documento? Se marcará como rechazado pero se conserva en el historial.')) return;
+                    try {
+                      await api.put(`/companies/${cid}/documents/${doc.id}`, { status: 'RECHAZADO' });
+                      qc.invalidateQueries({ queryKey: ['documents', cid] });
+                    } catch(e:any) { alert('Error al rechazar'); }
+                  }}
+                    style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #f8717144',
+                      background:'none', color:'#f87171', cursor:'pointer' }}>
+                    ✕ Rechazar
+                  </button>
+                )}
+                {/* Cancelar — disponible antes de VALIDADO */}
+                {doc.status !== 'VALIDADO' && doc.status !== 'CANCELADO' && (
+                  <button onClick={async () => {
+                    if (!confirm('¿Cancelar este documento? Se conserva en el historial.')) return;
+                    try {
+                      await api.put(`/companies/${cid}/documents/${doc.id}`, { status: 'CANCELADO' });
+                      qc.invalidateQueries({ queryKey: ['documents', cid] });
+                    } catch(e:any) { alert('Error al cancelar'); }
+                  }}
+                    style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #47556944',
+                      background:'none', color:'#64748b', cursor:'pointer' }}>
+                    Cancelar
                   </button>
                 )}
                 {doc.fileUrl && (
