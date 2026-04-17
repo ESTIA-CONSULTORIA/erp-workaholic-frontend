@@ -9,6 +9,7 @@ function parsearHistorial(notasCajero: string | null): any[] {
   if (!notasCajero) return [];
   try {
     const parsed = JSON.parse(notasCajero);
+    // Handle both array and object formats
     if (Array.isArray(parsed)) return parsed;
   } catch(e) {}
   // Formato viejo
@@ -271,10 +272,17 @@ export default function CorteCajaPage() {
                             </button>
                           )}
                           {/* Cajero: responder RECHAZADO */}
-                          {!puedeValidar && c.status === 'RECHAZADO' && (
+                          {!puedeValidar && (c.status === 'RECHAZADO' || c.status === 'PENDIENTE') && (
                             <button onClick={() => { setCorteRespuesta(c); setRespuestaTexto(''); setTicketImg(null); setTicketNombre(''); }}
                               style={{ background:'none', border:'none', color:'#f59e0b', cursor:'pointer', fontSize:12 }}>
                               Responder
+                            </button>
+                          )}
+                          {/* Contador: también puede agregar mensajes */}
+                          {puedeValidar && c.status !== 'PENDIENTE' && (
+                            <button onClick={() => { setCorteRespuesta(c); setRespuestaTexto(''); setTicketImg(null); setTicketNombre(''); }}
+                              style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                              💬
                             </button>
                           )}
                           {/* Ver detalle siempre */}
