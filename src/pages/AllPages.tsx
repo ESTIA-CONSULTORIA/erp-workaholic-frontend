@@ -496,7 +496,7 @@ export function GastosPage() {
             </table>
             </div>
           </div>
-        )}
+        </>)}
       </div>
       {showImport && (
         <ImportCSV
