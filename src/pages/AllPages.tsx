@@ -1614,11 +1614,26 @@ function BalanceTab({ cid, color, activePeriod }: any) {
 
 // ── Estado de Resultados ──────────────────────────────────────
 function ERTab({ cid, color, activePeriod }: any) {
+  // Calcular mes anterior
+  const mesAnterior = (() => {
+    const [y, m] = activePeriod.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
   const { data: edo, isLoading } = useQuery({
     queryKey: ['income-statement', cid, activePeriod],
     queryFn:  () => api.get(`/reports/companies/${cid}/income-statement?period=${activePeriod}`).then(r => r.data),
     enabled:  !!cid,
   });
+
+  const { data: edoAnt } = useQuery({
+    queryKey: ['income-statement', cid, mesAnterior],
+    queryFn:  () => api.get(`/reports/companies/${cid}/income-statement?period=${mesAnterior}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const [showComparativo, setShowComparativo] = useState(false);
 
   if (isLoading) return <p style={{color:'#64748b'}}>Cargando...</p>;
 
@@ -1633,13 +1648,21 @@ function ERTab({ cid, color, activePeriod }: any) {
 
   return (
     <div>
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
+        <button onClick={() => setShowComparativo(s => !s)}
+          style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${showComparativo?color:'#334155'}`,
+            background: showComparativo?color+'22':'none', color:showComparativo?color:'#64748b',
+            cursor:'pointer', fontSize:12 }}>
+          {showComparativo ? '✓ Vs mes anterior' : 'Vs mes anterior'}
+        </button>
+      </div>
       <div className="card" style={{ marginBottom:16 }}>
         <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>Ingresos</p>
-        <ERRow label="Venta bruta"                value={ventas.bruta    || 0} color={color}/>
-        <ERRow label="(-) Descuentos y cortesías" value={-(ventas.descuentos || 0)} color='#f87171' indent/>
+        <ERRow label="Venta bruta"                value={ventas.bruta    || 0} antValue={edoAnt?.ventas?.bruta} color={color} showComp={showComparativo}/>
+        <ERRow label="(-) Descuentos y cortesías" value={-(ventas.descuentos || 0)} antValue={edoAnt?.ventas?.descuentos ? -edoAnt.ventas.descuentos : undefined} color='#f87171' indent showComp={showComparativo}/>
         <ERRow label="Venta neta POS"             value={ventas.neta     || 0} color={color} indent/>
         <ERRow label="Venta por cortes"           value={ventas.cortes   || 0} color={color} indent/>
-        <ERRow label="= Total ventas"             value={ventas.total    || 0} color={color} bold/>
+        <ERRow label="= Total ventas"             value={ventas.total    || 0} antValue={edoAnt?.ventas?.total} color={color} bold showComp={showComparativo}/>
       </div>
 
       {edo?.costoVentas > 0 && (
@@ -2054,15 +2077,28 @@ function CxCReporteTab({ cid, color }: any) {
   );
 }
 
-function ERRow({ label, value, color, bold, indent }: any) {
+function ERRow({ label, value, antValue, color, bold, indent, showComp }: any) {
+  const diff = (showComp && antValue !== undefined) ? value - antValue : null;
+  const pct  = diff !== null && antValue !== 0 ? (diff / Math.abs(antValue)) * 100 : null;
   return (
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
       padding: indent ? '3px 0 3px 16px' : '4px 0',
       borderBottom: bold ? '1px solid #334155' : 'none',
       marginBottom: bold ? 8 : 0 }}>
       <span style={{ fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 400,
-        color: bold ? '#f1f5f9' : '#94a3b8' }}>{label}</span>
-      <span style={{ fontSize: bold ? 14 : 12, fontWeight: bold ? 700 : 500, color }}>
+        color: bold ? '#f1f5f9' : '#94a3b8', flex:1 }}>{label}</span>
+      {showComp && antValue !== undefined && (
+        <span style={{ fontSize:11, color:'#475569', marginRight:12, minWidth:72, textAlign:'right' }}>
+          {fmt(Math.abs(antValue))}
+        </span>
+      )}
+      {showComp && diff !== null && (
+        <span style={{ fontSize:11, minWidth:52, textAlign:'right', marginRight:12,
+          color: diff >= 0 ? '#10b981' : '#f87171' }}>
+          {pct !== null ? (diff>=0?'+':'')+pct.toFixed(1)+'%' : '—'}
+        </span>
+      )}
+      <span style={{ fontSize: bold ? 14 : 12, fontWeight: bold ? 700 : 500, color, minWidth:72, textAlign:'right' }}>
         {fmt(Math.abs(value))}
       </span>
     </div>
