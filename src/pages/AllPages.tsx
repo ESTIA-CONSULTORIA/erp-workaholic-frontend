@@ -591,6 +591,7 @@ export function ConciliacionPage() {
           </span>
         </div>
 
+        <div style={{ display: tab === 'arqueo' ? 'block' : 'none' }}>
         {/* Vista Admin: declarado vs teórico */}
         {esAdmin && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
@@ -691,7 +692,7 @@ export function ConciliacionPage() {
           </div>
         ))}
       </div>
-      </>)}
+      </div>
 
       {tab === 'movimientos' && (
         <div>
