@@ -2324,7 +2324,7 @@ export function DocumentosPage() {
     try {
       const d = validModal.extractedJson || {};
       if (!rubricId) { alert('Selecciona una subcuenta contable'); setValidando(false); return; }
-      await api.post(`/companies/${cid}/expenses`, {
+      const gastoRes = await api.post(`/companies/${cid}/expenses`, {
         date:          d.fecha || new Date().toISOString().slice(0,10),
         concept:       d.concepto || validModal.fileName,
         subtotal:      Number(d.subtotal || d.total || 0),
@@ -2335,11 +2335,15 @@ export function DocumentosPage() {
         rubricId:      rubricId,
         notes:         `Generado desde documento OCR: ${validModal.fileName}`,
       });
-      await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
+      await api.put(`/companies/${cid}/documents/${validModal.id}`, {
+        status: 'VALIDADO',
+        linkedId: gastoRes.data?.id,
+        linkedType: 'GASTO',
+      });
       qc.invalidateQueries({ queryKey: ['documents', cid] });
       qc.invalidateQueries({ queryKey: ['expenses', cid] });
       setValidModal(null); setTipoDoc(null); setRubricId('');
-      alert('✔ Gasto prellenado en estado Pendiente. Revísalo en Gastos.');
+      alert('✔ Gasto creado en estado Pendiente. Revísalo en Gastos.');
     } catch(e:any) {
       alert(e.response?.data?.message || 'Error al crear gasto');
     } finally { setValidando(false); }
@@ -2349,7 +2353,10 @@ export function DocumentosPage() {
     if (!validModal) return;
     setValidando(true);
     try {
-      await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
+      await api.put(`/companies/${cid}/documents/${validModal.id}`, {
+        status: 'VALIDADO',
+        linkedType: 'COMPRA',
+      });
       qc.invalidateQueries({ queryKey: ['documents', cid] });
       const d = validModal.extractedJson || {};
       sessionStorage.setItem('compra_prefill', JSON.stringify({
@@ -2475,8 +2482,8 @@ export function DocumentosPage() {
                     ✕ Rechazar
                   </button>
                 )}
-                {/* Cancelar — disponible antes de VALIDADO */}
-                {doc.status !== 'VALIDADO' && doc.status !== 'CANCELADO' && (
+                {/* Cancelar — disponible excepto si ya está CANCELADO */}
+                {doc.status !== 'CANCELADO' && (
                   <button onClick={async () => {
                     if (!confirm('¿Cancelar este documento? Se conserva en el historial.')) return;
                     try {
