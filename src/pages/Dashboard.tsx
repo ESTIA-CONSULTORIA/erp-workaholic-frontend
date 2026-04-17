@@ -42,12 +42,15 @@ export default function DashboardPage() {
     enabled:  !!cid,
   });
 
-  const ventas       = dash?.ventas       || 0;
-  const resultado    = dash?.resultado    || 0;
-  const totalGastos  = dash?.totalGastos  || 0;
-  const cxcPendiente = dash?.cxcPendiente || 0;
-  const cxpPendiente = dash?.cxpPendiente || 0;
-  const ventasMeses  = dash?.ventasMeses  || [];
+  const ventas        = dash?.ventas          || 0;
+  const resultado     = dash?.resultado       || 0;
+  const totalGastos   = dash?.totalGastos     || 0;
+  const cxcPendiente  = dash?.cxcPendiente    || 0;
+  const cxpPendiente  = dash?.cxpPendiente    || 0;
+  const costoVentas   = dash?.costoVentas     || 0;
+  const utilidadBruta = dash?.utilidadBruta   || 0;
+  const ventasMeses   = dash?.ventasMeses     || [];
+  const topProductos  = dash?.topProductos    || [];
   const maxVenta     = Math.max(...ventasMeses.map((m:any) => m.total), 1);
   const stockBajo    = (inventory as any[]).filter((p:any) => Number(p.stock||0) <= Number(p.minStock||5));
   const docsPend     = (docs as any[]).filter((d:any) => d.status === 'PENDIENTE_VALIDACION');
@@ -141,9 +144,9 @@ export default function DashboardPage() {
         {/* KPIs principales */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:12 }}>
           {[
-            { label:'Ventas / Ingresos',   value:fmt(ventas),      col:color,               sub:activePeriod },
-            { label:'Resultado neto',       value:fmt(resultado),   col:positivo(resultado), sub:resultado>=0?'Utilidad':'Pérdida' },
-            { label:'Gastos del período',   value:fmt(totalGastos), col:'#8b5cf6',           sub:'Total gastos' },
+            { label:'Ventas / Ingresos',   value:fmt(ventas),        col:color,               sub:activePeriod },
+            { label:'Costo de ventas',      value:fmt(costoVentas),   col:'#f97316',           sub:'Costo directo' },
+            { label:'Utilidad bruta',       value:fmt(utilidadBruta), col:positivo(utilidadBruta), sub: utilidadBruta>=0?'Positivo':'Negativo' },
           ].map(k => (
             <div key={k.label} className="card-sm" style={{ borderLeft:`3px solid ${k.col}` }}>
               <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
@@ -152,11 +155,12 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
           {[
-            { label:'CxC pendiente',      value:fmt(cxcPendiente),  col:'#f59e0b', sub:'Por cobrar' },
-            { label:'CxP pendiente',      value:fmt(cxpPendiente),  col:'#f87171', sub:'Por pagar'  },
-            { label:'CxP vencida',        value:fmt(cxpVencida),    col: cxpVencida>0?'#f87171':'#10b981', sub: cxpVencida>0?'Requiere atención':'Sin vencidas' },
+            { label:'Gastos del período',  value:fmt(totalGastos),  col:'#8b5cf6', sub:'Total gastos'   },
+            { label:'Resultado neto',       value:fmt(resultado),    col:positivo(resultado), sub:resultado>=0?'Utilidad':'Pérdida' },
+            { label:'CxC pendiente',       value:fmt(cxcPendiente), col:'#f59e0b', sub:'Por cobrar'     },
+            { label:'CxP vencida',         value:fmt(cxpVencida),   col: cxpVencida>0?'#f87171':'#10b981', sub: cxpVencida>0?'Req. atención':'Sin vencidas' },
           ].map(k => (
             <div key={k.label} className="card-sm" style={{ borderLeft:`3px solid ${k.col}` }}>
               <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
@@ -212,6 +216,28 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* Top 3 productos más vendidos */}
+        {isMachete && topProductos.length > 0 && (
+          <div className="card" style={{ borderLeft:`3px solid ${color}`, marginBottom:16 }}>
+            <p style={{ fontSize:12, fontWeight:700, color, textTransform:'uppercase',
+              letterSpacing:1, margin:'0 0 12px' }}>🏆 Top productos del período</p>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+              {topProductos.slice(0,3).map((p:any, i:number) => (
+                <div key={p.sku||i} style={{ background:'#0f172a', borderRadius:8, padding:'10px 12px',
+                  borderLeft:`3px solid ${i===0?'#f59e0b':i===1?'#94a3b8':'#cd7c2f'}` }}>
+                  <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px' }}>
+                    {i===0?'🥇':i===1?'🥈':'🥉'} {p.sku}
+                  </p>
+                  <p style={{ fontSize:12, fontWeight:600, color:'#f1f5f9', margin:'0 0 2px',
+                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
+                  <p style={{ fontSize:13, fontWeight:700, color, margin:0 }}>{fmt(p.total)}</p>
+                  <p style={{ fontSize:10, color:'#64748b', margin:0 }}>{p.qty} pzas</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stock bajo — solo Machete */}
         {isMachete && stockBajo.length > 0 && (

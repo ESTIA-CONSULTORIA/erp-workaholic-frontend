@@ -2276,6 +2276,13 @@ export function DocumentosPage() {
   const [validModal,   setValidModal]   = useState<any>(null);
   const [validando,    setValidando]    = useState(false);
   const [tipoDoc,      setTipoDoc]      = useState<'GASTO'|'COMPRA'|null>(null);
+  const [rubricId,     setRubricId]     = useState('');
+
+  const { data: rubros = [] } = useQuery({
+    queryKey: ['rubrics', cid],
+    queryFn:  () => api.get(`/companies/${cid}/financial-rubrics`).then(r => r.data),
+    enabled:  !!cid && !!validModal,
+  });
 
   const { data: docs=[], isLoading } = useQuery({
     queryKey:['documents',cid],
@@ -2315,6 +2322,7 @@ export function DocumentosPage() {
     setValidando(true);
     try {
       const d = validModal.extractedJson || {};
+      if (!rubricId) { alert('Selecciona una subcuenta contable'); setValidando(false); return; }
       await api.post(`/companies/${cid}/expenses`, {
         date:          d.fecha || new Date().toISOString().slice(0,10),
         concept:       d.concepto || validModal.fileName,
@@ -2323,12 +2331,13 @@ export function DocumentosPage() {
         paymentMethod: 'EFECTIVO',
         paymentStatus: 'PENDIENTE',
         invoiceRef:    d.folio || d.numero || '',
+        rubricId:      rubricId,
         notes:         `Generado desde documento OCR: ${validModal.fileName}`,
       });
       await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
       qc.invalidateQueries({ queryKey: ['documents', cid] });
       qc.invalidateQueries({ queryKey: ['expenses', cid] });
-      setValidModal(null); setTipoDoc(null);
+      setValidModal(null); setTipoDoc(null); setRubricId('');
       alert('✔ Gasto prellenado en estado Pendiente. Revísalo en Gastos.');
     } catch(e:any) {
       alert(e.response?.data?.message || 'Error al crear gasto');
@@ -2342,7 +2351,7 @@ export function DocumentosPage() {
       const d = validModal.extractedJson || {};
       await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
       qc.invalidateQueries({ queryKey: ['documents', cid] });
-      setValidModal(null); setTipoDoc(null);
+      setValidModal(null); setTipoDoc(null); setRubricId('');
       alert('✔ Documento marcado como compra. Regístrala en el módulo Compras.');
     } catch(e:any) {
       alert(e.response?.data?.message || 'Error');
@@ -2469,7 +2478,7 @@ export function DocumentosPage() {
             <div style={{ padding:'16px 20px', borderBottom:'1px solid #334155',
               display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <h3 style={{ fontSize:15, fontWeight:700, margin:0 }}>Clasificar documento</h3>
-              <button onClick={() => { setValidModal(null); setTipoDoc(null); }}
+              <button onClick={() => { setValidModal(null); setTipoDoc(null); setRubricId(''); }}
                 style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
             </div>
 
@@ -2549,14 +2558,14 @@ export function DocumentosPage() {
                 </div>
 
                 <div style={{ display:'flex', gap:8 }}>
-                  <button onClick={() => { setValidModal(null); setTipoDoc(null); }}
+                  <button onClick={() => { setValidModal(null); setTipoDoc(null); setRubricId(''); }}
                     style={{ flex:1, padding:'10px', borderRadius:8, border:'1px solid #334155',
                       background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
                     Cancelar
                   </button>
                   <button
                     onClick={tipoDoc==='GASTO' ? validarComoGasto : validarComoCompra}
-                    disabled={!tipoDoc || validando}
+                    disabled={!tipoDoc || validando || (tipoDoc==='GASTO' && !rubricId)}
                     style={{ flex:2, padding:'10px', borderRadius:8, border:'none', fontSize:13,
                       fontWeight:700, cursor: tipoDoc ? 'pointer' : 'not-allowed',
                       background: !tipoDoc ? '#334155' : tipoDoc==='GASTO' ? '#f59e0b' : color,
