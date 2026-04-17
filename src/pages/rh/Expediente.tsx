@@ -39,7 +39,10 @@ export default function ExpedientePage() {
   const [error,     setError]     = useState('');
 
   const [eventoForm, setEventoForm] = useState({
-    type: 'PERMISO', date: new Date().toISOString().slice(0,10),
+    type: 'PERMISO',
+    fechaSolicitud: new Date().toISOString().slice(0,10),
+    fechaInicio: '', fechaFin: '',
+    conGoce: true,
     description: '', resolution: '',
   });
   const [vacForm, setVacForm] = useState({
@@ -58,8 +61,8 @@ export default function ExpedientePage() {
   });
 
   const eventoM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/rh/employees/${id}/events`, eventoForm),
-    onSuccess: () => { setEventoModal(false); setEventoForm({ type:'PERMISO', date:new Date().toISOString().slice(0,10), description:'', resolution:'' }); refetch(); },
+    mutationFn: () => api.post(`/companies/${cid}/rh/employees/${id}/events`, { ...eventoForm, date: eventoForm.fechaSolicitud }),
+    onSuccess: () => { setEventoModal(false); setEventoForm({ type:'PERMISO', fechaSolicitud:new Date().toISOString().slice(0,10), fechaInicio:'', fechaFin:'', conGoce:true, description:'', resolution:'' }); refetch(); },
   });
 
   const vacM = useMutation({
@@ -127,10 +130,7 @@ export default function ExpedientePage() {
                   style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`, background:'none', color, cursor:'pointer', fontSize:12 }}>
                   ✏ Editar
                 </button>
-                <button onClick={() => setEventoModal(true)}
-                  style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #f59e0b', background:'none', color:'#f59e0b', cursor:'pointer', fontSize:12 }}>
-                  + Evento
-                </button>
+
                 {emp.status !== 'BAJA' && (
                   <button onClick={() => { if(confirm('¿Confirmas la baja del empleado?')) darDeBajaM.mutate(); }}
                     style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #f87171', background:'none', color:'#f87171', cursor:'pointer', fontSize:12 }}>
@@ -395,8 +395,8 @@ export default function ExpedientePage() {
               <h3 style={{fontSize:15,fontWeight:700,margin:0,color}}>Registrar evento</h3>
               <button onClick={()=>setEventoModal(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
-              <div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+              <div style={{gridColumn:'span 2'}}>
                 <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Tipo de evento</label>
                 <select className="input-base" style={{fontSize:13}} value={eventoForm.type}
                   onChange={e=>setEv('type',e.target.value)}>
@@ -404,27 +404,59 @@ export default function ExpedientePage() {
                 </select>
               </div>
               <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha</label>
-                <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.date}
-                  onChange={e=>setEv('date',e.target.value)}/>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha de solicitud</label>
+                <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.fechaSolicitud}
+                  onChange={e=>setEv('fechaSolicitud',e.target.value)}/>
               </div>
-              <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Descripción *</label>
+              {['PERMISO','SUSPENSION','INCAPACIDAD','VACACIONES'].includes(eventoForm.type) && (<>
+                <div>
+                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha inicio del período</label>
+                  <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.fechaInicio}
+                    onChange={e=>setEv('fechaInicio',e.target.value)}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha fin del período</label>
+                  <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.fechaFin}
+                    onChange={e=>setEv('fechaFin',e.target.value)}/>
+                </div>
+              </>)}
+              {eventoForm.type === 'PERMISO' && (
+                <div style={{gridColumn:'span 2'}}>
+                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:6}}>Tipo de permiso</label>
+                  <div style={{display:'flex',gap:8}}>
+                    {[{v:true,l:'Con goce de sueldo'},{v:false,l:'Sin goce de sueldo'}].map(op=>(
+                      <button key={String(op.v)} onClick={()=>setEv('conGoce',op.v)}
+                        style={{flex:1,padding:'8px',borderRadius:8,cursor:'pointer',fontSize:12,
+                          border:`1px solid ${eventoForm.conGoce===op.v?color:'#334155'}`,
+                          background:eventoForm.conGoce===op.v?color+'22':'transparent',
+                          color:eventoForm.conGoce===op.v?color:'#64748b'}}>
+                        {op.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{gridColumn:'span 2'}}>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Descripción / Motivo *</label>
                 <textarea className="input-base" style={{fontSize:13,height:80,resize:'none'}}
                   value={eventoForm.description} onChange={e=>setEv('description',e.target.value)}
-                  placeholder="Motivo o descripción del evento..."/>
+                  placeholder="Describe el motivo de la solicitud..."/>
               </div>
-              <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Resolución</label>
-                <input className="input-base" style={{fontSize:13}} value={eventoForm.resolution}
-                  onChange={e=>setEv('resolution',e.target.value)} placeholder="Acuerdo o resolución (opcional)"/>
-              </div>
+              {esAdmin && (
+                <div style={{gridColumn:'span 2'}}>
+                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>
+                    Resolución <span style={{color:'#475569'}}>(solo RH/Admin)</span>
+                  </label>
+                  <input className="input-base" style={{fontSize:13}} value={eventoForm.resolution}
+                    onChange={e=>setEv('resolution',e.target.value)} placeholder="Acuerdo o resolución"/>
+                </div>
+              )}
             </div>
             <div style={{display:'flex',gap:8}}>
               <button className="btn-secondary" style={{flex:1,fontSize:13}} onClick={()=>setEventoModal(false)}>Cancelar</button>
               <button className="btn-primary" style={{flex:1,fontSize:13,background:color}}
                 onClick={()=>eventoM.mutate()} disabled={eventoM.isPending||!eventoForm.description}>
-                {eventoM.isPending?'Guardando…':'Registrar'}
+                {eventoM.isPending?'Guardando…':'Registrar solicitud'}
               </button>
             </div>
           </div>
