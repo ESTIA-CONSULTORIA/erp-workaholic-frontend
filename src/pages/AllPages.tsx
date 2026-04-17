@@ -639,7 +639,7 @@ export function CxCPage() {
     if (!pagoModal || !pagoForm.amount) return;
     await api.post(`/companies/${cid}/cxc/${pagoModal.id}/payments`, pagoForm);
     setPagoModal(null);
-    setPagoForm({ amount:0, paymentMethod:'EFECTIVO_MXN', date:new Date().toISOString().slice(0,10), reference:'' });
+    setPagoForm({ amount:0, paymentMethod:'EFECTIVO', date:new Date().toISOString().slice(0,10), reference:'' });
     qc.invalidateQueries({ queryKey: ['cxc', cid] });
     qc.invalidateQueries({ queryKey: ['cxc-summary', cid] });
   };
@@ -831,9 +831,10 @@ export function CxPPage() {
   const color = activeCompany?.color || '#f59e0b';
   const qc    = useQueryClient();
 
-  const [filterProv,  setFilterProv]  = useState('');
-  const [pagoModal,   setPagoModal]   = useState<any>(null);
-  const [nuevaModal,  setNuevaModal]  = useState(false);
+  const [filterProv,     setFilterProv]     = useState('');
+  const [pagoModal,      setPagoModal]      = useState<any>(null);
+  const [historialCxP,   setHistorialCxP]   = useState<any>(null);
+  const [nuevaModal,     setNuevaModal]      = useState(false);
   const [pagoForm,    setPagoForm]    = useState({
     amount: 0, paymentMethod: 'EFECTIVO',
     date: new Date().toISOString().slice(0,10), reference: '',
@@ -879,7 +880,7 @@ export function CxPPage() {
     try {
       await api.post(`/companies/${cid}/cxp/${pagoModal.id}/payments`, pagoForm);
       setPagoModal(null);
-      setPagoForm({ amount:0, paymentMethod:'EFECTIVO_MXN', date:new Date().toISOString().slice(0,10), reference:'' });
+      setPagoForm({ amount:0, paymentMethod:'EFECTIVO', date:new Date().toISOString().slice(0,10), reference:'' });
       qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] });
       qc.invalidateQueries({ queryKey: ['cxp-summary', cid] });
     } finally { setSaving(false); }
@@ -939,6 +940,7 @@ export function CxPPage() {
           <table className="table-base">
             <thead><tr>
               <th>Proveedor</th>
+              <th>No. Factura</th>
               <th>Concepto</th>
               <th>Fecha</th>
               <th>Vencimiento</th>
@@ -950,13 +952,14 @@ export function CxPPage() {
             </tr></thead>
             <tbody>
               {(cxpsOrdenadas as any[]).length===0 && (
-                <tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por pagar</td></tr>
+                <tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por pagar</td></tr>
               )}
               {cxpsOrdenadas.map((c:any) => {
                 const vencida = c.dueDate && new Date(c.dueDate) < new Date() && c.status !== 'PAGADO';
                 return (
                   <tr key={c.id}>
                     <td style={{fontWeight:500}}>{c.supplier?.name||'—'}</td>
+                    <td style={{fontSize:11,color:'#64748b'}}>{c.invoiceRef||'—'}</td>
                     <td style={{fontSize:12,color:'#94a3b8',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.concept}</td>
                     <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
                     <td style={{fontSize:12,color: vencida?'#f87171':'#64748b'}}>
@@ -972,12 +975,20 @@ export function CxPPage() {
                       </span>
                     </td>
                     <td>
-                      {c.status !== 'PAGADO' && (
-                        <button onClick={() => setPagoModal(c)}
-                          style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                          Abonar
-                        </button>
-                      )}
+                      <div style={{display:'flex',gap:6}}>
+                        {c.status !== 'PAGADO' && (
+                          <button onClick={() => setPagoModal(c)}
+                            style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                            Abonar
+                          </button>
+                        )}
+                        {(c.payments?.length > 0) && (
+                          <button onClick={() => setHistorialCxP(c)}
+                            style={{background:'none',border:'none',color:'#10b981',cursor:'pointer',fontSize:12}}>
+                            Historial
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
