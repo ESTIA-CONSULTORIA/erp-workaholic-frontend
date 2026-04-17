@@ -1990,8 +1990,11 @@ export function DocumentosPage() {
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
 
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  const [uploading,    setUploading]    = useState(false);
+  const [uploadError,  setUploadError]  = useState('');
+  const [validModal,   setValidModal]   = useState<any>(null);
+  const [validando,    setValidando]    = useState(false);
+  const [tipoDoc,      setTipoDoc]      = useState<'GASTO'|'COMPRA'|null>(null);
 
   const { data: docs=[], isLoading } = useQuery({
     queryKey:['documents',cid],
@@ -2026,6 +2029,45 @@ export function DocumentosPage() {
     }
   };
 
+  const validarComoGasto = async () => {
+    if (!validModal) return;
+    setValidando(true);
+    try {
+      const d = validModal.extractedJson || {};
+      await api.post(`/companies/${cid}/expenses`, {
+        date:          d.fecha || new Date().toISOString().slice(0,10),
+        concept:       d.concepto || validModal.fileName,
+        subtotal:      Number(d.subtotal || d.total || 0),
+        tax:           Number(d.iva || 0),
+        paymentMethod: 'EFECTIVO',
+        paymentStatus: 'PENDIENTE',
+        invoiceRef:    d.folio || d.numero || '',
+        notes:         `Generado desde documento OCR: ${validModal.fileName}`,
+      });
+      await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
+      qc.invalidateQueries({ queryKey: ['documents', cid] });
+      qc.invalidateQueries({ queryKey: ['expenses', cid] });
+      setValidModal(null); setTipoDoc(null);
+      alert('✔ Gasto prellenado en estado Pendiente. Revísalo en Gastos.');
+    } catch(e:any) {
+      alert(e.response?.data?.message || 'Error al crear gasto');
+    } finally { setValidando(false); }
+  };
+
+  const validarComoCompra = async () => {
+    if (!validModal) return;
+    setValidando(true);
+    try {
+      const d = validModal.extractedJson || {};
+      await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
+      qc.invalidateQueries({ queryKey: ['documents', cid] });
+      setValidModal(null); setTipoDoc(null);
+      alert('✔ Documento marcado como compra. Regístrala en el módulo Compras.');
+    } catch(e:any) {
+      alert(e.response?.data?.message || 'Error');
+    } finally { setValidando(false); }
+  };
+
   const STATUS_LABEL: Record<string,string> = {
     CARGADO: 'Cargado', PROCESANDO: 'Procesando',
     PENDIENTE_VALIDACION: 'Pendiente', VALIDADO: 'Validado',
@@ -2034,7 +2076,7 @@ export function DocumentosPage() {
 
   return (
     <AppLayout>
-      <div style={{ maxWidth:800 }}>
+      <div style={{ maxWidth:900 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Bandeja documental</h1>
           <label style={{
@@ -2043,7 +2085,7 @@ export function DocumentosPage() {
             cursor: uploading ? 'not-allowed' : 'pointer',
           }}>
             {uploading ? 'Subiendo...' : '+ Subir documento'}
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png"
               style={{ display:'none' }} onChange={handleFile} disabled={uploading}/>
           </label>
         </div>
@@ -2055,26 +2097,41 @@ export function DocumentosPage() {
           </div>
         )}
 
+        {/* Pendientes de validación */}
+        {(docs as any[]).some((d:any) => d.status === 'PENDIENTE_VALIDACION') && (
+          <div style={{ background:'#f59e0b11', border:'1px solid #f59e0b44', borderRadius:8,
+            padding:'8px 14px', marginBottom:16, fontSize:12, color:'#f59e0b' }}>
+            ⚠ Tienes documentos pendientes de clasificar como Gasto o Compra
+          </div>
+        )}
+
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {isLoading && <p style={{ color:'#64748b' }}>Cargando…</p>}
           {!isLoading && (docs as any[]).length===0 && (
             <div className="card" style={{ textAlign:'center', padding:48 }}>
               <p style={{ fontSize:36, marginBottom:12 }}>📄</p>
               <p style={{ color:'#94a3b8', fontWeight:500, marginBottom:8 }}>Sin documentos</p>
-              <p style={{ color:'#64748b', fontSize:13 }}>Sube facturas, tickets, comprobantes o cualquier documento</p>
+              <p style={{ color:'#64748b', fontSize:13 }}>Sube facturas, tickets o comprobantes para extraer datos con OCR</p>
             </div>
           )}
           {(docs as any[]).map((doc:any) => (
-            <div key={doc.id} className="card" style={{ display:'flex', alignItems:'center', gap:16 }}>
-              <div style={{ width:48, height:48, borderRadius:8, background:'#334155',
-                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <div key={doc.id} className="card" style={{ display:'flex', alignItems:'center', gap:16,
+              border: doc.status==='PENDIENTE_VALIDACION' ? '1px solid #f59e0b44' : '1px solid #1e293b' }}>
+              <div onClick={() => doc.fileUrl && setValidModal(doc)}
+                style={{ width:56, height:56, borderRadius:8, background:'#334155',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                  cursor: doc.fileUrl ? 'pointer' : 'default', overflow:'hidden' }}>
                 {doc.fileUrl?.startsWith('data:image')
-                  ? <img src={doc.fileUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:8 }}/>
-                  : <span style={{ fontSize:24 }}>📄</span>}
+                  ? <img src={doc.fileUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                  : <span style={{ fontSize:28 }}>📄</span>}
               </div>
               <div style={{ flex:1 }}>
                 <p style={{ fontSize:14, fontWeight:500, margin:'0 0 2px' }}>{doc.fileName}</p>
-                <p style={{ fontSize:12, color:'#64748b', margin:0 }}>{fmtDate(doc.createdAt)}</p>
+                <p style={{ fontSize:12, color:'#64748b', margin:0 }}>
+                  {fmtDate(doc.createdAt)}
+                  {doc.extractedJson?.proveedor && ` · ${doc.extractedJson.proveedor}`}
+                  {doc.extractedJson?.total && ` · $${doc.extractedJson.total}`}
+                </p>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span className={
@@ -2092,33 +2149,148 @@ export function DocumentosPage() {
                       alert(e.response?.data?.message || 'Error al extraer');
                     }
                   }}
-                    style={{ fontSize:11, padding:'3px 10px', borderRadius:6, border:`1px solid ${color}`,
+                    style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:`1px solid ${color}`,
                       background:'none', color, cursor:'pointer' }}>
-                    🔍 Extraer datos
+                    🔍 Extraer OCR
                   </button>
                 )}
-                {doc.status === 'PENDIENTE_VALIDACION' && (doc as any).extractedJson && (
-                  <button onClick={() => {
-                    const d = (doc as any).extractedJson;
-                    alert(`Proveedor: ${d.proveedor}\nFecha: ${d.fecha}\nTotal: $${d.total}`);
-                  }}
-                    style={{ fontSize:11, padding:'3px 10px', borderRadius:6, border:'1px solid #10b981',
-                      background:'none', color:'#10b981', cursor:'pointer' }}>
-                    ✓ Ver datos
+                {doc.status === 'PENDIENTE_VALIDACION' && (
+                  <button onClick={() => { setValidModal(doc); setTipoDoc(null); }}
+                    style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #f59e0b',
+                      background:'#f59e0b22', color:'#f59e0b', cursor:'pointer', fontWeight:600 }}>
+                    📋 Clasificar
                   </button>
                 )}
-                
                 {doc.fileUrl && (
-                  <a href={doc.fileUrl} download={doc.fileName} target="_blank" rel="noreferrer"
-                    style={{ fontSize:18, textDecoration:'none' }} title="Descargar">
-                    ⬇
-                  </a>
+                  <button onClick={() => {
+                    const w = window.open();
+                    if (w) w.document.write(`<img src="${doc.fileUrl}" style="max-width:100%">`);
+                  }}
+                    style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:18 }}
+                    title="Ver imagen">
+                    👁
+                  </button>
                 )}
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Modal de clasificación OCR */}
+      {validModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex',
+          alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'#0f172a', borderRadius:12, border:'1px solid #334155',
+            width:'90vw', maxWidth:800, maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
+
+            {/* Header */}
+            <div style={{ padding:'16px 20px', borderBottom:'1px solid #334155',
+              display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ fontSize:15, fontWeight:700, margin:0 }}>Clasificar documento</h3>
+              <button onClick={() => { setValidModal(null); setTipoDoc(null); }}
+                style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:0, flex:1, overflow:'hidden' }}>
+
+              {/* Vista previa imagen */}
+              <div style={{ borderRight:'1px solid #334155', padding:16, overflowY:'auto',
+                display:'flex', alignItems:'center', justifyContent:'center', background:'#0a0f1a' }}>
+                {validModal.fileUrl?.startsWith('data:image') ? (
+                  <img src={validModal.fileUrl} alt="documento"
+                    style={{ maxWidth:'100%', maxHeight:'60vh', borderRadius:6, objectFit:'contain' }}/>
+                ) : (
+                  <div style={{ textAlign:'center' }}>
+                    <p style={{ fontSize:48, margin:'0 0 8px' }}>📄</p>
+                    <p style={{ fontSize:13, color:'#64748b' }}>{validModal.fileName}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Datos extraídos y clasificación */}
+              <div style={{ padding:20, overflowY:'auto' }}>
+                <p style={{ fontSize:11, color:'#64748b', textTransform:'uppercase',
+                  letterSpacing:1, margin:'0 0 12px', fontWeight:700 }}>
+                  Datos extraídos por OCR
+                </p>
+
+                {validModal.extractedJson ? (
+                  <div style={{ background:'#1e293b', borderRadius:8, padding:12, marginBottom:16 }}>
+                    {[
+                      ['Proveedor',   validModal.extractedJson.proveedor],
+                      ['Fecha',       validModal.extractedJson.fecha],
+                      ['Folio/No.',   validModal.extractedJson.folio || validModal.extractedJson.numero],
+                      ['Subtotal',    validModal.extractedJson.subtotal ? `$${validModal.extractedJson.subtotal}` : null],
+                      ['IVA',         validModal.extractedJson.iva ? `$${validModal.extractedJson.iva}` : null],
+                      ['Total',       validModal.extractedJson.total ? `$${validModal.extractedJson.total}` : null],
+                      ['Concepto',    validModal.extractedJson.concepto],
+                    ].filter(([,v]) => v).map(([label, value]) => (
+                      <div key={label as string} style={{ display:'flex', justifyContent:'space-between',
+                        marginBottom:6, paddingBottom:6, borderBottom:'1px solid #334155' }}>
+                        <span style={{ fontSize:11, color:'#64748b' }}>{label}</span>
+                        <span style={{ fontSize:12, fontWeight:500, color:'#f1f5f9' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ background:'#1e293b', borderRadius:8, padding:12, marginBottom:16 }}>
+                    <p style={{ fontSize:12, color:'#64748b', margin:0 }}>Sin datos extraídos — clasifica manualmente</p>
+                  </div>
+                )}
+
+                <p style={{ fontSize:11, color:'#64748b', textTransform:'uppercase',
+                  letterSpacing:1, margin:'0 0 12px', fontWeight:700 }}>
+                  ¿Qué tipo de documento es?
+                </p>
+
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+                  <button onClick={() => setTipoDoc('GASTO')}
+                    style={{ padding:'14px 10px', borderRadius:10, cursor:'pointer', textAlign:'center',
+                      border: tipoDoc==='GASTO' ? '2px solid #f59e0b' : '1px solid #334155',
+                      background: tipoDoc==='GASTO' ? '#f59e0b22' : '#1e293b' }}>
+                    <p style={{ fontSize:20, margin:'0 0 4px' }}>🧾</p>
+                    <p style={{ fontSize:13, fontWeight:700, color: tipoDoc==='GASTO' ? '#f59e0b' : '#94a3b8', margin:'0 0 2px' }}>
+                      Es un GASTO
+                    </p>
+                    <p style={{ fontSize:10, color:'#64748b', margin:0 }}>Afecta ER y flujo</p>
+                  </button>
+                  <button onClick={() => setTipoDoc('COMPRA')}
+                    style={{ padding:'14px 10px', borderRadius:10, cursor:'pointer', textAlign:'center',
+                      border: tipoDoc==='COMPRA' ? `2px solid ${color}` : '1px solid #334155',
+                      background: tipoDoc==='COMPRA' ? color+'22' : '#1e293b' }}>
+                    <p style={{ fontSize:20, margin:'0 0 4px' }}>📦</p>
+                    <p style={{ fontSize:13, fontWeight:700, color: tipoDoc==='COMPRA' ? color : '#94a3b8', margin:'0 0 2px' }}>
+                      Es una COMPRA
+                    </p>
+                    <p style={{ fontSize:10, color:'#64748b', margin:0 }}>Afecta inventario</p>
+                  </button>
+                </div>
+
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => { setValidModal(null); setTipoDoc(null); }}
+                    style={{ flex:1, padding:'10px', borderRadius:8, border:'1px solid #334155',
+                      background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={tipoDoc==='GASTO' ? validarComoGasto : validarComoCompra}
+                    disabled={!tipoDoc || validando}
+                    style={{ flex:2, padding:'10px', borderRadius:8, border:'none', fontSize:13,
+                      fontWeight:700, cursor: tipoDoc ? 'pointer' : 'not-allowed',
+                      background: !tipoDoc ? '#334155' : tipoDoc==='GASTO' ? '#f59e0b' : color,
+                      color: '#fff' }}>
+                    {validando ? 'Procesando…'
+                      : !tipoDoc ? 'Selecciona el tipo'
+                      : tipoDoc==='GASTO' ? '✓ Crear gasto pendiente'
+                      : '✓ Marcar como compra'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
