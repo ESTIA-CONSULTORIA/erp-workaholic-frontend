@@ -275,7 +275,7 @@ export default function ExpedientePage() {
                       {esAdmin && (
                         <td>
                           {v.status === 'PENDIENTE' && (
-                            <div style={{ display:'flex', gap:6' }}>
+                            <div style={{ display:'flex', gap:6 }}>
                               <button onClick={() => aprobarVacM.mutate(v.id)}
                                 style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
                                 ✓ Aprobar
