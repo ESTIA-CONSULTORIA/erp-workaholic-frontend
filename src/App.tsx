@@ -11,6 +11,7 @@ import ComprasPage from './pages/machete/Compras';
 import ProveedoresPage from './pages/Proveedores';
 import ClientesPage from './pages/Clientes';
 import IntercompanyPage from './pages/Intercompany';
+import BitacoraPage from './pages/Bitacora';
 import MacheteReportesPage, { VentasReportePage, CxCReportePage, CxPReportePage } from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
 import ExpedientePage from './pages/rh/Expediente';
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/proveedores" element={<ProveedoresPage/>}/>
         <Route path="/clientes" element={<ClientesPage/>}/>
         <Route path="/intercompany" element={<IntercompanyPage/>}/>
+        <Route path="/bitacora" element={<BitacoraPage/>}/>
         <Route path="/machete-reportes" element={<MacheteReportesPage/>}/>
         <Route path="/reportes/ventas" element={<VentasReportePage/>}/>
         <Route path="/reportes/cxc"    element={<CxCReportePage/>}/>
