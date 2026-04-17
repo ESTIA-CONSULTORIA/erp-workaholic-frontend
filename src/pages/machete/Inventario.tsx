@@ -1,6 +1,6 @@
 import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,18 @@ export default function InventarioPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<'productos'|'insumos'>('productos');
+  const [editModal, setEditModal] = useState<any>(null);
+  const [editForm,  setEditForm]  = useState({ minStock: 0, maxStock: 0 });
+  const qc = useQueryClient();
+
+  const updateLimitsM = useMutation({
+    mutationFn: (productId: string) =>
+      api.put(`/companies/${cid}/machete/products/${productId}/stock-limits`, editForm),
+    onSuccess: () => {
+      setEditModal(null);
+      qc.invalidateQueries({ queryKey: ['pt-inventory', cid] });
+    },
+  });
 
   const { data: productos = [], isLoading: loadProd } = useQuery({
     queryKey: ['pt-inventory', cid],
@@ -56,10 +68,7 @@ export default function InventarioPage() {
       <div style={{ maxWidth:960 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Inventario</h1>
-          <button className="btn-primary" style={{ background:color, fontSize:13 }}
-            onClick={() => navigate('/machete/compras')}>
-            + Registrar compra
-          </button>
+
         </div>
 
         {/* Tabs */}
@@ -101,10 +110,11 @@ export default function InventarioPage() {
                     <th style={{textAlign:'right'}}>Mínimo</th>
                     <th style={{textAlign:'right'}}>Máximo</th>
                     <th>Estado</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loadProd && <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>}
+                  {loadProd && <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando...</td></tr>}
                   {prodActivos.map((p: any) => {
                     const stock = Number(p.stock || 0);
                     const min   = Number(p.minStock || 5);
@@ -125,6 +135,12 @@ export default function InventarioPage() {
                             background: estadoColor+'22', color: estadoColor }}>
                             {estado}
                           </span>
+                        </td>
+                        <td>
+                          <button onClick={() => { setEditModal(p); setEditForm({ minStock: min, maxStock: max }); }}
+                            style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
+                            Editar
+                          </button>
                         </td>
                       </tr>
                     );
@@ -210,6 +226,37 @@ export default function InventarioPage() {
           </>
         )}
       </div>
+      {editModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:360,border:'1px solid #334155'}}>
+            <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 4px'}}>Editar límites de stock</h3>
+            <p style={{fontSize:12,color:'#64748b',margin:'0 0 16px'}}>{editModal.name}</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:20}}>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:4}}>Stock mínimo</label>
+                <input type="number" min="0" className="input-base" style={{fontSize:13}}
+                  value={editForm.minStock} onChange={e=>setEditForm(f=>({...f,minStock:+e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:4}}>Stock máximo</label>
+                <input type="number" min="0" className="input-base" style={{fontSize:13}}
+                  value={editForm.maxStock} onChange={e=>setEditForm(f=>({...f,maxStock:+e.target.value}))}/>
+                <p style={{fontSize:10,color:'#475569',margin:'3px 0 0'}}>0 = sin límite máximo</p>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setEditModal(null)}
+                className="btn-secondary" style={{flex:1,fontSize:13}}>Cancelar</button>
+              <button onClick={()=>updateLimitsM.mutate(editModal.id)}
+                className="btn-primary" style={{flex:1,fontSize:13,background:color}}
+                disabled={updateLimitsM.isPending}>
+                {updateLimitsM.isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
