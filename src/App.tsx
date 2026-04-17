@@ -9,7 +9,7 @@ import CatalogoPage from './pages/machete/Catalogo';
 import OrdenesCompraPage from './pages/machete/OrdenesCompra';
 import ComprasPage from './pages/machete/Compras';
 import ProveedoresPage from './pages/Proveedores';
-import MacheteReportesPage from './pages/machete/MacheteReportes';
+import MacheteReportesPage, { VentasReportePage, CxCReportePage, CxPReportePage } from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
@@ -45,6 +45,9 @@ export default function App() {
         <Route path="/machete/compras" element={<ComprasPage/>}/>
         <Route path="/proveedores" element={<ProveedoresPage/>}/>
         <Route path="/machete-reportes" element={<MacheteReportesPage/>}/>
+        <Route path="/reportes/ventas" element={<VentasReportePage/>}/>
+        <Route path="/reportes/cxc"    element={<CxCReportePage/>}/>
+        <Route path="/reportes/cxp"    element={<CxPReportePage/>}/>
         <Route path="/machete/produccion" element={<ProduccionPage/>}/>
         <Route path="/machete/inventario" element={<InventarioPage/>}/>
         <Route path="/rh" element={<RHPage/>}/>

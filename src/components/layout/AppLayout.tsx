@@ -53,7 +53,9 @@ const NAV_GROUPS = [
     label: 'Reportes',
     icon: '📊',
     items: [
-      { to:'/machete-reportes', icon:'📊', label:'Ventas', companies:['MACHETE'] },
+      { to:'/reportes/ventas',  icon:'📈', label:'Ventas',           companies:['MACHETE'] },
+      { to:'/reportes/cxc',     icon:'💰', label:'CxC Multicliente',  companies:['MACHETE'] },
+      { to:'/reportes/cxp',     icon:'📋', label:'CxP',               companies:['MACHETE'] },
     ]
   },
   {

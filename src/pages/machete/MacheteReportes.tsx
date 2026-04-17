@@ -542,3 +542,46 @@ function CxPReporteTab({ cid, color }: any) {
     </div>
   );
 }
+
+// ── STANDALONE REPORT PAGES ───────────────────────────────────
+export function VentasReportePage() {
+  const { activeCompany, activePeriod } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#B5451B';
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1100 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Reporte de Ventas</h1>
+        <VentasTab cid={cid!} color={color} activePeriod={activePeriod}/>
+      </div>
+    </AppLayout>
+  );
+}
+
+export function CxCReportePage() {
+  const { activeCompany } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#B5451B';
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1100 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Reporte CxC Multicliente</h1>
+        <CxCReporteTab cid={cid!} color={color}/>
+      </div>
+    </AppLayout>
+  );
+}
+
+export function CxPReportePage() {
+  const { activeCompany } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#B5451B';
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1100 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Reporte CxP</h1>
+        <CxPReporteTab cid={cid!} color={color}/>
+      </div>
+    </AppLayout>
+  );
+}
