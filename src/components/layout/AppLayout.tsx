@@ -32,7 +32,7 @@ const NAV_GROUPS = [
     icon: '💼',
     items: [
       { to:'/gastos',          icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
-      { to:'/conciliacion',    icon:'⊜', label:'Conciliación',  roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/conciliacion',    icon:'⊜', label:'Arqueo',  roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxc',             icon:'◷', label:'CxC',           roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxp',             icon:'◶', label:'CxP',           roles:['admin','administrador','gerente','contador','director'] },
       { to:'/ordenes-compra',  icon:'📋', label:'OC',            companies:['MACHETE'] },

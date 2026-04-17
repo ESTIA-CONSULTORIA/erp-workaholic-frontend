@@ -470,11 +470,14 @@ export function ConciliacionPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
+  const role  = activeCompany?.roleCode || '';
   const qc    = useQueryClient();
 
-  const [editId,    setEditId]    = useState<string|null>(null);
-  const [editName,  setEditName]  = useState('');
-  const [saving,    setSaving]    = useState(false);
+  const esAdmin = ['admin','administrador','gerente'].includes(role);
+
+  const [editId,   setEditId]   = useState<string|null>(null);
+  const [editName, setEditName] = useState('');
+  const [saving,   setSaving]   = useState(false);
 
   const { data: rawBalances } = useQuery({
     queryKey: ['balances', cid],
@@ -482,15 +485,19 @@ export function ConciliacionPage() {
     enabled:  !!cid,
   });
 
+  // Para el admin: obtener cortes del día para comparar declarado vs teórico
+  const hoy = new Date().toISOString().slice(0,10);
+  const { data: cortes = [] } = useQuery({
+    queryKey: ['cortes-arqueo', cid, hoy],
+    queryFn:  () => api.get(`/companies/${cid}/corte-caja`).then(r => r.data),
+    enabled:  !!cid && esAdmin,
+  });
+
   const balances = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
   const totalMxn = rawBalances?.totalMxn || 0;
-  const totalUsd = rawBalances?.totalUsd || 0;
 
   const TIPO_LABELS: Record<string,string> = {
-    EFECTIVO:   'Efectivo',
-    BANCO:      'Banco',
-    PLATAFORMA: 'Plataforma',
-    CAJA_CHICA: 'Caja chica',
+    EFECTIVO:'Efectivo', BANCO:'Banco', PLATAFORMA:'Plataforma', CAJA_CHICA:'Caja chica',
   };
 
   const grupos = (balances as any[]).reduce((acc: any, b: any) => {
@@ -509,31 +516,55 @@ export function ConciliacionPage() {
     } finally { setSaving(false); }
   };
 
-  const toggleAccount = async (accountId: string, isActive: boolean) => {
-    await api.put(`/companies/${cid}/flow/accounts/${accountId}`, { isActive: !isActive });
-    qc.invalidateQueries({ queryKey: ['balances', cid] });
-  };
+  // Calcular totales de cortes del día para comparar
+  const cortesHoy = (cortes as any[]).filter((c:any) => c.fecha?.slice(0,10) === hoy);
+  const efectivoDeclarado = cortesHoy.reduce((t:number,c:any) => t + Number(c.efectivoContado||0), 0);
+  const efectivoTeorico   = balances.find((b:any) => b.type === 'EFECTIVO')?.balance || 0;
+  const diferencia        = efectivoDeclarado - Number(efectivoTeorico);
 
   return (
     <AppLayout>
       <div style={{ maxWidth:900 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:24 }}>Conciliación</h1>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+          <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Arqueo de Caja</h1>
+          <span style={{ fontSize:12, padding:'4px 12px', borderRadius:99,
+            background: esAdmin ? '#3b82f622' : '#f59e0b22',
+            color: esAdmin ? '#3b82f6' : '#f59e0b' }}>
+            {esAdmin ? 'Vista administrador' : 'Vista contador'}
+          </span>
+        </div>
 
-        {/* KPIs */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
+        {/* Vista Admin: declarado vs teórico */}
+        {esAdmin && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
+            {[
+              { label:'Efectivo declarado (cortes hoy)', value: efectivoDeclarado, col: '#f59e0b' },
+              { label:'Efectivo teórico (sistema)',       value: efectivoTeorico,   col: color },
+              { label:'Diferencia',                       value: diferencia,        col: diferencia === 0 ? '#10b981' : diferencia > 0 ? '#3b82f6' : '#f87171' },
+            ].map(k => (
+              <div key={k.label} style={{ background:'#1e293b', borderRadius:8, padding:12, border:'1px solid #334155' }}>
+                <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
+                <p style={{ fontSize:20, fontWeight:700, color:k.col, margin:0 }}>{fmt(k.value)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Saldo total */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
           <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
             <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total MXN</p>
             <p style={{ fontSize:24, fontWeight:700, color, margin:0 }}>{fmt(totalMxn)}</p>
           </div>
-          <div className="card-sm" style={{ borderLeft:'3px solid #f59e0b' }}>
-            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total USD</p>
-            <p style={{ fontSize:24, fontWeight:700, color:'#f59e0b', margin:0 }}>${Number(totalUsd).toFixed(2)}</p>
+          <div className="card-sm" style={{ borderLeft:'3px solid #64748b' }}>
+            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Cuentas activas</p>
+            <p style={{ fontSize:24, fontWeight:700, color:'#94a3b8', margin:0 }}>{balances.length}</p>
           </div>
         </div>
 
-        {/* Cuentas agrupadas por tipo */}
+        {/* Desglose por tipo de cuenta */}
         {Object.entries(grupos).map(([tipo, cuentas]: any) => (
-          <div key={tipo} style={{ marginBottom:20 }}>
+          <div key={tipo} style={{ marginBottom:16 }}>
             <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
               letterSpacing:1, margin:'0 0 8px' }}>
               {TIPO_LABELS[tipo] || tipo}
@@ -542,49 +573,61 @@ export function ConciliacionPage() {
               <table className="table-base">
                 <thead>
                   <tr>
-                    <th>Cuenta</th><th>Moneda</th>
-                    <th style={{textAlign:'right'}}>Saldo</th>
-                    <th>Acciones</th>
+                    <th>Cuenta</th>
+                    <th>Moneda</th>
+                    <th style={{textAlign:'right'}}>Saldo sistema</th>
+                    {esAdmin && <th style={{textAlign:'right'}}>Diferencia</th>}
+                    {esAdmin && <th>Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {(cuentas as any[]).map((b: any) => (
-                    <tr key={b.accountId}>
-                      <td>
-                        {editId === b.accountId ? (
-                          <input className="input-base" style={{ fontSize:12, width:200 }}
-                            value={editName} onChange={e => setEditName(e.target.value)}/>
-                        ) : (
-                          <span style={{ fontWeight:500 }}>{b.accountName}</span>
-                        )}
-                      </td>
-                      <td><span className="badge-blue">{b.currency}</span></td>
-                      <td style={{ textAlign:'right', fontWeight:700, color:Number(b.balance)>=0?color:'#f87171' }}>
-                        {fmt(b.balance)}
-                      </td>
-                      <td>
-                        <div style={{ display:'flex', gap:8 }}>
-                          {editId === b.accountId ? (
-                            <>
-                              <button onClick={() => guardarNombre(b.accountId)} disabled={saving}
-                                style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
-                                ✓ Guardar
-                              </button>
-                              <button onClick={() => setEditId(null)}
-                                style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
-                                Cancelar
-                              </button>
-                            </>
+                  {(cuentas as any[]).map((b: any) => {
+                    const dif = tipo === 'EFECTIVO' ? diferencia : 0;
+                    return (
+                      <tr key={b.accountId}>
+                        <td>
+                          {esAdmin && editId === b.accountId ? (
+                            <input className="input-base" style={{ fontSize:12, width:200 }}
+                              value={editName} onChange={e => setEditName(e.target.value)}/>
                           ) : (
-                            <button onClick={() => { setEditId(b.accountId); setEditName(b.accountName); }}
-                              style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
-                              Renombrar
-                            </button>
+                            <span style={{ fontWeight:500 }}>{b.accountName}</span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td><span className="badge-blue">{b.currency}</span></td>
+                        <td style={{ textAlign:'right', fontWeight:700,
+                          color: Number(b.balance) >= 0 ? color : '#f87171' }}>
+                          {fmt(b.balance)}
+                        </td>
+                        {esAdmin && (
+                          <td style={{ textAlign:'right', fontWeight:700,
+                            color: tipo !== 'EFECTIVO' ? '#475569' : dif === 0 ? '#10b981' : dif > 0 ? '#3b82f6' : '#f87171' }}>
+                            {tipo === 'EFECTIVO' ? (dif > 0 ? `+${fmt(dif)}` : fmt(dif)) : '—'}
+                          </td>
+                        )}
+                        {esAdmin && (
+                          <td>
+                            {editId === b.accountId ? (
+                              <div style={{ display:'flex', gap:6 }}>
+                                <button onClick={() => guardarNombre(b.accountId)} disabled={saving}
+                                  style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
+                                  ✓ Guardar
+                                </button>
+                                <button onClick={() => setEditId(null)}
+                                  style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => { setEditId(b.accountId); setEditName(b.accountName); }}
+                                style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
+                                Renombrar
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
