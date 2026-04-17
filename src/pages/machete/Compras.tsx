@@ -384,16 +384,17 @@ export default function ComprasPage() {
                         </span>
                       </td>
                       <td>
-                        <button onClick={e=>{e.stopPropagation();setCompraDetalle(c);}}
-                          style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                          Ver
-                        </button>
-                        {c.paymentStatus !== 'CANCELADO' && (
-                          <button onClick={() => setCancelId(c.id)}
-                            style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:12}}>
-                            Cancelar
+                        <div style={{display:'flex',gap:6}}>
+                          <button onClick={e=>{e.stopPropagation();setCompraDetalle(c);}}
+                            style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                            Ver
                           </button>
-                        )}
+                          {c.paymentStatus !== 'CANCELADO' && (
+                            <button onClick={() => setCancelId(c.id)}
+                              style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:12}}>
+                              Cancelar
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

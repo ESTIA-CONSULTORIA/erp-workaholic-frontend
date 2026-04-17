@@ -134,8 +134,6 @@ export default function RHPage() {
           </table>
         </div>
       </div>
-    </AppLayout>
-  );
       {showImport && (
         <ImportCSV title="Empleados" color={color}
           columns={[
