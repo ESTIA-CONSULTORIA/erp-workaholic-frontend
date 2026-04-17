@@ -12,12 +12,11 @@ import ProveedoresPage from './pages/Proveedores';
 import ClientesPage from './pages/Clientes';
 import IntercompanyPage from './pages/Intercompany';
 import IntercompanyPage from './pages/Intercompany';
-import BitacoraPage from './pages/Bitacora';
 import MacheteReportesPage, { VentasReportePage, CxCReportePage, CxPReportePage } from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
-import { CortesPage, GastosPage, ConciliacionPage, CxCPage, CxPPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage } from './pages/AllPages';
+import { CortesPage, GastosPage, ConciliacionPage, CxCPage, CxPPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage, BitacoraPage } from './pages/AllPages';
 import CorteCajaPage from './pages/CorteCaja';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {

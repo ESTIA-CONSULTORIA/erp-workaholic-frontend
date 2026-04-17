@@ -2794,3 +2794,94 @@ export function AdminPage() {
     </AppLayout>
   );
 }
+
+export function BitacoraPage() {
+  const { activeCompany } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#3b82f6';
+
+  const [filtroEntidad, setFiltroEntidad] = useState('');
+  const [busqueda,      setBusqueda]      = useState('');
+
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ['audit', cid, filtroEntidad],
+    queryFn:  () => api.get(`/companies/${cid}/audit?entity=${filtroEntidad}&limit=200`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const ENTIDADES = ['','expenses','sales','cuts','receivables','payables','purchases','employees'];
+  const ETIQUETAS: Record<string,string> = {
+    expenses:'Gastos', sales:'Ventas', cuts:'Cortes', receivables:'CxC',
+    payables:'CxP', purchases:'Compras', employees:'Empleados',
+  };
+
+  const ACCION_COLOR: Record<string,string> = {
+    CREATE:'#10b981', UPDATE:'#3b82f6', DELETE:'#f87171',
+    APPROVE:'#10b981', REJECT:'#f87171', LOGIN:'#64748b', CLOSE_PERIOD:'#8b5cf6',
+  };
+
+  const logsFiltrados = (logs as any[]).filter(l =>
+    !busqueda || l.user?.name?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    l.action?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    l.entity?.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1000 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:20 }}>Bitácora de auditoría</h1>
+
+        <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
+          <input className="input-base" style={{ maxWidth:240, fontSize:13 }}
+            placeholder="Buscar usuario, acción…" value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}/>
+          <select className="input-base" style={{ fontSize:13, maxWidth:160 }}
+            value={filtroEntidad} onChange={e => setFiltroEntidad(e.target.value)}>
+            <option value="">Todas las entidades</option>
+            {ENTIDADES.filter(Boolean).map(e => (
+              <option key={e} value={e}>{ETIQUETAS[e]||e}</option>
+            ))}
+          </select>
+          <span style={{ fontSize:12, color:'#475569', marginLeft:'auto' }}>
+            {logsFiltrados.length} registros
+          </span>
+        </div>
+
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <table className="table-base">
+            <thead><tr>
+              <th>Fecha / Hora</th><th>Usuario</th><th>Acción</th>
+              <th>Entidad</th><th>Detalle</th>
+            </tr></thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
+              {!isLoading && logsFiltrados.length===0 && (
+                <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin registros</td></tr>
+              )}
+              {logsFiltrados.map((l:any) => (
+                <tr key={l.id}>
+                  <td style={{fontSize:11,color:'#64748b',whiteSpace:'nowrap'}}>
+                    {new Date(l.createdAt).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+                  </td>
+                  <td style={{fontSize:12,fontWeight:500}}>{l.user?.name||'—'}</td>
+                  <td>
+                    <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,
+                      background:(ACCION_COLOR[l.action]||'#64748b')+'22',
+                      color:ACCION_COLOR[l.action]||'#64748b'}}>
+                      {l.action}
+                    </span>
+                  </td>
+                  <td style={{fontSize:11,color:'#94a3b8'}}>{ETIQUETAS[l.entity]||l.entity||'—'}</td>
+                  <td style={{fontSize:11,color:'#64748b',maxWidth:200,overflow:'hidden',
+                    textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {l.entityId ? `ID: ${l.entityId.slice(-8)}` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
