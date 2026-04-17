@@ -388,6 +388,13 @@ export default function ComprasPage() {
                           style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
                           Ver
                         </button>
+                        {c.paymentStatus !== 'CANCELADO' && (
+                          <button onClick={() => setCancelId(c.id)}
+                            style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:12}}>
+                            Cancelar
+                          </button>
+                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -454,6 +461,31 @@ export default function ComprasPage() {
             <div style={{padding:'12px 20px',borderTop:'1px solid #334155',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span style={{fontSize:13,color:'#64748b'}}>Total de la compra</span>
               <span style={{fontSize:20,fontWeight:700,color}}>{fmt(compraDetalle.total)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {cancelId && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:380,border:'1px solid #334155'}}>
+            <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 8px',color:'#f87171'}}>Cancelar compra</h3>
+            <p style={{fontSize:13,color:'#94a3b8',margin:'0 0 20px'}}>
+              ¿Confirmas la cancelación? Esta acción no se puede deshacer.
+            </p>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setCancelId(null)}
+                className="btn-secondary" style={{flex:1,fontSize:13}}>No, volver</button>
+              <button onClick={async()=>{
+                try {
+                  await api.put(`/companies/${cid}/machete/compras/${cancelId}/cancelar`,{});
+                  qc.invalidateQueries({queryKey:['compras',cid]});
+                  setCancelId(null);
+                } catch(e:any){ alert(e.response?.data?.message||'Error'); }
+              }} className="btn-primary"
+                style={{flex:1,fontSize:13,background:'#f87171',border:'none'}}>
+                Sí, cancelar
+              </button>
             </div>
           </div>
         </div>

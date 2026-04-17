@@ -687,6 +687,95 @@ export function ConciliacionPage() {
           </div>
         ))}
       </div>
+      </>)}
+
+      {tab === 'movimientos' && (
+        <div>
+          <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center' }}>
+            <input type="month" className="input-base" style={{ fontSize:13, maxWidth:160 }}
+              value={filtroMes} onChange={e => setFiltroMes(e.target.value)}/>
+            <span style={{ fontSize:12, color:'#475569', marginLeft:8 }}>
+              {(movimientos as any[]).length} movimientos
+            </span>
+            <button onClick={() => exportCSV('movimientos', movimientos as any[],
+              [{key:'date',label:'Fecha'},{key:'type',label:'Tipo'},{key:'originType',label:'Origen'},
+               {key:'amount',label:'Monto'},{key:'currency',label:'Moneda'},{key:'notes',label:'Notas'}])}
+              style={{ marginLeft:'auto', padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+                background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+              ⬇ Exportar CSV
+            </button>
+          </div>
+          <div className="card" style={{ padding:0, overflow:'hidden' }}>
+            <table className="table-base">
+              <thead><tr>
+                <th>Fecha</th><th>Cuenta</th><th>Tipo</th><th>Origen</th>
+                <th style={{textAlign:'right'}}>Monto</th><th>Notas</th>
+              </tr></thead>
+              <tbody>
+                {loadMov && <tr><td colSpan={6} style={{textAlign:'center',padding:24,color:'#64748b'}}>Cargando…</td></tr>}
+                {!loadMov && (movimientos as any[]).length === 0 && (
+                  <tr><td colSpan={6} style={{textAlign:'center',padding:24,color:'#64748b'}}>Sin movimientos en este período</td></tr>
+                )}
+                {(movimientos as any[]).map((m:any) => (
+                  <tr key={m.id}>
+                    <td style={{fontSize:12,whiteSpace:'nowrap'}}>{fmtDate(m.date)}</td>
+                    <td style={{fontSize:11,color:'#94a3b8'}}>{m.cashAccount?.name||'—'}</td>
+                    <td>
+                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,
+                        background: m.type==='ENTRADA'?'#10b98122':'#f8717122',
+                        color: m.type==='ENTRADA'?'#10b981':'#f87171'}}>
+                        {m.type}
+                      </span>
+                    </td>
+                    <td style={{fontSize:11,color:'#64748b'}}>{m.originType?.replace(/_/g,' ')||'—'}</td>
+                    <td style={{textAlign:'right',fontWeight:700,
+                      color:m.type==='ENTRADA'?'#10b981':'#f87171'}}>
+                      {m.type==='SALIDA'?'-':''}{fmt(m.amountMxn||m.amount)}
+                    </td>
+                    <td style={{fontSize:11,color:'#64748b',maxWidth:160,overflow:'hidden',
+                      textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.notes||'—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showImportBanca && (
+        <ImportCSV title="Estado de cuenta bancario" color={color}
+          columns={[
+            { key:'fecha',       label:'Fecha',       required:true, type:'date'   },
+            { key:'descripcion', label:'Descripción', required:true               },
+            { key:'cargo',       label:'Cargo',                      type:'number' },
+            { key:'abono',       label:'Abono',                      type:'number' },
+            { key:'referencia',  label:'Referencia'                               },
+          ]}
+          onImport={async (rows) => {
+            // Convert bank statement rows to flow movements
+            const movs = rows.filter(r => r.cargo > 0 || r.abono > 0).map(r => ({
+              fecha:      r.fecha,
+              descripcion: r.descripcion,
+              monto:       r.abono > 0 ? r.abono : r.cargo,
+              tipo:        r.abono > 0 ? 'ENTRADA' : 'SALIDA',
+              referencia:  r.referencia,
+            }));
+            const res = await api.post(`/companies/${cid}/import/gastos`, {
+              rows: movs.filter(m => m.tipo === 'SALIDA').map(m => ({
+                fecha:    m.fecha,
+                concepto: m.descripcion,
+                total:    m.monto,
+                metodo:   'TRANSFERENCIA',
+                estatus:  'PAGADO',
+              }))
+            });
+            qc.invalidateQueries({ queryKey: ['movements', cid] });
+            qc.invalidateQueries({ queryKey: ['balances', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImportBanca(false)}
+        />
+      )}
     </AppLayout>
   );
 }
