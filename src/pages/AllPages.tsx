@@ -854,6 +854,32 @@ export function CxCPage() {
           </div>
         </div>
 
+        {/* Antigüedad de saldos */}
+        {(cxcsOrdenadas.filter((c:any)=>c.status!=='PAGADO')).length > 0 && (() => {
+          const hoy = new Date();
+          const pendientes = cxcsOrdenadas.filter((c:any) => c.status !== 'PAGADO' && Number(c.balance) > 0);
+          const buckets = [
+            { label:'0-30 días',  col:'#10b981', items: pendientes.filter((c:any) => { const d=(hoy.getTime()-new Date(c.date).getTime())/86400000; return d<=30; }) },
+            { label:'31-60 días', col:'#f59e0b', items: pendientes.filter((c:any) => { const d=(hoy.getTime()-new Date(c.date).getTime())/86400000; return d>30&&d<=60; }) },
+            { label:'61-90 días', col:'#f97316', items: pendientes.filter((c:any) => { const d=(hoy.getTime()-new Date(c.date).getTime())/86400000; return d>60&&d<=90; }) },
+            { label:'90+ días',   col:'#f87171', items: pendientes.filter((c:any) => { const d=(hoy.getTime()-new Date(c.date).getTime())/86400000; return d>90; }) },
+          ];
+          return (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
+              {buckets.map(b => (
+                <div key={b.label} style={{ background:'#1e293b', borderRadius:8, padding:'10px 14px',
+                  borderLeft:`3px solid ${b.col}`, border:`1px solid ${b.col}44`, borderLeftWidth:3 }}>
+                  <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px', textTransform:'uppercase', letterSpacing:1 }}>{b.label}</p>
+                  <p style={{ fontSize:16, fontWeight:700, color:b.col, margin:'0 0 2px' }}>
+                    {fmt(b.items.reduce((t:number,c:any)=>t+Number(c.balance),0))}
+                  </p>
+                  <p style={{ fontSize:10, color:'#475569', margin:0 }}>{b.items.length} cuenta{b.items.length!==1?'s':''}</p>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
           <input className="input-base" style={{ maxWidth:240, fontSize:13 }}
             placeholder="Buscar cliente, concepto…" id="cxc-search"
@@ -887,6 +913,7 @@ export function CxCPage() {
               <th>Cliente</th>
               <th>No. OC</th>
               <th>Fecha venta</th>
+              <th>Antigüedad</th>
               <th>Último pago</th>
               <th style={{textAlign:'right'}}>Original</th>
               <th style={{textAlign:'right'}}>Pagado</th>
@@ -896,7 +923,7 @@ export function CxCPage() {
             </tr></thead>
             <tbody>
               {(cxcsOrdenadas as any[]).length===0 && (
-                <tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
+                <tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
               )}
               {cxcsOrdenadas.map((c:any) => {
                 const ultimoPago = c.payments?.[0];
@@ -907,6 +934,14 @@ export function CxCPage() {
                       {c.concept?.match(/OC-?\d+|[A-Z]+-\d+/)?.[0] || '—'}
                     </td>
                     <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
+                    <td style={{fontSize:11}}>
+                      {(() => {
+                        const dias = Math.floor((new Date().getTime()-new Date(c.date).getTime())/86400000);
+                        const col = dias<=30?'#10b981':dias<=60?'#f59e0b':dias<=90?'#f97316':'#f87171';
+                        return c.status==='PAGADO' ? <span style={{color:'#10b981'}}>✓</span> :
+                          <span style={{color:col,fontWeight:600}}>{dias}d</span>;
+                      })()}
+                    </td>
                     <td style={{fontSize:12,color: ultimoPago ? '#10b981' : '#475569'}}>
                       {ultimoPago ? fmtDate(ultimoPago.date) : '—'}
                     </td>
@@ -1206,6 +1241,14 @@ export function CxPPage() {
                     <td style={{fontSize:11,color:'#64748b'}}>{c.invoiceRef||'—'}</td>
                     <td style={{fontSize:12,color:'#94a3b8',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.concept}</td>
                     <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
+                    <td style={{fontSize:11}}>
+                      {(() => {
+                        const dias = Math.floor((new Date().getTime()-new Date(c.date).getTime())/86400000);
+                        const col = dias<=30?'#10b981':dias<=60?'#f59e0b':dias<=90?'#f97316':'#f87171';
+                        return c.status==='PAGADO' ? <span style={{color:'#10b981'}}>✓</span> :
+                          <span style={{color:col,fontWeight:600}}>{dias}d</span>;
+                      })()}
+                    </td>
                     <td style={{fontSize:12,color: vencida?'#f87171':'#64748b'}}>
                       {c.dueDate ? fmtDate(c.dueDate) : '—'}
                       {vencida && <span style={{marginLeft:4,fontSize:10}}>⚠</span>}
