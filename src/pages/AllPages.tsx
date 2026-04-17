@@ -2270,6 +2270,7 @@ export function DocumentosPage() {
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
+  const navigate = useNavigate();
 
   const [uploading,    setUploading]    = useState(false);
   const [uploadError,  setUploadError]  = useState('');
@@ -2348,11 +2349,18 @@ export function DocumentosPage() {
     if (!validModal) return;
     setValidando(true);
     try {
-      const d = validModal.extractedJson || {};
       await api.put(`/companies/${cid}/documents/${validModal.id}`, { status: 'VALIDADO' });
       qc.invalidateQueries({ queryKey: ['documents', cid] });
+      const d = validModal.extractedJson || {};
+      sessionStorage.setItem('compra_prefill', JSON.stringify({
+        fecha:      d.fecha || new Date().toISOString().slice(0,10),
+        referencia: d.folio || d.numero || '',
+        proveedor:  d.proveedor || '',
+        total:      Number(d.total || 0),
+        concepto:   d.concepto || validModal.fileName,
+      }));
       setValidModal(null); setTipoDoc(null); setRubricId('');
-      alert('✔ Documento marcado como compra. Regístrala en el módulo Compras.');
+      navigate('/machete/compras');
     } catch(e:any) {
       alert(e.response?.data?.message || 'Error');
     } finally { setValidando(false); }
@@ -2556,6 +2564,21 @@ export function DocumentosPage() {
                     <p style={{ fontSize:10, color:'#64748b', margin:0 }}>Afecta inventario</p>
                   </button>
                 </div>
+
+                {tipoDoc === 'GASTO' && (
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                      Subcuenta contable *
+                    </label>
+                    <select className="input-base" style={{ fontSize:13 }} value={rubricId}
+                      onChange={e => setRubricId(e.target.value)}>
+                      <option value="">— Seleccionar rubro —</option>
+                      {(rubros as any[]).map((r:any) => (
+                        <option key={r.id} value={r.id}>{r.label || r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={() => { setValidModal(null); setTipoDoc(null); setRubricId(''); }}

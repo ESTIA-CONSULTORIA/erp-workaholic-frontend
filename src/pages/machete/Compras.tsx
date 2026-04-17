@@ -56,6 +56,24 @@ export default function ComprasPage() {
   const setF = (k: string, v: any) => setForm(f => ({...f, [k]: v}));
 
   // Queries
+  // Leer prefill de Documentos OCR
+  useState(() => {
+    const prefill = sessionStorage.getItem('compra_prefill');
+    if (prefill) {
+      try {
+        const d = JSON.parse(prefill);
+        sessionStorage.removeItem('compra_prefill');
+        setForm(f => ({
+          ...f,
+          fecha:      d.fecha      || f.fecha,
+          referencia: d.referencia || f.referencia,
+          notas:      d.concepto   || f.notas,
+        }));
+        setVista('nueva');
+      } catch(e) {}
+    }
+  });
+
   const { data: compras = [], isLoading } = useQuery({
     queryKey: ['compras', cid],
     queryFn:  () => api.get(`/companies/${cid}/machete/compras`).then(r => r.data),
