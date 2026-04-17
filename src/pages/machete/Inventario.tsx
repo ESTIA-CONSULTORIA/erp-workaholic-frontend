@@ -143,7 +143,7 @@ export default function InventarioPage() {
               {[
                 { label:'Total insumos',    value: insLista.length,    fmt: (v:any) => v,    col:'#94a3b8' },
                 { label:'Bajo mínimo',      value: insBajoMin.length,  fmt: (v:any) => v,    col:'#f59e0b' },
-                { label:'Valor inventario', value: valorInsumos,       fmt: fmt,              col },
+                { label:'Valor inventario', value: valorInsumos,       fmt: fmt,              col: color },
               ].map(k => (
                 <div key={k.label} style={{ background:'#1e293b', borderRadius:8, padding:12, border:'1px solid #334155' }}>
                   <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
