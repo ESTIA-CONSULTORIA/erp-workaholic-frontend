@@ -1,6 +1,7 @@
 import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import ImportCSV from '../../components/ImportCSV';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +13,8 @@ export default function InventarioPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<'productos'|'insumos'>('productos');
-  const [editModal, setEditModal] = useState<any>(null);
+  const [editModal,   setEditModal]   = useState<any>(null);
+  const [showImport,  setShowImport]  = useState<'productos'|'insumos'|null>(null);
   const [editForm,  setEditForm]  = useState({ minStock: 0, maxStock: 0 });
   const qc = useQueryClient();
 
@@ -86,6 +88,13 @@ export default function InventarioPage() {
         {/* ── PRODUCTO TERMINADO ── */}
         {tab === 'productos' && (
           <>
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+              <button onClick={() => setShowImport('productos')}
+                style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
+                  background:'none', color, cursor:'pointer', fontSize:12 }}>
+                ⬆ Importar CSV
+              </button>
+            </div>
             {/* KPIs */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
               {[
@@ -154,6 +163,13 @@ export default function InventarioPage() {
         {/* ── INSUMOS ── */}
         {tab === 'insumos' && (
           <>
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+              <button onClick={() => setShowImport('insumos')}
+                style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
+                  background:'none', color, cursor:'pointer', fontSize:12 }}>
+                ⬆ Importar CSV
+              </button>
+            </div>
             {/* KPIs */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
               {[
@@ -226,6 +242,45 @@ export default function InventarioPage() {
           </>
         )}
       </div>
+      {showImport === 'productos' && (
+        <ImportCSV title="Productos" color={color}
+          columns={[
+            { key:'sku',    label:'SKU',     required:true },
+            { key:'nombre', label:'Nombre',  required:true },
+            { key:'precio', label:'Precio',  type:'number' },
+            { key:'peso',   label:'Peso',    type:'number' },
+            { key:'tipo',   label:'Tipo (RES/CERDO/POLLO)'  },
+            { key:'sabor',  label:'Sabor (NATURAL/CHILE…)'  },
+            { key:'stock',  label:'Stock inicial', type:'number' },
+            { key:'minimo', label:'Stock mínimo',  type:'number' },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.put(`/companies/${cid}/machete/products/${cid}/stock-limits`).catch(()=>null);
+            const r2 = await api.post(`/companies/${cid}/import/productos`, { rows });
+            qc.invalidateQueries({ queryKey: ['pt-inventory', cid] });
+            return r2.data;
+          }}
+          onClose={() => setShowImport(null)}
+        />
+      )}
+      {showImport === 'insumos' && (
+        <ImportCSV title="Insumos" color={color}
+          columns={[
+            { key:'nombre',  label:'Nombre',   required:true },
+            { key:'unidad',  label:'Unidad (kg/pza/l)'       },
+            { key:'grupo',   label:'Grupo'                   },
+            { key:'costo',   label:'Costo unitario', type:'number' },
+            { key:'stock',   label:'Stock inicial',  type:'number' },
+            { key:'minimo',  label:'Stock mínimo',   type:'number' },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/insumos`, { rows });
+            qc.invalidateQueries({ queryKey: ['insumos', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImport(null)}
+        />
+      )}
       {editModal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',
           alignItems:'center',justifyContent:'center',zIndex:1000}}>

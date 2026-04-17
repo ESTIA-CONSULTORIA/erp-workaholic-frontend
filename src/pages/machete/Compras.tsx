@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
+import ImportCSV from '../../components/ImportCSV';
 
 const METODOS_PAGO = [
   { id:'EFECTIVO',        label:'Efectivo'        },
@@ -324,6 +325,11 @@ export default function ComprasPage() {
 
             {/* Tabla */}
             <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+              <button onClick={() => setShowImport(true)}
+                style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
+                  background:'none', color, cursor:'pointer', fontSize:12 }}>
+                ⬆ Importar CSV
+              </button>
               <button onClick={() => exportCSV('compras', comprasFiltradas,
                 [{key:'date',label:'Fecha'},{key:'concept',label:'Folio/Concepto'},
                  {key:'total',label:'Total'},{key:'paymentStatus',label:'Estado'},
@@ -451,6 +457,24 @@ export default function ComprasPage() {
             </div>
           </div>
         </div>
+      )}
+      {showImport && (
+        <ImportCSV title="Compras" color={color}
+          columns={[
+            { key:'fecha',     label:'Fecha',      required:true, type:'date'   },
+            { key:'proveedor', label:'Proveedor'                                },
+            { key:'concepto',  label:'Concepto',   required:true               },
+            { key:'total',     label:'Total',       required:true, type:'number'},
+            { key:'factura',   label:'No. Factura'                              },
+            { key:'estatus',   label:'Estatus'                                  },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/compras`, { rows });
+            qc.invalidateQueries({ queryKey: ['compras', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImport(false)}
+        />
       )}
     </AppLayout>
   );

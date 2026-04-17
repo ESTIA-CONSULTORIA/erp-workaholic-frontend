@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
+import ImportCSV from '../../components/ImportCSV';
 import { useNavigate } from 'react-router-dom';
 
 export default function RHPage() {
@@ -15,6 +16,7 @@ export default function RHPage() {
   const [search,       setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState('ACTIVO');
   const [showNew,      setShowNew]      = useState(false);
+  const [showImport,   setShowImport]   = useState(false);
 
   const { data: dash } = useQuery({
     queryKey: ['rh-dashboard', cid],
@@ -33,8 +35,15 @@ export default function RHPage() {
       <div style={{ maxWidth:960 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Recursos Humanos</h1>
-          <button className="btn-primary" style={{ background:color }}
-            onClick={() => setShowNew(!showNew)}>+ Alta de empleado</button>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={() => setShowImport(true)}
+              style={{ padding:'8px 16px', borderRadius:8, border:`1px solid ${color}`,
+                background:'none', color, cursor:'pointer', fontSize:13 }}>
+              ⬆ Importar CSV
+            </button>
+            <button className="btn-primary" style={{ background:color }}
+              onClick={() => setShowNew(!showNew)}>+ Alta de empleado</button>
+          </div>
         </div>
 
         {/* KPIs */}
@@ -125,6 +134,34 @@ export default function RHPage() {
           </table>
         </div>
       </div>
+    </AppLayout>
+  );
+      {showImport && (
+        <ImportCSV title="Empleados" color={color}
+          columns={[
+            { key:'nombre',       label:'Nombre',       required:true },
+            { key:'apellido',     label:'Apellido paterno', required:true },
+            { key:'apellido2',    label:'Apellido materno'              },
+            { key:'puesto',       label:'Puesto',       required:true },
+            { key:'area',         label:'Área'                         },
+            { key:'salario',      label:'Salario bruto', type:'number' },
+            { key:'ingreso',      label:'Fecha ingreso', type:'date'   },
+            { key:'rfc',          label:'RFC'                           },
+            { key:'curp',         label:'CURP'                          },
+            { key:'nss',          label:'NSS'                           },
+            { key:'email',        label:'Email'                         },
+            { key:'telefono',     label:'Teléfono'                      },
+            { key:'clabe',        label:'CLABE'                         },
+            { key:'banco',        label:'Banco'                         },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/empleados`, { rows });
+            refetch();
+            return res.data;
+          }}
+          onClose={() => setShowImport(false)}
+        />
+      )}
     </AppLayout>
   );
 }

@@ -157,7 +157,8 @@ export function GastosPage() {
   const esContador = ['admin','administrador','gerente','contador'].includes(role);
 
   const [vista,   setVista]   = useState<'lista'|'nuevo'>('lista');
-  const [busqueda, setBusqueda] = useState('');
+  const [busqueda,    setBusqueda]    = useState('');
+  const [showImport, setShowImport]  = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
 
@@ -399,6 +400,11 @@ export function GastosPage() {
             <input className="input-base" style={{ maxWidth:280, fontSize:13 }}
               placeholder="Buscar concepto, proveedor, rubro…"
               value={busqueda} onChange={e => setBusqueda(e.target.value)}/>
+            <button onClick={() => setShowImport(true)}
+              style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
+                background:'none', color, cursor:'pointer', fontSize:12 }}>
+              ⬆ Importar CSV
+            </button>
             <button onClick={() => exportCSV('gastos',
               (gastos as any[]).filter((g:any) => {
                 const q = busqueda.toLowerCase();
@@ -488,6 +494,27 @@ export function GastosPage() {
           </div>
         )}
       </div>
+      {showImport && (
+        <ImportCSV
+          title="Gastos"
+          color={color}
+          columns={[
+            { key:'fecha',         label:'Fecha',      required:true,  type:'date'   },
+            { key:'concepto',      label:'Concepto',   required:true                 },
+            { key:'subtotal',      label:'Subtotal',   required:true,  type:'number' },
+            { key:'iva',           label:'IVA',                        type:'number' },
+            { key:'total',         label:'Total',                      type:'number' },
+            { key:'metodo',        label:'Método de pago'                            },
+            { key:'factura',       label:'No. Factura'                               },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/gastos`, { rows });
+            qc.invalidateQueries({ queryKey: ['expenses', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImport(false)}
+        />
+      )}
     </AppLayout>
   );
 }
@@ -673,6 +700,7 @@ export function CxCPage() {
   const [filterCliente, setFilterCliente] = useState('');
   const [pagoModal,     setPagoModal]     = useState<any>(null);
   const [historialModal, setHistorialModal] = useState<any>(null);
+  const [showImportCxC, setShowImportCxC] = useState(false);
   const [pagoForm,      setPagoForm]      = useState({
     amount: 0, paymentMethod: 'EFECTIVO',
     date: new Date().toISOString().slice(0,10), reference: '',
@@ -745,6 +773,11 @@ export function CxCPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+          <button onClick={() => setShowImportCxC(true)}
+            style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
+              background:'none', color, cursor:'pointer', fontSize:12 }}>
+            ⬆ Importar CSV
+          </button>
           <button onClick={() => exportCSV('cxc', cxcsOrdenadas,
             [{key:'date',label:'Fecha'},{key:'originalAmount',label:'Original'},
              {key:'paidAmount',label:'Pagado'},{key:'balance',label:'Saldo'},
@@ -861,6 +894,25 @@ export function CxCPage() {
           </div>
         </div>
       )}
+      {showImportCxC && (
+        <ImportCSV title="CxC" color={color}
+          columns={[
+            { key:'cliente',      label:'Cliente',    required:true },
+            { key:'concepto',     label:'Concepto',   required:true },
+            { key:'fecha',        label:'Fecha',      type:'date'   },
+            { key:'vencimiento',  label:'Vencimiento',type:'date'   },
+            { key:'monto',        label:'Monto',      required:true, type:'number' },
+            { key:'pagado',       label:'Pagado',     type:'number' },
+            { key:'estatus',      label:'Estatus'                   },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/cxc`, { rows });
+            qc.invalidateQueries({ queryKey: ['cxc', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImportCxC(false)}
+        />
+      )}
       {historialModal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',
           alignItems:'center',justifyContent:'center',zIndex:1000}}>
@@ -916,6 +968,7 @@ export function CxPPage() {
   const [filterProv,     setFilterProv]     = useState('');
   const [pagoModal,      setPagoModal]      = useState<any>(null);
   const [historialCxP,   setHistorialCxP]   = useState<any>(null);
+  const [showImportCxP, setShowImportCxP] = useState(false);
   const [nuevaModal,     setNuevaModal]      = useState(false);
   const [pagoForm,    setPagoForm]    = useState({
     amount: 0, paymentMethod: 'EFECTIVO',
@@ -1018,6 +1071,11 @@ export function CxPPage() {
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          <button onClick={() => setShowImportCxP(true)}
+            style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
+              background:'none', color, cursor:'pointer', fontSize:12 }}>
+            ⬆ Importar CSV
+          </button>
           <button onClick={() => exportCSV('cxp', cxpsOrdenadas,
             [{key:'concept',label:'Concepto'},{key:'date',label:'Fecha'},
              {key:'dueDate',label:'Vencimiento'},{key:'originalAmount',label:'Original'},

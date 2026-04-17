@@ -2,7 +2,8 @@ import AppLayout from '../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../store/erp.store';
-import { api, fmtDate } from '../lib/api';
+import { api, fmtDate, exportCSV } from '../lib/api';
+import ImportCSV from '../components/ImportCSV';
 
 export default function ProveedoresPage() {
   const { activeCompany } = useERPStore();
@@ -54,10 +55,17 @@ export default function ProveedoresPage() {
       <div style={{ maxWidth:800 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Proveedores</h1>
-          <button className="btn-primary" style={{ background:color, fontSize:13 }}
-            onClick={() => { setShowNew(!showNew); setEditProv(null); setForm(initForm); setError(''); }}>
-            {showNew ? 'Cancelar' : '+ Nuevo proveedor'}
-          </button>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={() => setShowImport(true)}
+              style={{ padding:'8px 16px', borderRadius:8, border:`1px solid ${color}`,
+                background:'none', color, cursor:'pointer', fontSize:13 }}>
+              ⬆ Importar CSV
+            </button>
+            <button className="btn-primary" style={{ background:color, fontSize:13 }}
+              onClick={() => { setShowNew(!showNew); setEditProv(null); setForm(initForm); setError(''); }}>
+              {showNew ? 'Cancelar' : '+ Nuevo proveedor'}
+            </button>
+          </div>
         </div>
 
         {/* Formulario nuevo/editar */}
@@ -134,6 +142,24 @@ export default function ProveedoresPage() {
           </table>
         </div>
       </div>
+      {showImport && (
+        <ImportCSV title="Proveedores" color={color}
+          columns={[
+            { key:'nombre',    label:'Nombre',    required:true },
+            { key:'rfc',       label:'RFC'                      },
+            { key:'telefono',  label:'Teléfono'                 },
+            { key:'email',     label:'Email'                    },
+            { key:'contacto',  label:'Contacto'                 },
+            { key:'direccion', label:'Dirección'                },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/proveedores`, { rows });
+            qc.invalidateQueries({ queryKey: ['suppliers', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImport(false)}
+        />
+      )}
     </AppLayout>
   );
 }
