@@ -1139,9 +1139,10 @@ export function ReportesPage() {
             </button>
           ))}
         </div>
-        {tab === 'er'      && <ERTab      cid={cid!} color={color} activePeriod={activePeriod}/>}
-        {tab === 'flujo'   && <FlujoTab   cid={cid!} color={color} activePeriod={activePeriod}/>}
-        {tab === 'balance' && <BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/>}
+        {/* Todos los tabs se montan desde el inicio para cargar en paralelo */}
+        <div style={{ display: tab === 'er'      ? 'block' : 'none' }}><ERTab      cid={cid!} color={color} activePeriod={activePeriod}/></div>
+        <div style={{ display: tab === 'flujo'   ? 'block' : 'none' }}><FlujoTab   cid={cid!} color={color} activePeriod={activePeriod}/></div>
+        <div style={{ display: tab === 'balance' ? 'block' : 'none' }}><BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/></div>
       </div>
     </AppLayout>
   );
