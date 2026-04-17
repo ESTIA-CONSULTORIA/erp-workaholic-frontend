@@ -257,6 +257,8 @@ export default function OrdenesCompraPage() {
               <thead>
                 <tr>
                   <th>OC</th><th>Cliente</th><th>Fecha</th>
+                  <th>Entrega solicitada</th>
+                  <th>Entrega real</th>
                   <th style={{textAlign:'right'}}>Total</th>
                   <th style={{textAlign:'right'}}>Saldo</th>
                   <th>Estado</th>
@@ -264,10 +266,10 @@ export default function OrdenesCompraPage() {
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>
+                  <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>
                 )}
                 {!isLoading && (ocs as any[]).length === 0 && (
-                  <tr><td colSpan={6} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin órdenes de compra</td></tr>
+                  <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin órdenes de compra</td></tr>
                 )}
                 {(ocs as any[]).map((oc:any) => (
                   <tr key={oc.id}
@@ -278,6 +280,12 @@ export default function OrdenesCompraPage() {
                     </code></td>
                     <td style={{fontWeight:500,fontSize:12}}>{oc.client?.name||'—'}</td>
                     <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(oc.fecha)}</td>
+                    <td style={{fontSize:12,color: oc.fechaEntregaSol ? '#f59e0b' : '#475569'}}>
+                      {oc.fechaEntregaSol ? fmtDate(oc.fechaEntregaSol) : '—'}
+                    </td>
+                    <td style={{fontSize:12,color: oc.fechaEntregaReal ? '#10b981' : '#475569'}}>
+                      {oc.fechaEntregaReal ? fmtDate(oc.fechaEntregaReal) : '—'}
+                    </td>
                     <td style={{textAlign:'right',fontSize:12}}>{fmt(oc.montoTotal)}</td>
                     <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(oc.saldo)}</td>
                     <td>
