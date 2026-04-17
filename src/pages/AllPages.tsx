@@ -603,6 +603,7 @@ export function CxCPage() {
   const color = activeCompany?.color || '#f59e0b';
   const [filterCliente, setFilterCliente] = useState('');
   const [pagoModal,     setPagoModal]     = useState<any>(null);
+  const [historialModal, setHistorialModal] = useState<any>(null);
   const [pagoForm,      setPagoForm]      = useState({
     amount: 0, paymentMethod: 'EFECTIVO',
     date: new Date().toISOString().slice(0,10), reference: '',
@@ -676,6 +677,7 @@ export function CxCPage() {
           <table className="table-base">
             <thead><tr>
               <th>Cliente</th>
+              <th>No. OC</th>
               <th>Fecha venta</th>
               <th>Último pago</th>
               <th style={{textAlign:'right'}}>Original</th>
@@ -686,13 +688,16 @@ export function CxCPage() {
             </tr></thead>
             <tbody>
               {(cxcsOrdenadas as any[]).length===0 && (
-                <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
+                <tr><td colSpan={9} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
               )}
               {cxcsOrdenadas.map((c:any) => {
                 const ultimoPago = c.payments?.[0];
                 return (
                   <tr key={c.id}>
                     <td style={{fontWeight:500}}>{c.client?.name}</td>
+                    <td style={{fontSize:11,color:'#64748b'}}>
+                      {c.concept?.match(/OC-?\d+|[A-Z]+-\d+/)?.[0] || '—'}
+                    </td>
                     <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
                     <td style={{fontSize:12,color: ultimoPago ? '#10b981' : '#475569'}}>
                       {ultimoPago ? fmtDate(ultimoPago.date) : '—'}
@@ -706,12 +711,20 @@ export function CxCPage() {
                       </span>
                     </td>
                     <td>
-                      {c.status !== 'PAGADO' && (
-                        <button onClick={() => setPagoModal(c)}
-                          style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                          Registrar pago
-                        </button>
-                      )}
+                      <div style={{display:'flex',gap:6}}>
+                        {c.status !== 'PAGADO' && (
+                          <button onClick={() => setPagoModal(c)}
+                            style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                            Abonar
+                          </button>
+                        )}
+                        {(c.payments?.length > 0) && (
+                          <button onClick={() => setHistorialModal(c)}
+                            style={{background:'none',border:'none',color:'#10b981',cursor:'pointer',fontSize:12}}>
+                            Historial
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -739,9 +752,10 @@ export function CxCPage() {
                 <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Método de pago</label>
                 <select className="input-base" style={{fontSize:13}} value={pagoForm.paymentMethod}
                   onChange={e=>setPagoForm(f=>({...f,paymentMethod:e.target.value}))}>
-                  <option value="EFECTIVO_MXN">Efectivo MXN</option>
+                  <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
-                  <option value="TARJETA">Tarjeta</option>
+                  <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                  <option value="TARJETA_CREDITO">Tarjeta crédito</option>
                 </select>
               </div>
               <div>
@@ -761,6 +775,46 @@ export function CxCPage() {
                 style={{flex:1,fontSize:13,background:color}} disabled={!pagoForm.amount}>
                 Registrar pago
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {historialModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#0f172a',borderRadius:12,padding:0,width:520,
+            maxHeight:'80vh',display:'flex',flexDirection:'column',border:'1px solid #334155'}}>
+            <div style={{padding:'16px 20px',borderBottom:'1px solid #334155',
+              display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 2px'}}>Historial de pagos</h3>
+                <p style={{fontSize:12,color:'#64748b',margin:0}}>
+                  {historialModal.client?.name} · Saldo: {fmt(historialModal.balance)}
+                </p>
+              </div>
+              <button onClick={()=>setHistorialModal(null)}
+                style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
+            </div>
+            <div style={{flex:1,overflowY:'auto',padding:'12px 20px'}}>
+              {(historialModal.payments||[]).length === 0 ? (
+                <p style={{color:'#475569',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin pagos registrados</p>
+              ) : (historialModal.payments||[]).map((p:any,i:number) => (
+                <div key={i} style={{background:'#1e293b',borderRadius:8,padding:'10px 14px',
+                  marginBottom:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div>
+                    <p style={{fontSize:13,fontWeight:600,color:'#10b981',margin:'0 0 2px'}}>{fmt(p.amount)}</p>
+                    <p style={{fontSize:11,color:'#64748b',margin:0}}>
+                      {fmtDate(p.date)} · {p.paymentMethod||'—'} {p.reference ? `· Ref: ${p.reference}` : ''}
+                    </p>
+                  </div>
+                  <span style={{fontSize:10,color:'#475569'}}>#{i+1}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{padding:'12px 20px',borderTop:'1px solid #334155',
+              display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <span style={{fontSize:12,color:'#64748b'}}>Total pagado</span>
+              <span style={{fontSize:16,fontWeight:700,color:'#10b981'}}>{fmt(historialModal.paidAmount)}</span>
             </div>
           </div>
         </div>
