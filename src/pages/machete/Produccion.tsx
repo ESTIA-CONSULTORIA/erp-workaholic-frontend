@@ -2,7 +2,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate } from '../../lib/api';
+import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
 
 const TIPOS = [
   { id:'MACHETE_RES', label:'Machete / Res',  hasGrasa: true  },
@@ -233,6 +233,17 @@ export default function ProduccionPage() {
 
         {/* ── LISTA DE LOTES ─────────────────────────────────── */}
         {vista === 'lista' && (
+          <>
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+            <button onClick={() => exportCSV('produccion', lotes as any[],
+              [{key:'tipo',label:'Tipo'},{key:'fecha',label:'Fecha'},
+               {key:'kgEntrada',label:'Kg entrada'},{key:'kgSalida',label:'Kg salida'},
+               {key:'rendimiento',label:'Rendimiento'},{key:'status',label:'Estado'}])}
+              style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+                background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+              ⬇ Exportar CSV
+            </button>
+          </div>
           <div className="card" style={{ padding:0, overflow:'hidden' }}>
             <table className="table-base">
               <thead>

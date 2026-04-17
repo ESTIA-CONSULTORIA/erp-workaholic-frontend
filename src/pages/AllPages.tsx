@@ -157,6 +157,7 @@ export function GastosPage() {
   const esContador = ['admin','administrador','gerente','contador'].includes(role);
 
   const [vista,   setVista]   = useState<'lista'|'nuevo'>('lista');
+  const [busqueda, setBusqueda] = useState('');
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
 
@@ -393,6 +394,31 @@ export function GastosPage() {
         )}
 
         {vista === 'lista' && (
+          <>
+          <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
+            <input className="input-base" style={{ maxWidth:280, fontSize:13 }}
+              placeholder="Buscar concepto, proveedor, rubro…"
+              value={busqueda} onChange={e => setBusqueda(e.target.value)}/>
+            <button onClick={() => exportCSV('gastos',
+              (gastos as any[]).filter((g:any) => {
+                const q = busqueda.toLowerCase();
+                return !q || g.concept?.toLowerCase().includes(q) || g.supplier?.name?.toLowerCase().includes(q) || g.rubric?.name?.toLowerCase().includes(q);
+              }),
+              [{key:'date',label:'Fecha'},{key:'concept',label:'Concepto'},
+               {key:'subtotal',label:'Subtotal'},{key:'tax',label:'IVA'},
+               {key:'total',label:'Total'},{key:'paymentMethod',label:'Método'},
+               {key:'paymentStatus',label:'Estatus'}])}
+              style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+                background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+              ⬇ Exportar CSV
+            </button>
+            <span style={{ fontSize:12, color:'#475569', marginLeft:'auto' }}>
+              {(gastos as any[]).filter((g:any) => {
+                const q = busqueda.toLowerCase();
+                return !q || g.concept?.toLowerCase().includes(q) || g.supplier?.name?.toLowerCase().includes(q);
+              }).length} registros
+            </span>
+          </div>
           <div className="card" style={{ padding:0, overflow:'hidden' }}>
             <div style={{ overflowX:'auto' }}>
             <table className="table-base" style={{ minWidth:900 }}>
@@ -414,7 +440,7 @@ export function GastosPage() {
                 {!isLoading && (gastos as any[]).length===0 && (
                   <tr><td colSpan={11} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin gastos registrados</td></tr>
                 )}
-                {(gastos as any[]).map((g:any) => {
+                {(gastos as any[]).filter((g:any) => { const q=busqueda.toLowerCase(); return !q||g.concept?.toLowerCase().includes(q)||g.supplier?.name?.toLowerCase().includes(q)||g.rubric?.name?.toLowerCase().includes(q); }).map((g:any) => {
                   const fecha = g.date ? new Date(g.date) : null;
                   const mes = fecha ? fecha.toLocaleDateString('es-MX',{month:'short',year:'2-digit'}).toUpperCase() : '—';
                   const fechaCorta = fecha ? fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'}) : '—';
@@ -707,14 +733,27 @@ export function CxCPage() {
           </div>
         </div>
 
-        <select style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #334155',
-          background:'#1e293b', color:'#f1f5f9', fontSize:13, marginBottom:16 }}
-          value={filterCliente} onChange={e => setFilterCliente(e.target.value)}>
-          <option value="">Todos los clientes</option>
-          {(clientes as any[]).map((c:any) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
+          <input className="input-base" style={{ maxWidth:240, fontSize:13 }}
+            placeholder="Buscar cliente, concepto…" id="cxc-search"
+            onChange={e => { (window as any)._cxcQ = e.target.value; }}/>
+          <select style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #334155',
+            background:'#1e293b', color:'#f1f5f9', fontSize:13 }}
+            value={filterCliente} onChange={e => setFilterCliente(e.target.value)}>
+            <option value="">Todos los clientes</option>
+            {(clientes as any[]).map((c:any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button onClick={() => exportCSV('cxc', cxcsOrdenadas,
+            [{key:'date',label:'Fecha'},{key:'originalAmount',label:'Original'},
+             {key:'paidAmount',label:'Pagado'},{key:'balance',label:'Saldo'},
+             {key:'status',label:'Estado'}])}
+            style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+              background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+            ⬇ Exportar CSV
+          </button>
+        </div>
 
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
@@ -970,14 +1009,25 @@ export function CxPPage() {
           </div>
         </div>
 
-        <select style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #334155',
-          background:'#1e293b', color:'#f1f5f9', fontSize:13, marginBottom:16 }}
-          value={filterProv} onChange={e => setFilterProv(e.target.value)}>
-          <option value="">Todos los proveedores</option>
-          {(proveedores as any[]).map((p:any) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
+          <select style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #334155',
+            background:'#1e293b', color:'#f1f5f9', fontSize:13 }}
+            value={filterProv} onChange={e => setFilterProv(e.target.value)}>
+            <option value="">Todos los proveedores</option>
+            {(proveedores as any[]).map((p:any) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <button onClick={() => exportCSV('cxp', cxpsOrdenadas,
+            [{key:'concept',label:'Concepto'},{key:'date',label:'Fecha'},
+             {key:'dueDate',label:'Vencimiento'},{key:'originalAmount',label:'Original'},
+             {key:'paidAmount',label:'Pagado'},{key:'balance',label:'Saldo'},
+             {key:'status',label:'Estado'},{key:'invoiceRef',label:'Factura'}])}
+            style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+              background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+            ⬇ Exportar CSV
+          </button>
+        </div>
 
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">

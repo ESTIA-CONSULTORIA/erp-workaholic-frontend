@@ -3,7 +3,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate } from '../../lib/api';
+import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function RHPage() {
@@ -85,6 +85,17 @@ export default function RHPage() {
         </div>
 
         {/* Tabla */}
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+          <button onClick={() => exportCSV('empleados', employees as any[],
+            [{key:'employeeNumber',label:'#'},{key:'firstName',label:'Nombre'},
+             {key:'lastName',label:'Apellido'},{key:'position',label:'Puesto'},
+             {key:'department',label:'Área'},{key:'grossSalary',label:'Salario'},
+             {key:'status',label:'Estado'}])}
+            style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+              background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+            ⬇ Exportar CSV
+          </button>
+        </div>
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
             <thead><tr>

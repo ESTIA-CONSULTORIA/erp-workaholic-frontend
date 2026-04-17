@@ -33,3 +33,23 @@ export const fmtDate = (d: string | Date | null | undefined) => {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 };
+
+// ── CSV Export ────────────────────────────────────────────────
+export function exportCSV(filename: string, rows: Record<string, any>[], columns: { key: string; label: string }[]) {
+  const header = columns.map(c => `"${c.label}"`).join(',');
+  const body   = rows.map(row =>
+    columns.map(c => {
+      const val = row[c.key];
+      if (val === null || val === undefined) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    }).join(',')
+  );
+  const csv  = [header, ...body].join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${filename}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

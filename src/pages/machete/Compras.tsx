@@ -2,7 +2,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate } from '../../lib/api';
+import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
 
 const METODOS_PAGO = [
   { id:'EFECTIVO',        label:'Efectivo'        },
@@ -323,6 +323,16 @@ export default function ComprasPage() {
             </div>
 
             {/* Tabla */}
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+              <button onClick={() => exportCSV('compras', comprasFiltradas,
+                [{key:'date',label:'Fecha'},{key:'concept',label:'Folio/Concepto'},
+                 {key:'total',label:'Total'},{key:'paymentStatus',label:'Estado'},
+                 {key:'invoiceRef',label:'No. Factura'}])}
+                style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
+                  background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                ⬇ Exportar CSV
+              </button>
+            </div>
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               <table className="table-base">
                 <thead>
