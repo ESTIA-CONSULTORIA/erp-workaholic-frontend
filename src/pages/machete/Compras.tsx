@@ -360,7 +360,7 @@ export default function ComprasPage() {
                   {!isLoading && comprasFiltradas.length === 0 && (
                     <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin compras registradas</td></tr>
                   )}
-                  {comprasFiltradas.map((c:any) => (
+                  {comprasFiltradas.slice((pagina-1)*POR_PAGINA, pagina*POR_PAGINA).map((c:any) => (
                     <tr key={c.id} style={{cursor:'pointer'}} onClick={() => setCompraDetalle(c)}>
                       <td>
                         <code style={{fontSize:11,background:'#334155',padding:'2px 6px',borderRadius:4,color:'#94a3b8'}}>

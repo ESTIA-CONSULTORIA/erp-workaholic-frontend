@@ -159,6 +159,8 @@ export function GastosPage() {
   const [vista,   setVista]   = useState<'lista'|'nuevo'>('lista');
   const [busqueda,    setBusqueda]    = useState('');
   const [showImport, setShowImport]  = useState(false);
+  const [pagina,     setPagina]      = useState(1);
+  const POR_PAGINA = 25;
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
 
@@ -446,7 +448,9 @@ export function GastosPage() {
                 {!isLoading && (gastos as any[]).length===0 && (
                   <tr><td colSpan={11} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin gastos registrados</td></tr>
                 )}
-                {(gastos as any[]).filter((g:any) => { const q=busqueda.toLowerCase(); return !q||g.concept?.toLowerCase().includes(q)||g.supplier?.name?.toLowerCase().includes(q)||g.rubric?.name?.toLowerCase().includes(q); }).map((g:any) => {
+                {((gastosOrdenados:any[]) => gastosOrdenados.slice((pagina-1)*POR_PAGINA, pagina*POR_PAGINA))(
+                  (gastos as any[]).filter((g:any) => { const q=busqueda.toLowerCase(); return !q||g.concept?.toLowerCase().includes(q)||g.supplier?.name?.toLowerCase().includes(q)||g.rubric?.name?.toLowerCase().includes(q); })
+                ).map((g:any) => {
                   const fecha = g.date ? new Date(g.date) : null;
                   const mes = fecha ? fecha.toLocaleDateString('es-MX',{month:'short',year:'2-digit'}).toUpperCase() : '—';
                   const fechaCorta = fecha ? fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'}) : '—';
