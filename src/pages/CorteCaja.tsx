@@ -278,8 +278,8 @@ export default function CorteCajaPage() {
                               Responder
                             </button>
                           )}
-                          {/* Contador: también puede agregar mensajes */}
-                          {puedeValidar && c.status !== 'PENDIENTE' && (
+                          {/* Contador: puede agregar mensajes a cualquier corte */}
+                          {puedeValidar && (
                             <button onClick={() => { setCorteRespuesta(c); setRespuestaTexto(''); setTicketImg(null); setTicketNombre(''); }}
                               style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
                               💬
@@ -287,7 +287,7 @@ export default function CorteCajaPage() {
                           )}
                           {/* Ver detalle siempre */}
                           <button onClick={() => setCorteDetalle(c)}
-                            style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                            style={{ background:'none', border:'none', color:`${color}`, cursor:'pointer', fontSize:12, fontWeight:600 }}>
                             Ver
                           </button>
                         </div>
@@ -393,7 +393,7 @@ export default function CorteCajaPage() {
       {corteSeleccionado && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex',
           alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:460, border:'1px solid #334155' }}>
+          <div style={{ background:'#0f172a', borderRadius:12, padding:24, width:560, maxHeight:'85vh', overflowY:'auto', border:'1px solid #334155' }}>
             <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 16px' }}>
               Validar corte — {fmtDate(corteSeleccionado.fecha)}
             </h3>
@@ -403,7 +403,7 @@ export default function CorteCajaPage() {
               const historial = parsearHistorial(corteSeleccionado.notasCajero);
               if (historial.length === 0) return null;
               return (
-                <div style={{ background:'#0f172a', borderRadius:8, padding:12, marginBottom:16, maxHeight:180, overflowY:'auto' }}>
+                <div style={{ background:'#1e293b', borderRadius:8, padding:12, marginBottom:16, maxHeight:260, overflowY:'auto' }}>
                   <p style={{ fontSize:10, color:'#64748b', margin:'0 0 8px', textTransform:'uppercase', letterSpacing:1 }}>
                     Conversación
                   </p>
