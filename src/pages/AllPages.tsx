@@ -2753,24 +2753,34 @@ export function AdminPage() {
               <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
             </thead>
             <tbody>
+              {(usuarios as any[]).length === 0 && (
+                <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin usuarios</td></tr>
+              )}
               {(usuarios as any[]).map((u: any) => (
                 <tr key={u.user?.id || u.id}>
                   <td style={{ fontWeight:500 }}>{u.user?.name || u.name}</td>
-                  <td style={{ color:'#64748b' }}>{u.user?.email || u.email}</td>
-                  <td><span className="badge-blue">{u.role?.name || u.roleCode}</span></td>
+                  <td style={{ color:'#64748b', fontSize:12 }}>{u.user?.email || u.email}</td>
+                  <td>
+                    <span style={{ fontSize:11, padding:'2px 8px', borderRadius:99,
+                      background: color+'22', color }}>
+                      {u.role?.code || u.role?.name || u.roleCode}
+                    </span>
+                  </td>
                   <td>
                     <span className={u.user?.isActive !== false ? 'badge-green' : 'badge-red'}>
                       {u.user?.isActive !== false ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td>
-                    <div style={{ display:'flex', gap:8 }}>
+                    <div style={{ display:'flex', gap:6 }}>
                       <button onClick={() => startEdit(u)}
                         style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
                         Editar
                       </button>
                       <button onClick={() => toggle(u)}
-                        style={{ background:'none', border:'none', color: u.user?.isActive !== false ? '#f87171' : '#10b981', cursor:'pointer', fontSize:12 }}>
+                        style={{ background:'none', border:'none',
+                          color: u.user?.isActive !== false ? '#f87171' : '#10b981',
+                          cursor:'pointer', fontSize:12 }}>
                         {u.user?.isActive !== false ? 'Desactivar' : 'Activar'}
                       </button>
                     </div>
