@@ -335,7 +335,7 @@ export default function ProduccionPage() {
               </tbody>
             </table>
           </div>
-        )}
+          </>)}
 
         {/* ── MODAL DETALLE / HORNO / EMPAQUE ───────────────── */}
         {loteActivo && (
