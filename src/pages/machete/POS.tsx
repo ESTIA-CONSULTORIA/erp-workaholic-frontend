@@ -187,6 +187,9 @@ function POSPageInner() {
   const [showCobro,     setShowCobro]     = useState(false);
   const [conCuanto,     setConCuanto]     = useState(0);
   const [efectivoCobro, setEfectivoCobro] = useState<any>({});
+  const [tecladoInput,  setTecladoInput]  = useState('');
+  const [metodoCobro,   setMetodoCobro]   = useState('EFECTIVO');
+  const [showDenom,     setShowDenom]     = useState(true);
   const [busqueda,      setBusqueda]      = useState('');
   const [filtroGrupo,   setFiltroGrupo]   = useState('TODOS');
   const [vistaNav,      setVistaNav]      = useState<'venta'|'historial'>('venta');
@@ -343,14 +346,13 @@ function POSPageInner() {
     }
     setError('');
     if(!esCredito){
-      // If payment is already configured in panel with correct total, go directly
-      const panelTotal = pagos.reduce((t,p)=>t+Number(p.amount||0),0);
-      if(panelTotal >= total && total > 0) {
-        saleM.mutate();
-      } else {
-        // Open full cobro modal
-        setShowCobro(true);
-      }
+      // Always open cobro modal for payment
+      setMetodoCobro('EFECTIVO');
+      setTecladoInput('');
+      setEfectivoCobro({});
+      setPagos([{method:'EFECTIVO',amount:0}]);
+      setShowDenom(true);
+      setShowCobro(true);
       return;
     }
     saleM.mutate();
@@ -804,170 +806,219 @@ function POSPageInner() {
         )}
       </div>
 
-      {/* ── MODAL COBRO — selección de pago aquí ── */}
+      {/* ── MODAL COBRO REDISEÑADO ── */}
       {showCobro&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:700,border:'1px solid #334155'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <h3 style={{fontSize:16,fontWeight:700,margin:0,color}}>Forma de pago</h3>
-              <div style={{background:'#0f172a',borderRadius:8,padding:'6px 16px',textAlign:'right'}}>
-                <p style={{fontSize:11,color:'#64748b',margin:'0 0 2px'}}>Total a cobrar</p>
-                <p style={{fontSize:26,fontWeight:700,color,margin:0}}>{fmt(total)}</p>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e2535',borderRadius:16,width:820,maxHeight:'92vh',overflow:'hidden',border:'1px solid #334155',display:'flex',flexDirection:'column'}}>
+            {/* Header */}
+            <div style={{background:'#0f172a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #334155'}}>
+              <div>
+                <p style={{fontSize:11,color:'#64748b',margin:'0 0 2px',textTransform:'uppercase',letterSpacing:1}}>Consumo</p>
+                <p style={{fontSize:28,fontWeight:800,color,margin:0}}>{fmt(total)}</p>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                {/* Saldo / Cambio */}
+                {(()=>{
+                  const pagado = pagos.reduce((t,p)=>t+Number(p.amount||0),0);
+                  const cambio = Math.max(0, pagado - total);
+                  const saldo  = Math.max(0, total - pagado);
+                  return (
+                    <div style={{display:'flex',gap:16,alignItems:'center'}}>
+                      <div style={{textAlign:'center'}}>
+                        <p style={{fontSize:10,color:'#64748b',margin:'0 0 2px'}}>SALDO</p>
+                        <p style={{fontSize:20,fontWeight:700,color: saldo>0?'#f87171':'#10b981',margin:0}}>{fmt(saldo)}</p>
+                      </div>
+                      <div style={{textAlign:'center'}}>
+                        <p style={{fontSize:10,color:'#64748b',margin:'0 0 2px'}}>CAMBIO</p>
+                        <p style={{fontSize:20,fontWeight:700,color:'#10b981',margin:0}}>{fmt(cambio)}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={()=>{
+                      const pagado=pagos.reduce((t,p)=>t+Number(p.amount||0),0);
+                      if(pagado<total){setError('El pago no cubre el total');return;}
+                      saleM.mutate();setShowCobro(false);
+                    }}
+                    style={{display:'flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:8,border:'none',background:'#10b981',color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700}}>
+                    ✓ Aceptar <span style={{fontSize:11,opacity:.7}}>(F2)</span>
+                  </button>
+                  <button onClick={()=>{setShowCobro(false);setTecladoInput('');setPagos([{method:'EFECTIVO',amount:0}]);}}
+                    style={{display:'flex',alignItems:'center',gap:6,padding:'10px 16px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#f87171',cursor:'pointer',fontSize:14,fontWeight:700}}>
+                    ✕ <span style={{fontSize:11,opacity:.7}}>Esc</span>
+                  </button>
+                </div>
               </div>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
-              {/* Métodos */}
-              <div>
-                <p style={{fontSize:10,color:'#64748b',margin:'0 0 8px',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Selecciona método</p>
-                {pagos.map(pago=>{
-                  const mc=METODOS_PAGO.find(m=>m.id===pago.method);
-                  return(
-                    <div key={pago.method} style={{background:'#0f172a',borderRadius:8,padding:10,marginBottom:6}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                        <span style={{fontSize:12,fontWeight:600,color:mc?.color}}>{mc?.label}</span>
-                        <div style={{display:'flex',gap:6}}>
-                          {pagos.length>1&&<button onClick={()=>distribuirResto(pago.method)} style={{fontSize:10,padding:'2px 8px',borderRadius:4,border:`1px solid ${mc?.color}`,background:'none',color:mc?.color,cursor:'pointer'}}>Resto</button>}
-                          {pagos.length>1&&<button onClick={()=>quitarMetodo(pago.method)} style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:16}}>✕</button>}
-                        </div>
-                      </div>
-                      <div style={{display:'flex',gap:8}}>
-                        <input type="number" min="0" step="0.01" autoFocus={pago.method==='EFECTIVO'}
-                          style={{flex:1,padding:'8px 10px',borderRadius:6,border:`1px solid ${mc?.color}44`,background:'#1e293b',color:'#f1f5f9',fontSize:16,fontWeight:700}}
-                          value={pago.amount||''} placeholder={fmt(pagos.length===1?total:0)}
-                          onChange={e=>actualizarMonto(pago.method,+e.target.value)}/>
-                        <button onClick={()=>actualizarMonto(pago.method,pagos.length===1?total:Math.max(0,total-pagos.filter(p=>p.method!==pago.method).reduce((t,p)=>t+Number(p.amount||0),0)))}
-                          style={{padding:'6px 12px',borderRadius:6,border:`1px solid ${mc?.color}`,background:'none',color:mc?.color,cursor:'pointer',fontSize:12}}>
-                          Exacto
-                        </button>
-                      </div>
-                      {pago.method!=='EFECTIVO'&&(
-                        <div style={{marginTop:6}}>
-                          <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                            <input type="text"
-                              style={{flex:1,padding:'5px 8px',borderRadius:6,border:'1px solid #334155',background:'#1e293b',color:'#94a3b8',fontSize:11}}
-                              placeholder={pago.method==='TRANSFERENCIA'?'Clave de rastreo SPEI':'Últimos 4 dígitos / No. autorización'}
-                              value={pago.reference||''}
-                              onChange={e=>actualizarReferencia(pago.method,e.target.value)}/>
-                            <RefTooltip method={pago.method}/>
-                            {pago.method==='TRANSFERENCIA'&&pago.reference&&pago.reference.length>=10&&(
-                              <button onClick={()=>window.open(`https://www.banxico.org.mx/cep/?i=90646&s=20${new Date().toISOString().slice(0,10).replace(/-/g,'')}&n=${encodeURIComponent(pago.reference||'')}`, '_blank')}
-                                style={{padding:'5px 8px',borderRadius:6,border:'1px solid #06b6d4',background:'none',color:'#06b6d4',cursor:'pointer',fontSize:10,whiteSpace:'nowrap'}}>
-                                Verificar CEP
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+
+            <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+              {/* Columna izquierda: métodos de pago */}
+              <div style={{width:180,background:'#0a0f1a',borderRight:'1px solid #334155',display:'flex',flexDirection:'column',gap:4,padding:10}}>
+                {METODOS_PAGO.map(m=>{
+                  const activo = metodoCobro === m.id;
+                  const montoPagado = pagos.find(p=>p.method===m.id)?.amount||0;
+                  return (
+                    <button key={m.id} onClick={()=>{
+                      setMetodoCobro(m.id);
+                      if(!pagos.find(p=>p.method===m.id)) agregarMetodo(m.id);
+                      setTecladoInput('');
+                      setShowDenom(m.id==='EFECTIVO');
+                    }}
+                      style={{padding:'10px 12px',borderRadius:10,border:`2px solid ${activo?m.color:'#1e293b'}`,
+                        background:activo?m.color+'22':'#1e293b',cursor:'pointer',textAlign:'left',
+                        transition:'all 0.15s'}}>
+                      <p style={{fontSize:11,fontWeight:700,color:activo?m.color:'#94a3b8',margin:'0 0 3px'}}>{m.label}</p>
+                      <p style={{fontSize:15,fontWeight:800,color:activo?m.color:'#475569',margin:0}}>{montoPagado>0?fmt(montoPagado):'$0.00'}</p>
+                    </button>
                   );
                 })}
-                {pagos.length<METODOS_PAGO.length&&(
-                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:6}}>
-                    {METODOS_PAGO.filter(m=>!pagos.find(p=>p.method===m.id)).map(m=>(
-                      <button key={m.id} onClick={()=>agregarMetodo(m.id)}
-                        style={{padding:'4px 10px',borderRadius:6,fontSize:11,cursor:'pointer',border:`1px solid ${m.color}44`,background:'none',color:`${m.color}bb`}}>
-                        + {m.label}
-                      </button>
-                    ))}
+                {/* Tabla resumen */}
+                <div style={{marginTop:'auto',background:'#1e293b',borderRadius:8,padding:8}}>
+                  {pagos.filter(p=>Number(p.amount)>0).map(p=>{
+                    const m=METODOS_PAGO.find(x=>x.id===p.method);
+                    return (
+                      <div key={p.method} style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                        <span style={{fontSize:10,color:'#64748b'}}>{m?.label.slice(0,8)}</span>
+                        <span style={{fontSize:10,fontWeight:700,color:m?.color}}>{fmt(p.amount)}</span>
+                      </div>
+                    );
+                  })}
+                  <div style={{borderTop:'1px solid #334155',marginTop:4,paddingTop:4,display:'flex',justifyContent:'space-between'}}>
+                    <span style={{fontSize:10,color:'#64748b'}}>Total pagado</span>
+                    <span style={{fontSize:11,fontWeight:700,color:'#f1f5f9'}}>{fmt(pagos.reduce((t,p)=>t+Number(p.amount||0),0))}</span>
                   </div>
-                )}
-                {esMixto&&(
-                  <div style={{background:'#0f172a',borderRadius:6,padding:'8px 12px',marginTop:8,display:'flex',justifyContent:'space-between'}}>
-                    <span style={{fontSize:12,color:'#64748b'}}>Total cubierto</span>
-                    <span style={{fontSize:13,fontWeight:700,color:totalPagado>=total?'#10b981':'#f59e0b'}}>{fmt(totalPagado)} / {fmt(total)}</span>
-                  </div>
-                )}
+                </div>
               </div>
-              {/* Cambio efectivo — desglose de denominaciones */}
-              <div>
-                {tieneEfectivo?(()=>{
-                  const BILLETES = [500,200,100,50,20];
-                  const MONEDAS  = [10,5,2,1,0.5];
-                  const [cobDen, setCobDen] = [efectivoCobro, setEfectivoCobro];
-                  const totalDen = DENOMINACIONES.reduce((t,d)=>t+(d*(cobDen?.[`den_${d}`]||0)),0);
-                  const montoEfectivo = totalDen > 0 ? totalDen : Number(pagos.find(p=>p.method==='EFECTIVO')?.amount||0);
-                  const cambio = Math.max(0, montoEfectivo - faltaEfectivo);
-                  const suficiente = montoEfectivo >= faltaEfectivo && montoEfectivo > 0;
-                  // Sync to pagos when totalDen changes
-                  if(totalDen>0 && Number(pagos.find(p=>p.method==='EFECTIVO')?.amount||0)!==totalDen){
-                    setTimeout(()=>actualizarMonto('EFECTIVO',totalDen),0);
-                  }
-                  return(
-                    <>
-                      <p style={{fontSize:10,color:'#64748b',margin:'0 0 6px',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Efectivo recibido</p>
-                      {esMixto&&(
-                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,padding:'6px 10px',background:'#0f172a',borderRadius:6}}>
-                          <span style={{fontSize:12,color:'#64748b'}}>Debe cubrir en efectivo</span>
-                          <span style={{fontSize:13,fontWeight:700,color:'#10b981'}}>{fmt(faltaEfectivo)}</span>
-                        </div>
-                      )}
-                      <div style={{background:'#0f172a',borderRadius:8,padding:10,marginBottom:8,maxHeight:200,overflowY:'auto'}}>
-                        <p style={{fontSize:9,color:'#64748b',margin:'0 0 6px',textTransform:'uppercase',letterSpacing:1}}>Billetes</p>
-                        {BILLETES.map(d=>(
-                          <div key={d} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                            <span style={{fontSize:11,color:'#94a3b8',width:38,textAlign:'right'}}>${d}</span>
-                            <span style={{fontSize:10,color:'#475569'}}>×</span>
-                            <input type="number" min="0"
-                              style={{width:44,padding:'2px 5px',borderRadius:5,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:11,textAlign:'center'}}
-                              value={cobDen?.[`den_${d}`]||''}
-                              onChange={e=>{const v={...cobDen,[`den_${d}`]:+e.target.value};setCobDen(v);const tot=DENOMINACIONES.reduce((t,dd)=>t+(dd*(v?.[`den_${dd}`]||0)),0);actualizarMonto('EFECTIVO',tot);}}/>
-                            <span style={{fontSize:11,color,fontWeight:600,marginLeft:'auto'}}>{fmt(d*(cobDen?.[`den_${d}`]||0))}</span>
-                          </div>
-                        ))}
-                        <p style={{fontSize:9,color:'#64748b',margin:'8px 0 6px',textTransform:'uppercase',letterSpacing:1}}>Monedas</p>
-                        {MONEDAS.map(d=>(
-                          <div key={d} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                            <span style={{fontSize:11,color:'#94a3b8',width:38,textAlign:'right'}}>${d}</span>
-                            <span style={{fontSize:10,color:'#475569'}}>×</span>
-                            <input type="number" min="0"
-                              style={{width:44,padding:'2px 5px',borderRadius:5,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:11,textAlign:'center'}}
-                              value={cobDen?.[`den_${d}`]||''}
-                              onChange={e=>{const v={...cobDen,[`den_${d}`]:+e.target.value};setCobDen(v);const tot=DENOMINACIONES.reduce((t,dd)=>t+(dd*(v?.[`den_${dd}`]||0)),0);actualizarMonto('EFECTIVO',tot);}}/>
-                            <span style={{fontSize:11,color,fontWeight:600,marginLeft:'auto'}}>{fmt(d*(cobDen?.[`den_${d}`]||0))}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#0f172a',borderRadius:8,padding:'8px 12px',marginBottom:8}}>
-                        <span style={{fontSize:12,color:'#64748b'}}>Total contado</span>
-                        <span style={{fontSize:16,fontWeight:700,color:suficiente?'#10b981':'#f59e0b'}}>{fmt(montoEfectivo)}</span>
-                      </div>
-                      <div style={{background:'#0f172a',borderRadius:8,padding:12,textAlign:'center'}}>
-                        <p style={{fontSize:11,color:'#64748b',margin:'0 0 4px'}}>Cambio</p>
-                        <p style={{fontSize:32,fontWeight:700,margin:0,color:suficiente?'#10b981':'#475569'}}>
-                          {suficiente?fmt(cambio):'—'}
-                        </p>
-                      </div>
-                    </>
+
+              {/* Columna central: teclado numérico */}
+              <div style={{flex:1,display:'flex',flexDirection:'column',padding:20,gap:10}}>
+                {/* Display input */}
+                <div style={{background:'#0a0f1a',borderRadius:10,padding:'12px 16px',textAlign:'right',border:'1px solid #334155',marginBottom:4}}>
+                  <p style={{fontSize:11,color:'#64748b',margin:'0 0 4px',textAlign:'left'}}>
+                    {METODOS_PAGO.find(m=>m.id===metodoCobro)?.label}
+                  </p>
+                  <p style={{fontSize:32,fontWeight:800,color:'#f1f5f9',margin:0,letterSpacing:-1,fontVariantNumeric:'tabular-nums'}}>
+                    {tecladoInput ? '$'+tecladoInput : '$0.00'}
+                  </p>
+                </div>
+
+                {/* Teclado */}
+                {(()=>{
+                  const tecla=(v:string)=>{
+                    const nuevo = v==='.' ? (tecladoInput.includes('.')?tecladoInput:tecladoInput+'.') :
+                                  v==='C' ? '' : tecladoInput+v;
+                    setTecladoInput(nuevo);
+                    const num=parseFloat(nuevo)||0;
+                    actualizarMonto(metodoCobro, num);
+                  };
+                  const teclaResto=()=>{
+                    const pagadoOtros=pagos.filter(p=>p.method!==metodoCobro).reduce((t,p)=>t+Number(p.amount||0),0);
+                    const resto=Math.max(0,total-pagadoOtros);
+                    setTecladoInput(resto.toFixed(2));
+                    actualizarMonto(metodoCobro,resto);
+                  };
+                  const btn=(label:string,val:string,wide=false,accent=false)=>(
+                    <button key={label} onClick={()=>val==='RESTO'?teclaResto():tecla(val)}
+                      style={{gridColumn:wide?'span 2':'span 1',padding:'18px 0',borderRadius:10,border:'none',
+                        background:accent?color:val==='C'?'#7f1d1d':'#1e293b',
+                        color:accent||val==='C'?'#fff':'#f1f5f9',
+                        fontSize:val==='RESTO'?12:20,fontWeight:700,cursor:'pointer',transition:'background 0.1s'}}>
+                      {label}
+                    </button>
                   );
-                })():(
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',background:'#0f172a',borderRadius:8,padding:24}}>
-                    <div style={{textAlign:'center'}}>
-                      <p style={{fontSize:32,margin:'0 0 8px'}}>💳</p>
-                      <p style={{fontSize:13,color:'#64748b',margin:0}}>Pago electrónico</p>
-                      <p style={{fontSize:18,fontWeight:700,color:'#10b981',margin:'8px 0 0'}}>{fmt(totalPagado)}</p>
+                  return (
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,flex:1}}>
+                      {btn('7','7')}{btn('8','8')}{btn('9','9')}
+                      {btn('4','4')}{btn('5','5')}{btn('6','6')}
+                      {btn('1','1')}{btn('2','2')}{btn('3','3')}
+                      {btn('0','0')}{btn('.','.')}{btn('⌫','C')}
+                      {btn('RESTO','RESTO',true)}{btn('ENTER','ENTER',false,true)}
                     </div>
+                  );
+                })()}
+              </div>
+
+              {/* Columna derecha: denominaciones (solo efectivo) */}
+              {showDenom && metodoCobro==='EFECTIVO' && (
+                <div style={{width:220,background:'#0a0f1a',borderLeft:'1px solid #334155',padding:12,display:'flex',flexDirection:'column',gap:6}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#64748b',margin:0,textTransform:'uppercase',letterSpacing:1}}>Denominaciones</p>
+                    <button onClick={()=>setShowDenom(false)}
+                      style={{background:'none',border:'none',color:'#475569',cursor:'pointer',fontSize:14}}>✕</button>
                   </div>
+                  {(()=>{
+                    const BILLETES=[1000,500,200,100,50,20,10,5,2,1];
+                    const totalDenom=BILLETES.reduce((t,d)=>t+(d*(efectivoCobro[`den_${d}`]||0)),0);
+                    return (
+                      <>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                          {BILLETES.map(d=>(
+                            <button key={d} onClick={()=>{
+                              const nuevo={...efectivoCobro,[`den_${d}`]:(efectivoCobro[`den_${d}`]||0)+1};
+                              setEfectivoCobro(nuevo);
+                              const tot=BILLETES.reduce((t,dd)=>t+(dd*(nuevo[`den_${dd}`]||0)),0);
+                              setTecladoInput(tot.toFixed(2));
+                              actualizarMonto('EFECTIVO',tot);
+                            }}
+                              style={{padding:'8px 4px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',cursor:'pointer',fontSize:11,fontWeight:600}}>
+                              +${d>=1000?'1K':d>=500?'500':d}
+                            </button>
+                          ))}
+                        </div>
+                        {totalDenom>0&&(
+                          <div style={{marginTop:'auto',background:'#1e293b',borderRadius:8,padding:8}}>
+                            {BILLETES.filter(d=>efectivoCobro[`den_${d}`]>0).map(d=>(
+                              <div key={d} style={{display:'flex',justifyContent:'space-between',marginBottom:2,alignItems:'center'}}>
+                                <span style={{fontSize:10,color:'#64748b'}}>${d} × {efectivoCobro[`den_${d}`]}</span>
+                                <div style={{display:'flex',alignItems:'center',gap:4}}>
+                                  <span style={{fontSize:10,fontWeight:700,color:'#f1f5f9'}}>{fmt(d*efectivoCobro[`den_${d}`])}</span>
+                                  <button onClick={()=>{
+                                    const nuevo={...efectivoCobro,[`den_${d}`]:0};
+                                    setEfectivoCobro(nuevo);
+                                    const tot=BILLETES.reduce((t,dd)=>t+(dd*(nuevo[`den_${dd}`]||0)),0);
+                                    setTecladoInput(tot>0?tot.toFixed(2):'');
+                                    actualizarMonto('EFECTIVO',tot);
+                                  }} style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:10}}>✕</button>
+                                </div>
+                              </div>
+                            ))}
+                            <div style={{borderTop:'1px solid #334155',marginTop:4,paddingTop:4,display:'flex',justifyContent:'space-between'}}>
+                              <span style={{fontSize:10,color:'#64748b'}}>Total</span>
+                              <span style={{fontSize:11,fontWeight:700,color:'#10b981'}}>{fmt(totalDenom)}</span>
+                            </div>
+                          </div>
+                        )}
+                        <button onClick={()=>{setEfectivoCobro({});setTecladoInput('');actualizarMonto('EFECTIVO',0);}}
+                          style={{padding:'6px',borderRadius:6,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:10}}>
+                          Limpiar denominaciones
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* Referencia para tarjeta/transferencia */}
+            {metodoCobro!=='EFECTIVO' && (
+              <div style={{padding:'10px 20px',borderTop:'1px solid #334155',background:'#0f172a',display:'flex',gap:10,alignItems:'center'}}>
+                <span style={{fontSize:12,color:'#64748b',flexShrink:0}}>
+                  {metodoCobro==='TRANSFERENCIA'?'Clave de rastreo:':'No. autorización:'}
+                </span>
+                <input
+                  placeholder={metodoCobro==='TRANSFERENCIA'?'Ej: 2024041600123456':'Últimos 4 dígitos'}
+                  value={pagos.find(p=>p.method===metodoCobro)?.reference||''}
+                  onChange={e=>actualizarReferencia(metodoCobro,e.target.value)}
+                  style={{flex:1,padding:'7px 12px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:13}}/>
+                {metodoCobro==='TRANSFERENCIA'&&(pagos.find(p=>p.method===metodoCobro)?.reference||'').length>=10&&(
+                  <button onClick={()=>window.open(`https://www.banxico.org.mx/cep/?n=${pagos.find(p=>p.method===metodoCobro)?.reference}`,'_blank')}
+                    style={{padding:'6px 12px',borderRadius:6,border:'1px solid #06b6d4',background:'none',color:'#06b6d4',cursor:'pointer',fontSize:11}}>
+                    Verificar CEP
+                  </button>
                 )}
               </div>
-            </div>
-            <div style={{display:'flex',gap:8,marginTop:20}}>
-              <button onClick={()=>{setShowCobro(false);setEfectivoCobro({});}} style={{flex:1,padding:'11px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>Cancelar</button>
-              {(()=>{
-                const montoEfectivo = Number(pagos.find(p=>p.method==='EFECTIVO')?.amount||0);
-                const cambio = Math.max(0, montoEfectivo - faltaEfectivo);
-                const efectivoOk = !tieneEfectivo || montoEfectivo >= faltaEfectivo;
-                const totalOk = !esMixto || totalPagado >= total;
-                const pureEfectivoOk = !esMixto && tieneEfectivo ? montoEfectivo >= total : true;
-                const canConfirm = !saleM.isPending && efectivoOk && totalOk && pureEfectivoOk;
-                return(
-                  <button onClick={()=>saleM.mutate()} disabled={!canConfirm}
-                    style={{flex:2,padding:'11px',borderRadius:8,border:'none',fontSize:13,fontWeight:700,color:'#fff',cursor:canConfirm?'pointer':'not-allowed',
-                      background:canConfirm?color:'#334155'}}>
-                    {saleM.isPending?'Procesando…':tieneEfectivo?`Confirmar — Cambio ${fmt(cambio)}`:`Confirmar — ${fmt(total)}`}
-                  </button>
-                );
-              })()}
-            </div>
+            )}
           </div>
         </div>
       )}
