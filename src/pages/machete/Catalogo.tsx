@@ -916,65 +916,31 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
           </div>
 
           {oc.status !== 'CANCELADA' && oc.status !== 'SURTIDO_COMPLETO' && (
-            <div style={{display:'flex',gap:6,marginBottom:8}}>
-              <button onClick={async()=>{
-                if(window.confirm('¿Cerrar OC con lo surtido hasta ahora?')){
-                  await api.put(`/companies/${cid}/ordenes/${oc.id}/cerrar`,{});
-                  qc.invalidateQueries({queryKey:['client-detail']});
-                }
-              }} style={{flex:1,padding:'4px',borderRadius:6,fontSize:11,border:'1px solid #10b981',background:'none',color:'#10b981',cursor:'pointer'}}>
-                ✓ Cerrar OC
-              </button>
-              <button onClick={async()=>{
-                const motivo = window.prompt('Motivo de cancelación:');
-                if(motivo !== null){
-                  await api.put(`/companies/${cid}/ordenes/${oc.id}/cancelar`,{motivo});
-                  qc.invalidateQueries({queryKey:['client-detail']});
-                }
-              }} style={{flex:1,padding:'4px',borderRadius:6,fontSize:11,border:'1px solid #f87171',background:'none',color:'#f87171',cursor:'pointer'}}>
-                ✕ Cancelar OC
-              </button>
-            </div>
-          )}
-
-          {oc.status !== 'SURTIDO_COMPLETO' && (
             <>
-              {surtidoOC === oc.id ? (
-                <div>
-                  <p style={{fontSize:11,color:'#64748b',margin:'0 0 6px'}}>Selecciona cantidades a surtir:</p>
-                  {oc.lineas?.map((l:any) => {
-                    const pendiente = l.cantidad - l.cantidadSurtida;
-                    if (pendiente <= 0) return null;
-                    const surtVal = surtLineas.find((s:any)=>s.lineaId===l.id)?.cantidad||0;
-                    return (
-                      <div key={l.id} style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:8,marginBottom:6,alignItems:'center'}}>
-                        <span style={{fontSize:11,color:'#94a3b8'}}>{l.product?.name} (pendiente: {pendiente})</span>
-                        <input type="number" min="0" max={pendiente} className="input-base" style={{fontSize:11}}
-                          value={surtVal||''}
-                          onChange={e => {
-                            const val = Math.min(+e.target.value, pendiente);
-                            setSurtLineas(sl => {
-                              const exists = sl.findIndex((s:any)=>s.lineaId===l.id);
-                              if (exists>=0) return sl.map((s:any,i:number)=>i===exists?{...s,cantidad:val}:s);
-                              return [...sl, { lineaId:l.id, cantidad:val }];
-                            });
-                          }}/>
-                      </div>
-                    );
-                  })}
-                  <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
-                    <button className="btn-secondary" style={{fontSize:12}} onClick={()=>{setSurtidoOC(null);setSurtLineas([])}}>Cancelar</button>
-                    <button className="btn-primary" style={{background:color,fontSize:12}} onClick={()=>registrarSurtido(oc.id)} disabled={saving}>
-                      {saving?'…':'Registrar surtido'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={()=>{setSurtidoOC(oc.id);setSurtLineas([])}}
-                  style={{background:'none',border:`1px solid ${color}`,color,padding:'4px 12px',borderRadius:6,cursor:'pointer',fontSize:12,width:'100%'}}>
-                  + Registrar surtido
+              <div style={{background:'#0f172a',borderRadius:6,padding:'6px 10px',marginBottom:8,border:'1px solid #334155'}}>
+                <p style={{fontSize:10,color:'#64748b',margin:0}}>
+                  🛒 Para surtir esta OC, selecciona al cliente en el <strong style={{color:'#f59e0b'}}>POS</strong> y elige la OC
+                </p>
+              </div>
+              <div style={{display:'flex',gap:6,marginBottom:8}}>
+                <button onClick={async()=>{
+                  if(window.confirm('¿Cerrar OC con lo surtido hasta ahora? El saldo pendiente quedará cancelado.')){
+                    await api.put(`/companies/${cid}/ordenes/${oc.id}/cerrar`,{});
+                    qc.invalidateQueries({queryKey:['client-detail']});
+                  }
+                }} style={{flex:1,padding:'6px',borderRadius:6,fontSize:11,border:'1px solid #10b981',background:'none',color:'#10b981',cursor:'pointer'}}>
+                  ✓ Cerrar OC
                 </button>
-              )}
+                <button onClick={async()=>{
+                  const motivo = window.prompt('Motivo de cancelación:');
+                  if(motivo !== null){
+                    await api.put(`/companies/${cid}/ordenes/${oc.id}/cancelar`,{motivo});
+                    qc.invalidateQueries({queryKey:['client-detail']});
+                  }
+                }} style={{flex:1,padding:'6px',borderRadius:6,fontSize:11,border:'1px solid #f87171',background:'none',color:'#f87171',cursor:'pointer'}}>
+                  ✕ Cancelar OC
+                </button>
+              </div>
             </>
           )}
         </div>
