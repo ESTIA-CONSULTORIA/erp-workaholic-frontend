@@ -129,7 +129,6 @@ const RefTooltip = ({method}:{method:string}) => {
     </div>
   );
 };
-
 export default function POSPage() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -388,271 +387,206 @@ export default function POSPage() {
 
   const masVendidos = [...prods].sort((a: any, b: any) => Number(b.stock || 0) - Number(a.stock || 0)).slice(0, 6);
 
-  return(
-    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', height:'100vh', background:'#0a0f1a', fontFamily:'system-ui,-apple-system,sans-serif', overflow:'hidden' }}>
 
-      {/* ── SIDEBAR IZQUIERDO ────────────────────────── */}
-      <div style={{ width:180, background:'#0f172a', borderRight:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
-        {/* Back button */}
-        <div style={{ padding:'8px 10px', borderBottom:'1px solid #1e293b', display:'flex', justifyContent:'flex-end' }}>
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', background:'#0a0f1a', fontFamily:'system-ui,sans-serif', overflow:'hidden' }}>
+
+      {/* ══ SIDEBAR ══════════════════════════════════════════ */}
+      <div style={{ width:176, background:'#0f172a', borderRight:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
+
+        {/* Botón salir */}
+        <div style={{ padding:'8px', borderBottom:'1px solid #1e293b' }}>
           <button onClick={() => window.history.back()}
-            style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #334155', background:'none',
-              color:'#64748b', cursor:'pointer', fontSize:11, display:'flex', alignItems:'center', gap:4 }}>
+            style={{ width:'100%', padding:'6px', borderRadius:6, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:11 }}>
             ← Salir
           </button>
         </div>
+
         {/* Logo */}
-        <div style={{ padding:'12px 14px', borderBottom:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{ width:32, height:32, borderRadius:8, background:color, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:14, color:'#fff' }}>M</div>
-            <div>
-              <p style={{ fontSize:13, fontWeight:800, color:'#f1f5f9', margin:0, letterSpacing:-0.3 }}>MACHETE</p>
-              <p style={{ fontSize:9, color:color, margin:0, fontWeight:700, letterSpacing:1 }}>POS</p>
-            </div>
+        <div style={{ padding:'10px 12px', borderBottom:'1px solid #1e293b', display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:28, height:28, borderRadius:6, background:color, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:13, color:'#fff' }}>M</div>
+          <div>
+            <p style={{ fontSize:12, fontWeight:800, color:'#f1f5f9', margin:0 }}>MACHETE</p>
+            <p style={{ fontSize:9, color:color, margin:0, letterSpacing:1 }}>POS</p>
           </div>
         </div>
 
-        {/* Nav items */}
-        <div style={{ padding:'8px 8px', flex:1 }}>
+        {/* Navegación */}
+        <div style={{ padding:'6px', flex:1, overflowY:'auto' }}>
           {[
-            { id:'venta',    icon:'🛒', label:'Venta' },
-            { id:'historial',icon:'🕐', label:'Historial' },
+            { id:'venta',     icon:'🛒', label:'Venta' },
+            { id:'historial', icon:'🕐', label:'Historial' },
           ].map(n => (
             <button key={n.id} onClick={() => setVistaNav(n.id as any)}
-              style={{ width:'100%', display:'flex', alignItems:'center', gap:8, padding:'9px 10px',
-                borderRadius:8, border:'none', cursor:'pointer', marginBottom:2, textAlign:'left',
-                background: vistaNav === n.id ? color+'22' : 'transparent',
-                color: vistaNav === n.id ? color : '#64748b', fontSize:13, fontWeight: vistaNav===n.id?700:400 }}>
-              <span style={{ fontSize:16 }}>{n.icon}</span>{n.label}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:7, border:'none', cursor:'pointer', marginBottom:2, textAlign:'left', background: vistaNav===n.id ? color+'22' : 'transparent', color: vistaNav===n.id ? color : '#64748b', fontSize:12, fontWeight: vistaNav===n.id?700:400 }}>
+              <span>{n.icon}</span>{n.label}
             </button>
           ))}
 
-          <div style={{ height:1, background:'#1e293b', margin:'8px 0' }}/>
-
-          <p style={{ fontSize:9, color:'#334155', margin:'8px 0 6px 10px', textTransform:'uppercase', letterSpacing:1, fontWeight:700 }}>ACCESOS RÁPIDOS</p>
-          {[
-            { icon:'⚡', label:'Más vendidos', action:() => setFiltroGrupo('TODOS') },
-            { icon:'⭐', label:'Favoritos',    action:() => {} },
-          ].map(a => (
-            <button key={a.label} onClick={a.action}
-              style={{ width:'100%', display:'flex', alignItems:'center', gap:8, padding:'7px 10px',
-                borderRadius:8, border:'none', cursor:'pointer', marginBottom:2,
-                background:'transparent', color:'#475569', fontSize:11 }}>
-              <span>{a.icon}</span>{a.label}
-            </button>
-          ))}
-
-          <div style={{ height:1, background:'#1e293b', margin:'8px 0' }}/>
-
-          {/* Canal selector */}
-          <p style={{ fontSize:9, color:'#334155', margin:'8px 0 6px 10px', textTransform:'uppercase', letterSpacing:1, fontWeight:700 }}>CANAL</p>
+          <div style={{ height:1, background:'#1e293b', margin:'6px 0' }}/>
+          <p style={{ fontSize:9, color:'#334155', margin:'6px 0 4px 8px', textTransform:'uppercase', letterSpacing:1 }}>CANAL</p>
           {CANALES.map(c => (
             <button key={c.id} onClick={() => setCanal(c.id)}
-              style={{ width:'100%', display:'flex', alignItems:'center', gap:6, padding:'6px 10px',
-                borderRadius:8, border:'none', cursor:'pointer', marginBottom:2, textAlign:'left',
-                background: canal === c.id ? c.color+'22' : 'transparent',
-                color: canal === c.id ? c.color : '#475569', fontSize:11, fontWeight: canal===c.id?700:400 }}>
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:6, padding:'5px 8px', borderRadius:6, border:'none', cursor:'pointer', marginBottom:2, textAlign:'left', background: canal===c.id ? c.color+'22' : 'transparent', color: canal===c.id ? c.color : '#475569', fontSize:11, fontWeight: canal===c.id?700:400 }}>
               <div style={{ width:6, height:6, borderRadius:'50%', background: canal===c.id?c.color:'#334155', flexShrink:0 }}/>
               {c.label}
             </button>
           ))}
-        </div>
 
-        {/* Usuario bottom */}
-        <div style={{ padding:'10px 12px', borderTop:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', gap:6 }}>
+          <div style={{ height:1, background:'#1e293b', margin:'6px 0' }}/>
+          <div style={{ display:'flex', gap:4, padding:'0 4px' }}>
             <button onClick={() => { cargarTira(); setShowTiraX(true); }}
-              style={{ flex:1, padding:'5px', borderRadius:6, border:`1px solid ${tiraXGuardada?'#10b981':'#334155'}`, background:'none', color:tiraXGuardada?'#10b981':'#64748b', cursor:'pointer', fontSize:9 }}>
-              {tiraXGuardada ? '✔ Tira X' : 'Tira X'}
+              style={{ flex:1, padding:'4px', borderRadius:5, border:`1px solid ${tiraXGuardada?'#10b981':'#334155'}`, background:'none', color:tiraXGuardada?'#10b981':'#64748b', cursor:'pointer', fontSize:9 }}>
+              {tiraXGuardada ? '✔ X' : 'Tira X'}
             </button>
-            <button onClick={() => { if(tiraXGuardada) { cargarTira(); setShowTiraZ(true); } }} disabled={!tiraXGuardada}
-              style={{ flex:1, padding:'5px', borderRadius:6, border:`1px solid ${tiraXGuardada?'#f59e0b':'#334155'}`, background:'none', color:tiraXGuardada?'#f59e0b':'#334155', cursor:tiraXGuardada?'pointer':'not-allowed', fontSize:9, opacity:tiraXGuardada?1:0.4 }}>
+            <button onClick={() => { if(tiraXGuardada){ cargarTira(); setShowTiraZ(true); } }} disabled={!tiraXGuardada}
+              style={{ flex:1, padding:'4px', borderRadius:5, border:`1px solid ${tiraXGuardada?'#f59e0b':'#334155'}`, background:'none', color:tiraXGuardada?'#f59e0b':'#334155', cursor:tiraXGuardada?'pointer':'not-allowed', fontSize:9, opacity:tiraXGuardada?1:0.4 }}>
               Tira Z
             </button>
           </div>
         </div>
       </div>
+      {/* ══ FIN SIDEBAR ══════════════════════════════════════ */}
 
-      {/* ── CENTRO: CATÁLOGO ─────────────────────────── */}
+      {/* ══ CENTRO: CATÁLOGO ════════════════════════════════ */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
         {/* Top bar */}
-        <div style={{ padding:'10px 16px', background:'#0f172a', borderBottom:'1px solid #1e293b', display:'flex', gap:10, alignItems:'center' }}>
-          {/* Search */}
+        <div style={{ padding:'8px 12px', background:'#0f172a', borderBottom:'1px solid #1e293b', display:'flex', gap:8, alignItems:'center' }}>
           <div style={{ flex:1, position:'relative' }}>
-            <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#475569', fontSize:14 }}>🔍</span>
-            <input
-              ref={busquedaRef}
-              value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar producto, SKU o código...  F2"
-              style={{ width:'100%', padding:'8px 10px 8px 34px', borderRadius:8, border:'1px solid #1e293b',
-                background:'#0a0f1a', color:'#f1f5f9', fontSize:12, outline:'none', boxSizing:'border-box' }}/>
+            <span style={{ position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', color:'#475569', fontSize:13 }}>🔍</span>
+            <input ref={busquedaRef} value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar producto, SKU...  F2"
+              style={{ width:'100%', padding:'7px 8px 7px 30px', borderRadius:7, border:'1px solid #1e293b', background:'#0a0f1a', color:'#f1f5f9', fontSize:12, outline:'none', boxSizing:'border-box' }}/>
           </div>
-          {/* Cliente */}
           <select ref={clienteRef} value={clienteId} onChange={e => { setClienteId(e.target.value); setOcId(''); setCarrito([]); }}
-            style={{ padding:'7px 10px', borderRadius:8, fontSize:11, background:'#0a0f1a', border:`1px solid ${clienteId?'#f59e0b':'#1e293b'}`, color:clienteId?'#f59e0b':'#475569', cursor:'pointer', minWidth:140 }}>
+            style={{ padding:'6px 8px', borderRadius:7, fontSize:11, background:'#0a0f1a', border:`1px solid ${clienteId?'#f59e0b':'#1e293b'}`, color:clienteId?'#f59e0b':'#475569', cursor:'pointer', maxWidth:140 }}>
             <option value="">👤 Cliente  F3</option>
             {(clientes as any[]).map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           {clienteId && (
             <select value={ocId} onChange={e => { if(e.target.value){const oc=(ocsPendientes as any[]).find((o:any)=>o.id===e.target.value);if(oc)cargarDesdeOC(oc);}else{setOcId('');setCarrito([]);setEsCredito(true);} }}
-              style={{ padding:'7px 10px', borderRadius:8, fontSize:11, background:'#0a0f1a', border:`1px solid ${ocId?'#10b981':'#1e293b'}`, color:ocId?'#10b981':'#475569', cursor:'pointer', minWidth:140 }}>
+              style={{ padding:'6px 8px', borderRadius:7, fontSize:11, background:'#0a0f1a', border:`1px solid ${ocId?'#10b981':'#1e293b'}`, color:ocId?'#10b981':'#475569', cursor:'pointer', maxWidth:130 }}>
               <option value="">📋 OC pendiente</option>
               {(ocsPendientes as any[]).map((oc:any) => <option key={oc.id} value={oc.id}>{oc.numero}</option>)}
             </select>
           )}
-          <div style={{ display:'flex', gap:6 }}>
-            <button onClick={() => { setShowMovCaja('deposito'); setMovMonto(0); setMovNota(''); }}
-              style={{ padding:'6px 10px', borderRadius:7, border:'1px solid #10b98144', background:'none', color:'#10b981', cursor:'pointer', fontSize:11 }}>↑ Dep.</button>
-            <button onClick={() => { setShowMovCaja('retiro'); setMovMonto(0); setMovNota(''); setMovMotivo('seguridad'); }}
-              style={{ padding:'6px 10px', borderRadius:7, border:'1px solid #f8717144', background:'none', color:'#f87171', cursor:'pointer', fontSize:11 }}>↓ Ret.</button>
-          </div>
+          <button onClick={() => { setShowMovCaja('deposito'); setMovMonto(0); setMovNota(''); }}
+            style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #10b98133', background:'none', color:'#10b981', cursor:'pointer', fontSize:11, flexShrink:0 }}>↑ Dep</button>
+          <button onClick={() => { setShowMovCaja('retiro'); setMovMonto(0); setMovNota(''); setMovMotivo('seguridad'); }}
+            style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #f8717133', background:'none', color:'#f87171', cursor:'pointer', fontSize:11, flexShrink:0 }}>↓ Ret</button>
         </div>
 
-        {/* Filtros de familia */}
-        <div style={{ padding:'8px 16px', background:'#0f172a', borderBottom:'1px solid #1e293b', display:'flex', gap:6, alignItems:'center', overflowX:'auto' }}>
+        {/* Filtros */}
+        <div style={{ padding:'6px 12px', background:'#0f172a', borderBottom:'1px solid #1e293b', display:'flex', gap:4, overflowX:'auto' }}>
           {FILTROS.map(f => (
             <button key={f.id} onClick={() => setFiltroGrupo(f.id)}
-              style={{ padding:'5px 14px', borderRadius:99, border:`1px solid ${filtroGrupo===f.id?color:'#1e293b'}`,
-                background: filtroGrupo===f.id?color:'#0a0f1a', color:filtroGrupo===f.id?'#fff':'#64748b',
-                cursor:'pointer', fontSize:11, fontWeight:filtroGrupo===f.id?700:400, whiteSpace:'nowrap', flexShrink:0 }}>
+              style={{ padding:'4px 12px', borderRadius:99, border:`1px solid ${filtroGrupo===f.id?color:'#1e293b'}`, background: filtroGrupo===f.id?color:'#0a0f1a', color:filtroGrupo===f.id?'#fff':'#64748b', cursor:'pointer', fontSize:11, fontWeight:filtroGrupo===f.id?700:400, whiteSpace:'nowrap', flexShrink:0 }}>
               {f.label}
             </button>
           ))}
-          <div style={{ marginLeft:'auto', display:'flex', gap:4, flexShrink:0 }}>
-            <button style={{ padding:'4px 10px', borderRadius:99, border:'1px solid #1e293b', background:'none', color:'#64748b', cursor:'pointer', fontSize:10 }}>⭐ Favoritos</button>
-            <button style={{ padding:'4px 10px', borderRadius:99, border:'1px solid #1e293b', background:'none', color:'#64748b', cursor:'pointer', fontSize:10 }}>⚡ Más vendidos</button>
-          </div>
         </div>
 
-        {/* Grid de productos */}
-        <div style={{ flex:1, overflowY:'auto', padding:'12px 16px' }}>
+        {/* Grid productos */}
+        <div style={{ flex:1, overflowY:'auto', padding:'10px 12px' }}>
           {ocId && (
-            <div style={{ background:'#0f172a', borderRadius:8, padding:'8px 12px', marginBottom:10, border:'1px solid #10b981', display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:16 }}>📋</span>
-              <span style={{ fontSize:12, color:'#10b981' }}>OC cargada — modifica cantidades en el pedido</span>
+            <div style={{ background:'#0f172a', borderRadius:7, padding:'6px 10px', marginBottom:8, border:'1px solid #10b981' }}>
+              <span style={{ fontSize:11, color:'#10b981' }}>📋 OC cargada — modifica cantidades en el pedido</span>
             </div>
           )}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))', gap:10 }}>
-            {prodsFiltrados.map((p: any) => {
-              const precio  = Number((p as any)[priceKey] || 0);
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(128px, 1fr))', gap:8 }}>
+            {prodsFiltrados.map((p:any) => {
+              const precio    = Number((p as any)[priceKey] || 0);
               const sinPrecio = precio === 0;
               const bloqueado = !!ocId;
               const enCarrito = carrito.find(i => i.id === p.id);
-              const stockBajo = p.stock > 0 && p.stock <= 5;
               return (
-                <div key={p.id} onClick={() => !bloqueado && !sinPrecio && agregar(p)}
-                  style={{ background:'#0f172a', borderRadius:10, border:`2px solid ${enCarrito?color:p.stock<=0?'#1e293b':'#1e293b'}`,
-                    padding:10, cursor:p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer',
-                    opacity:p.stock<=0?0.4:1, position:'relative', transition:'border-color 0.15s',
-                    outline:'none' }}>
-                  {/* Imagen placeholder */}
-                  <div style={{ width:'100%', aspectRatio:'1', borderRadius:7, background:'#1e293b',
-                    display:'flex', alignItems:'center', justifyContent:'center', marginBottom:8, overflow:'hidden' }}>
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                      : <span style={{ fontSize:28 }}>🥩</span>}
-                    {/* Stock badge */}
-                    <div style={{ position:'absolute', top:8, right:8, fontSize:9, padding:'2px 6px', borderRadius:4,
-                      background: p.stock<=0?'#f87171':stockBajo?'#f59e0b':'#10b981',
-                      color:'#fff', fontWeight:700 }}>
-                      {p.stock<=0?'SIN STOCK':`Stock: ${p.stock}`}
+                <div key={p.id}
+                  style={{ background:'#0f172a', borderRadius:9, border:`2px solid ${enCarrito?color:'#1e293b'}`, padding:8, cursor:p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer', opacity:p.stock<=0?0.45:1, position:'relative' }}
+                  onClick={() => !bloqueado && !sinPrecio && agregar(p)}>
+                  <div style={{ width:'100%', aspectRatio:'1', borderRadius:6, background:'#1e293b', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:6, overflow:'hidden', position:'relative' }}>
+                    {p.imageUrl ? <img src={p.imageUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:26 }}>🥩</span>}
+                    <div style={{ position:'absolute', top:4, right:4, fontSize:8, padding:'1px 5px', borderRadius:3, background: p.stock<=0?'#f87171':p.stock<=5?'#f59e0b':'#10b981', color:'#fff', fontWeight:700 }}>
+                      {p.stock<=0?'AGOTADO':`${p.stock}`}
                     </div>
                   </div>
-                  {/* Badge familia */}
-                  <div style={{ display:'flex', gap:3, marginBottom:5, flexWrap:'wrap' }}>
-                    <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:color+'22', color }}>
-                      {getFamilia(p).toUpperCase()}
-                    </span>
-                  </div>
-                  <p style={{ fontSize:11, fontWeight:600, color:'#f1f5f9', margin:'0 0 2px', lineHeight:1.3 }}>{p.name}</p>
-                  <p style={{ fontSize:13, fontWeight:800, color:sinPrecio?'#334155':color, margin:'0 0 6px' }}>
-                    {sinPrecio ? 'Sin precio' : fmt(precio)}
-                  </p>
+                  <p style={{ fontSize:10, color:color, margin:'0 0 2px', textTransform:'uppercase', letterSpacing:0.5 }}>{getFamilia(p)}</p>
+                  <p style={{ fontSize:11, fontWeight:600, color:'#f1f5f9', margin:'0 0 3px', lineHeight:1.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
+                  <p style={{ fontSize:13, fontWeight:800, color:sinPrecio?'#334155':color, margin:'0 0 5px' }}>{sinPrecio?'Sin precio':fmt(precio)}</p>
                   {enCarrito ? (
-                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                      <button onClick={e => { e.stopPropagation(); cambiar(p.id, -1); }}
-                        style={{ width:26, height:26, borderRadius:6, border:`1px solid ${color}44`, background:'none', color:'#f1f5f9', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
-                      <span style={{ flex:1, textAlign:'center', fontWeight:700, fontSize:13, color }}>{enCarrito.cantidad}</span>
-                      <button onClick={e => { e.stopPropagation(); cambiar(p.id, +1); }}
-                        style={{ width:26, height:26, borderRadius:6, border:`1px solid ${color}44`, background:color, color:'#fff', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+                    <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                      <button onClick={e => { e.stopPropagation(); cambiar(p.id,-1); }}
+                        style={{ width:24, height:24, borderRadius:5, border:'1px solid #334155', background:'none', color:'#f1f5f9', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+                      <span style={{ flex:1, textAlign:'center', fontWeight:700, fontSize:12, color }}>{enCarrito.cantidad}</span>
+                      <button onClick={e => { e.stopPropagation(); cambiar(p.id,+1); }}
+                        style={{ width:24, height:24, borderRadius:5, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
                     </div>
                   ) : (
-                    <button onClick={() => agregar(p)} disabled={p.stock<=0||sinPrecio||bloqueado}
-                      style={{ width:'100%', padding:'6px', borderRadius:7, border:'none',
-                        background:p.stock<=0||sinPrecio||bloqueado?'#1e293b':color+'33', color:p.stock<=0||sinPrecio?'#334155':color,
-                        cursor:p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer', fontSize:11, fontWeight:600 }}>
-                      {p.stock<=0?'Sin stock':'Agregar'}
+                    <button disabled={p.stock<=0||sinPrecio||bloqueado}
+                      style={{ width:'100%', padding:'5px', borderRadius:6, border:'none', background:p.stock<=0||sinPrecio?'#1e293b':color+'33', color:p.stock<=0||sinPrecio?'#334155':color, cursor:p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer', fontSize:11, fontWeight:600 }}>
+                      {p.stock<=0?'Agotado':'Agregar'}
                     </button>
                   )}
                 </div>
               );
             })}
-          </div>
-
-          {prodsFiltrados.length === 0 && (
-            <div style={{ textAlign:'center', padding:'60px 0', color:'#334155' }}>
-              <p style={{ fontSize:40, margin:'0 0 8px' }}>🔍</p>
-              <p style={{ fontSize:13 }}>Sin resultados para "{busqueda}"</p>
-            </div>
-          )}
-        </div>
-
-        {/* Shortcuts bar */}
-        <div style={{ padding:'6px 16px', background:'#0a0f1a', borderTop:'1px solid #1e293b', display:'flex', gap:12, alignItems:'center' }}>
-          <span style={{ fontSize:10, color:'#334155' }}>Atajos (F1)</span>
-          {['F2 Buscar','F3 Cliente','F4 Efectivo','F5 Tarjeta','Ctrl+L Limpiar','ESC Cancelar'].map(s => (
-            <span key={s} style={{ fontSize:10, color:'#475569' }}>{s}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── PANEL DERECHO: PEDIDO ────────────────────── */}
-      <div style={{ width:320, background:'#0f172a', borderLeft:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
-
-        {/* Header pedido */}
-        <div style={{ padding:'14px 16px', borderBottom:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div>
-              <p style={{ fontSize:13, fontWeight:700, color:'#f1f5f9', margin:'0 0 2px' }}>
-                PEDIDO ACTUAL
-              </p>
-              <p style={{ fontSize:10, color:'#475569', margin:0 }}>
-                {clienteActivo ? `Cliente: ${clienteActivo.name}` : `${canalConfig.label} · ${new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`}
-              </p>
-            </div>
-            {carrito.length > 0 && (
-              <button onClick={() => { setCarrito([]); setOcId(''); setEsCredito(false); setClienteId(''); setDescAuth(null); }}
-                style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:11 }}>
-                Limpiar
-              </button>
+            {prodsFiltrados.length === 0 && (
+              <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'50px 0', color:'#334155' }}>
+                <p style={{ fontSize:36, margin:'0 0 8px' }}>🔍</p>
+                <p style={{ fontSize:12 }}>Sin resultados para "{busqueda}"</p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Items del carrito */}
-        <div style={{ flex:1, overflowY:'auto', padding:'8px 12px' }}>
+        {/* Atajos */}
+        <div style={{ padding:'5px 12px', background:'#0a0f1a', borderTop:'1px solid #1e293b', display:'flex', gap:10 }}>
+          {['F2 Buscar','F3 Cliente','F4 Efectivo','F5 Tarjeta','Ctrl+L Limpiar','ESC Cancelar'].map(s => (
+            <span key={s} style={{ fontSize:10, color:'#334155' }}>{s}</span>
+          ))}
+        </div>
+      </div>
+      {/* ══ FIN CATÁLOGO ════════════════════════════════════ */}
+
+      {/* ══ PANEL DERECHO: PEDIDO ═══════════════════════════ */}
+      <div style={{ width:300, background:'#0f172a', borderLeft:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
+
+        {/* Header */}
+        <div style={{ padding:'12px 14px', borderBottom:'1px solid #1e293b', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <p style={{ fontSize:12, fontWeight:700, color:'#f1f5f9', margin:'0 0 1px' }}>PEDIDO ACTUAL</p>
+            <p style={{ fontSize:10, color:'#475569', margin:0 }}>{clienteActivo ? clienteActivo.name : canalConfig.label}</p>
+          </div>
+          {carrito.length > 0 && (
+            <button onClick={() => { setCarrito([]); setOcId(''); setEsCredito(false); setClienteId(''); setDescAuth(null); setPagos([{method:'EFECTIVO',amount:0}]); setBusqueda(''); }}
+              style={{ padding:'3px 8px', borderRadius:5, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:10 }}>
+              Limpiar
+            </button>
+          )}
+        </div>
+
+        {/* Items */}
+        <div style={{ flex:1, overflowY:'auto', padding:'6px 10px' }}>
           {carrito.length === 0 ? (
             <div style={{ textAlign:'center', padding:'40px 0', color:'#334155' }}>
-              <p style={{ fontSize:32, margin:'0 0 8px' }}>🛒</p>
-              <p style={{ fontSize:12 }}>Selecciona productos del catálogo</p>
+              <p style={{ fontSize:28, margin:'0 0 6px' }}>🛒</p>
+              <p style={{ fontSize:11 }}>Selecciona productos</p>
             </div>
           ) : carrito.map(item => (
-            <div key={item.id} style={{ background:'#1e293b', borderRadius:8, padding:'8px 10px', marginBottom:6, display:'flex', gap:8, alignItems:'center' }}>
-              <div style={{ width:32, height:32, borderRadius:6, background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:16 }}>🥩</div>
+            <div key={item.id} style={{ background:'#1e293b', borderRadius:7, padding:'7px 8px', marginBottom:5, display:'flex', gap:7, alignItems:'center' }}>
               <div style={{ flex:1, minWidth:0 }}>
-                <p style={{ fontSize:11, fontWeight:600, color:'#f1f5f9', margin:'0 0 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nombre}</p>
-                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <button onClick={() => cambiar(item.id, -1)} style={{ width:22, height:22, borderRadius:5, border:'1px solid #334155', background:'none', color:'#f1f5f9', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+                <p style={{ fontSize:10, fontWeight:600, color:'#f1f5f9', margin:'0 0 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nombre}</p>
+                <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                  <button onClick={() => cambiar(item.id,-1)} style={{ width:20, height:20, borderRadius:4, border:'1px solid #334155', background:'none', color:'#f1f5f9', cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
                   <input type="number" min="1" value={item.cantidad} onChange={e => cambiarCantidad(item.id, +e.target.value)}
-                    style={{ width:32, textAlign:'center', padding:'1px 2px', borderRadius:4, border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:11, fontWeight:700 }}/>
-                  <button onClick={() => cambiar(item.id, +1)} style={{ width:22, height:22, borderRadius:5, border:`1px solid ${color}44`, background:color, color:'#fff', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+                    style={{ width:28, textAlign:'center', padding:'1px', borderRadius:4, border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:11, fontWeight:700 }}/>
+                  <button onClick={() => cambiar(item.id,+1)} style={{ width:20, height:20, borderRadius:4, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
                 </div>
               </div>
               <div style={{ textAlign:'right', flexShrink:0 }}>
-                <p style={{ fontSize:13, fontWeight:700, color, margin:'0 0 4px' }}>{fmt(item.precio * item.cantidad)}</p>
-                <button onClick={() => setCarrito(c => c.filter(i => i.id !== item.id))}
-                  style={{ background:'none', border:'none', color:'#475569', cursor:'pointer', fontSize:11 }}>✕</button>
+                <p style={{ fontSize:12, fontWeight:700, color, margin:'0 0 3px' }}>{fmt(item.precio*item.cantidad)}</p>
+                <button onClick={() => setCarrito(c => c.filter(i => i.id !== item.id))} style={{ background:'none', border:'none', color:'#475569', cursor:'pointer', fontSize:10 }}>✕</button>
               </div>
             </div>
           ))}
@@ -660,128 +594,113 @@ export default function POSPage() {
 
         {/* Totales + Pago */}
         {carrito.length > 0 && (
-          <div style={{ padding:'12px 14px', borderTop:'1px solid #1e293b' }}>
-            {/* Totales */}
-            <div style={{ marginBottom:10 }}>
+          <div style={{ padding:'10px 12px', borderTop:'1px solid #1e293b' }}>
+            <div style={{ marginBottom:8 }}>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
                 <span style={{ fontSize:11, color:'#64748b' }}>Subtotal</span>
-                <span style={{ fontSize:12, color:'#94a3b8' }}>{fmt(subtotal)}</span>
+                <span style={{ fontSize:11, color:'#94a3b8' }}>{fmt(subtotal)}</span>
               </div>
               {descAuth && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                  <span style={{ fontSize:11, color:'#10b981' }}>{tipoDesc==='cortesia'?'Cortesía':'Descuento'} ({descAuth.authorizedBy})</span>
-                  <span style={{ fontSize:12, color:'#10b981' }}>-{fmt(descMonto)}</span>
+                  <span style={{ fontSize:11, color:'#10b981' }}>{tipoDesc==='cortesia'?'Cortesía':'Desc.'}</span>
+                  <span style={{ fontSize:11, color:'#10b981' }}>−{fmt(descMonto)}</span>
                 </div>
               )}
-              <div style={{ display:'flex', justifyContent:'space-between', marginTop:6, paddingTop:6, borderTop:'1px solid #334155' }}>
-                <span style={{ fontSize:14, fontWeight:700, color:'#f1f5f9' }}>TOTAL</span>
-                <span style={{ fontSize:24, fontWeight:800, color, fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</span>
+              <div style={{ display:'flex', justifyContent:'space-between', paddingTop:5, borderTop:'1px solid #334155' }}>
+                <span style={{ fontSize:13, fontWeight:700 }}>TOTAL</span>
+                <span style={{ fontSize:22, fontWeight:800, color, fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</span>
               </div>
             </div>
 
-            {/* Pago combinado en el panel */}
-            <div style={{ background:'#1e293b', borderRadius:8, padding:'10px 12px', marginBottom:10 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                <span style={{ fontSize:11, fontWeight:700, color:'#94a3b8' }}>PAGO COMBINADO</span>
-                {totalPagado >= total && totalPagado > 0 && (
-                  <span style={{ fontSize:10, padding:'2px 8px', borderRadius:99, background:'#10b98122', color:'#10b981', fontWeight:700 }}>COMPLETO</span>
-                )}
+            {/* Métodos de pago */}
+            <div style={{ background:'#1e293b', borderRadius:7, padding:'8px', marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                <span style={{ fontSize:10, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1 }}>Pago</span>
+                {totalPagado >= total && total > 0 && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:99, background:'#10b98122', color:'#10b981', fontWeight:700 }}>COMPLETO</span>}
               </div>
               {pagos.map(pago => {
                 const mc = METODOS_PAGO.find(m => m.id === pago.method);
                 return (
-                  <div key={pago.method} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                    <span style={{ width:8, height:8, borderRadius:'50%', background:mc?.color, flexShrink:0 }} />
-                    <span style={{ fontSize:11, color:'#94a3b8', flex:1 }}>{mc?.label}</span>
+                  <div key={pago.method} style={{ display:'flex', alignItems:'center', gap:5, marginBottom:5 }}>
+                    <div style={{ width:7, height:7, borderRadius:'50%', background:mc?.color, flexShrink:0 }}/>
+                    <span style={{ fontSize:10, color:'#94a3b8', flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{mc?.label}</span>
                     <input type="number" min="0" step="0.01"
-                      style={{ width:80, padding:'4px 6px', borderRadius:5, border:`1px solid ${mc?.color}44`, background:'#0f172a', color:'#f1f5f9', fontSize:12, fontWeight:700, textAlign:'right' }}
+                      style={{ width:72, padding:'3px 5px', borderRadius:4, border:`1px solid ${mc?.color}44`, background:'#0f172a', color:'#f1f5f9', fontSize:11, fontWeight:700, textAlign:'right' }}
                       value={pago.amount || ''} placeholder="$0.00"
                       onChange={e => actualizarMonto(pago.method, +e.target.value)}/>
                     {pagos.length > 1 && (
-                      <button onClick={() => quitarMetodo(pago.method)}
-                        style={{ background:'none', border:'none', color:'#f87171', cursor:'pointer', fontSize:14 }}>🗑</button>
+                      <button onClick={() => quitarMetodo(pago.method)} style={{ background:'none', border:'none', color:'#f87171', cursor:'pointer', fontSize:11, padding:0 }}>✕</button>
                     )}
                   </div>
                 );
               })}
               {pagos.length < METODOS_PAGO.length && (
-                <button onClick={() => {
-                  const noUsados = METODOS_PAGO.filter(m => !pagos.find(p => p.method === m.id));
-                  if (noUsados.length) agregarMetodo(noUsados[0].id);
-                }}
-                  style={{ width:'100%', padding:'5px', borderRadius:6, border:'1px dashed #334155', background:'none', color:'#475569', cursor:'pointer', fontSize:10 }}>
-                  + Agregar método de pago
+                <button onClick={() => { const no = METODOS_PAGO.filter(m => !pagos.find(p => p.method===m.id)); if(no.length) agregarMetodo(no[0].id); }}
+                  style={{ width:'100%', padding:'4px', borderRadius:5, border:'1px dashed #334155', background:'none', color:'#475569', cursor:'pointer', fontSize:10 }}>
+                  + Agregar método
                 </button>
               )}
               {esMixto && (
-                <div style={{ marginTop:8, display:'flex', justifyContent:'space-between', padding:'6px 0', borderTop:'1px solid #334155' }}>
-                  <span style={{ fontSize:11, color:'#64748b' }}>Pagado: {fmt(totalPagado)}</span>
-                  <span style={{ fontSize:11, color: totalPagado >= total ? '#10b981' : '#f59e0b' }}>
-                    Pendiente: {fmt(Math.max(0, total - totalPagado))}
-                  </span>
+                <div style={{ marginTop:6, display:'flex', justifyContent:'space-between', paddingTop:5, borderTop:'1px solid #334155' }}>
+                  <span style={{ fontSize:10, color:'#64748b' }}>Pagado: {fmt(totalPagado)}</span>
+                  <span style={{ fontSize:10, color: totalPagado>=total?'#10b981':'#f59e0b' }}>Pendiente: {fmt(Math.max(0,total-totalPagado))}</span>
+                </div>
+              )}
+              {tieneEfectivo && totalPagado > 0 && (
+                <div style={{ marginTop:6, display:'flex', justifyContent:'space-between' }}>
+                  <span style={{ fontSize:10, color:'#64748b' }}>Cambio:</span>
+                  <span style={{ fontSize:14, fontWeight:700, color:'#10b981' }}>{fmt(Math.max(0,totalPagado-total))}</span>
                 </div>
               )}
             </div>
 
-            {/* Cambio */}
-            {tieneEfectivo && totalPagado > 0 && (
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, padding:'6px 10px', background:'#0a0f1a', borderRadius:6 }}>
-                <span style={{ fontSize:12, color:'#64748b' }}>Cambio:</span>
-                <span style={{ fontSize:18, fontWeight:700, color:'#10b981' }}>
-                  {fmt(Math.max(0, totalPagado - total))}
-                </span>
-              </div>
-            )}
-
             {/* Descuento */}
             {!descAuth && !esCredito && (
               <button onClick={() => setShowDescuento(true)}
-                style={{ width:'100%', marginBottom:6, padding:'6px', borderRadius:7, fontSize:11, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer' }}>
+                style={{ width:'100%', marginBottom:5, padding:'5px', borderRadius:6, fontSize:10, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer' }}>
                 + Descuento / Cortesía
               </button>
             )}
             {showDescuento && (
-              <div style={{ background:'#0a0f1a', borderRadius:8, padding:10, marginBottom:8 }}>
-                <p style={{ fontSize:11, fontWeight:600, margin:'0 0 8px', color:'#f1f5f9' }}>Autorización gerente</p>
-                <div style={{ display:'flex', gap:4, marginBottom:6 }}>
+              <div style={{ background:'#0a0f1a', borderRadius:7, padding:8, marginBottom:6 }}>
+                <p style={{ fontSize:10, fontWeight:600, margin:'0 0 6px', color:'#f1f5f9' }}>PIN gerente</p>
+                <div style={{ display:'flex', gap:3, marginBottom:5 }}>
                   {(['descuento','cortesia'] as const).map(t => (
                     <button key={t} onClick={() => setTipoDesc(t)}
-                      style={{ flex:1, padding:'3px', borderRadius:5, fontSize:10, cursor:'pointer', border:`1px solid ${tipoDesc===t?color:'#334155'}`, background:tipoDesc===t?color+'22':'transparent', color:tipoDesc===t?color:'#64748b' }}>
-                      {t==='descuento'?'Descuento $':'Cortesía'}
+                      style={{ flex:1, padding:'3px', borderRadius:4, fontSize:9, cursor:'pointer', border:`1px solid ${tipoDesc===t?color:'#334155'}`, background:tipoDesc===t?color+'22':'transparent', color:tipoDesc===t?color:'#64748b' }}>
+                      {t==='descuento'?'Desc $':'Cortesía'}
                     </button>
                   ))}
                 </div>
-                {tipoDesc==='descuento' && <input type="number" min="0" placeholder="Monto" className="input-base" style={{ fontSize:11, marginBottom:6 }} value={descValor||''} onChange={e => setDescValor(+e.target.value)}/>}
-                <input type="password" maxLength={4} placeholder="PIN gerente" className="input-base" style={{ fontSize:11, marginBottom:4, letterSpacing:4, textAlign:'center' }} value={descPin} onChange={e => setDescPin(e.target.value)}/>
-                {pinError && <p style={{ color:'#f87171', fontSize:10, margin:'0 0 4px' }}>{pinError}</p>}
-                <div style={{ display:'flex', gap:4 }}>
-                  <button onClick={() => { setShowDescuento(false); setDescPin(''); setPinError(''); }} style={{ flex:1, padding:'5px', borderRadius:5, fontSize:11, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer' }}>Cancelar</button>
-                  <button onClick={verificarPin} disabled={descPin.length!==4} style={{ flex:1, padding:'5px', borderRadius:5, fontSize:11, border:'none', background:color, color:'#fff', cursor:'pointer' }}>Autorizar</button>
+                {tipoDesc==='descuento' && <input type="number" min="0" placeholder="Monto" className="input-base" style={{ fontSize:10, marginBottom:5 }} value={descValor||''} onChange={e => setDescValor(+e.target.value)}/>}
+                <input type="password" maxLength={4} placeholder="PIN 4 dígitos" className="input-base" style={{ fontSize:10, marginBottom:3, letterSpacing:4, textAlign:'center' }} value={descPin} onChange={e => setDescPin(e.target.value)}/>
+                {pinError && <p style={{ color:'#f87171', fontSize:9, margin:'0 0 3px' }}>{pinError}</p>}
+                <div style={{ display:'flex', gap:3 }}>
+                  <button onClick={() => { setShowDescuento(false); setDescPin(''); setPinError(''); }} style={{ flex:1, padding:'4px', borderRadius:4, fontSize:10, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer' }}>Cancelar</button>
+                  <button onClick={verificarPin} disabled={descPin.length!==4} style={{ flex:1, padding:'4px', borderRadius:4, fontSize:10, border:'none', background:color, color:'#fff', cursor:'pointer' }}>Autorizar</button>
                 </div>
               </div>
             )}
 
-            {error && <p style={{ color:'#f87171', fontSize:11, marginBottom:6 }}>{error}</p>}
+            {error && <p style={{ color:'#f87171', fontSize:10, marginBottom:5 }}>{error}</p>}
 
-            {/* Botón cobrar */}
             <button onClick={cobrar}
-              disabled={saleM.isPending || (esCredito && !clienteId) || carrito.length === 0}
-              style={{ width:'100%', padding:'14px', borderRadius:10, border:'none', fontSize:15, fontWeight:800,
-                cursor:'pointer', letterSpacing:0.5, background:carrito.length===0||(esCredito&&!clienteId)?'#1e293b':(esCredito||clienteId)?'#f59e0b':color,
-                color: carrito.length===0?'#334155':'#fff', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-              🔒 {saleM.isPending ? 'Procesando…' : esCredito ? `Registrar crédito — ${fmt(total)}` : `COBRAR Y FINALIZAR`}
-              {!saleM.isPending && !esCredito && <span style={{ fontSize:10, opacity:0.7 }}>(Enter)</span>}
+              disabled={saleM.isPending || (esCredito&&!clienteId) || carrito.length===0}
+              style={{ width:'100%', padding:'12px', borderRadius:9, border:'none', fontSize:14, fontWeight:800, cursor:'pointer', background:carrito.length===0||(esCredito&&!clienteId)?'#1e293b':(esCredito||clienteId)?'#f59e0b':color, color:carrito.length===0?'#334155':'#fff', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+              🔒 {saleM.isPending?'Procesando…':esCredito?`Crédito ${fmt(total)}`:`COBRAR (Enter)`}
             </button>
-          </div>
-        )}
 
-        {exito && (
-          <div style={{ padding:16, textAlign:'center', background:'rgba(16,185,129,0.08)', borderTop:'1px solid rgba(16,185,129,0.2)' }}>
-            <p style={{ fontSize:24, margin:'0 0 4px' }}>✔</p>
-            <p style={{ color:'#10b981', fontWeight:700, margin:0, fontSize:14 }}>¡Venta registrada!</p>
+            {exito && (
+              <div style={{ marginTop:8, padding:10, textAlign:'center', background:'rgba(16,185,129,0.08)', borderRadius:7, border:'1px solid rgba(16,185,129,0.2)' }}>
+                <p style={{ fontSize:20, margin:'0 0 2px' }}>✔</p>
+                <p style={{ color:'#10b981', fontWeight:700, margin:0, fontSize:12 }}>¡Venta registrada!</p>
+              </div>
+            )}
           </div>
         )}
       </div>
+      {/* ══ FIN PANEL DERECHO ═══════════════════════════════ */}
+
 
       {/* ── MODAL COBRO — selección de pago aquí ── */}
       {showCobro&&(
