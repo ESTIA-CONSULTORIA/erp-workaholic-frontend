@@ -49,7 +49,6 @@ export default function App() {
         <Route path="/proveedores" element={<ProveedoresPage/>}/>
         <Route path="/clientes" element={<ClientesPage/>}/>
         <Route path="/intercompany" element={<IntercompanyPage/>}/>
-        <Route path="/intercompany" element={<IntercompanyPage/>}/>
         <Route path="/bitacora" element={<BitacoraPage/>}/>
         <Route path="/machete-reportes" element={<MacheteReportesPage/>}/>
         <Route path="/reportes/ventas" element={<VentasReportePage/>}/>

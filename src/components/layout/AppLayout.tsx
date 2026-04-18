@@ -23,6 +23,7 @@ const NAV_GROUPS = [
       { to:'/machete/compras',    icon:'🛒', label:'Compras',      companies:['MACHETE'] },
       { to:'/machete/produccion', icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
       { to:'/catalogo',           icon:'≋',  label:'Catálogo',     companies:['MACHETE'] },
+      { to:'/clientes',      icon:'👤', label:'Clientes',     roles:['admin','administrador','gerente','contador'] },
       { to:'/proveedores',        icon:'🏭', label:'Proveedores',  roles:['admin','administrador','gerente','contador'] },
     ]
   },
@@ -34,7 +35,6 @@ const NAV_GROUPS = [
       { to:'/gastos',          icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
       { to:'/bitacora',        icon:'📋', label:'Bitácora',     roles:['admin','administrador','director'] },
       { to:'/intercompany',    icon:'↔', label:'Intercompany', roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/intercompany',   icon:'🔄', label:'Intercompany', roles:['admin','administrador','gerente','contador','director'] },
       { to:'/conciliacion',    icon:'⊜', label:'Arqueo',  roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxc',             icon:'◷', label:'CxC',           roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxp',             icon:'◶', label:'CxP',           roles:['admin','administrador','gerente','contador','director'] },
