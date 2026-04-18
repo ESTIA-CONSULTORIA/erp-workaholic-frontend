@@ -48,7 +48,10 @@ export default function ComprasPage() {
     notas:         '',
   });
   const [lineas, setLineas] = useState<any[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [cancelId,   setCancelId]   = useState<string|null>(null);
+  const [pagina,     setPagina]     = useState(1);
+  const POR_PAGINA = 20;
 
   // Modal detalle
   const [compraDetalle, setCompraDetalle] = useState<any>(null);

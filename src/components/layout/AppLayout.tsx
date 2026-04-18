@@ -90,7 +90,7 @@ function getUltimos12() {
   return result;
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children, noPadding }: { children: React.ReactNode; noPadding?: boolean }) {
   const navigate = useNavigate();
   const { user, activeCompany, activePeriod, setActiveCompany, setActivePeriod, logout } = useERPStore();
   const [collapsed,  setCollapsed]  = useState(false);
@@ -245,7 +245,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {periodos.find(p => p.key === activePeriod)?.label || activePeriod}
           </span>
         </header>
-        <main style={{ flex:1, overflowY:'auto', padding:24 }}>
+        <main style={{ flex:1, overflowY: noPadding ? 'hidden' : 'auto', padding: noPadding ? 0 : 24, display: noPadding ? 'flex' : 'block', flexDirection: 'column' }}>
           {children}
         </main>
       </div>

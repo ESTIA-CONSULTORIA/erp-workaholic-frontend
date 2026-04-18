@@ -274,7 +274,17 @@ export default function POSPage() {
       }
     }
     setError('');
-    if(!esCredito){setPagos([{method:'EFECTIVO',amount:0}]);setConCuanto(0);setShowCobro(true);return;}
+    if(!esCredito){
+      // If payment is already configured in panel with correct total, go directly
+      const panelTotal = pagos.reduce((t,p)=>t+Number(p.amount||0),0);
+      if(panelTotal >= total && total > 0) {
+        saleM.mutate();
+      } else {
+        // Open full cobro modal
+        setShowCobro(true);
+      }
+      return;
+    }
     saleM.mutate();
   };
 
@@ -340,7 +350,8 @@ export default function POSPage() {
   const masVendidos = [...prods].sort((a: any, b: any) => Number(b.stock || 0) - Number(a.stock || 0)).slice(0, 6);
 
   return(
-    <div style={{ display:'flex', height:'100vh', background:'#0a0f1a', fontFamily:'system-ui,-apple-system,sans-serif', overflow:'hidden' }}>
+    <AppLayout noPadding>
+    <div style={{ display:'flex', height:'100%', flex:1, background:'#0a0f1a', fontFamily:'system-ui,-apple-system,sans-serif', overflow:'hidden' }}>
 
       {/* ── SIDEBAR IZQUIERDO ────────────────────────── */}
       <div style={{ width:180, background:'#0f172a', borderRight:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
@@ -1128,5 +1139,6 @@ export default function POSPage() {
         </div>
       )}
     </div>
+    </AppLayout>
   );
 }
