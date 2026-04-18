@@ -4,6 +4,25 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt } from '../../lib/api';
 
+import React from 'react';
+
+class POSErrorBoundary extends React.Component<{children:React.ReactNode},{error:string|null}> {
+  constructor(props: any) { super(props); this.state = {error: null}; }
+  static getDerivedStateFromError(e: Error) { return {error: e.message}; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{position:'fixed',inset:0,background:'#0a0f1a',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16}}>
+          <p style={{color:'#f87171',fontSize:18,fontWeight:700}}>Error en POS</p>
+          <pre style={{color:'#fca5a5',fontSize:12,maxWidth:600,whiteSpace:'pre-wrap',background:'#1e293b',padding:16,borderRadius:8}}>{this.state.error}</pre>
+          <button onClick={()=>window.location.reload()} style={{padding:'8px 20px',background:'#B5451B',color:'#fff',border:'none',borderRadius:8,cursor:'pointer'}}>Recargar</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const CANALES = [
   { id:'MOSTRADOR', label:'Tienda',      color:'#3b82f6', priceKey:'priceMostrador' },
   { id:'MAYOREO',   label:'Mayoreo',     color:'#f59e0b', priceKey:'priceMayoreo'   },
@@ -130,7 +149,7 @@ const RefTooltip = ({method}:{method:string}) => {
   );
 };
 
-export default function POSPage() {
+function POSPageInner() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#B5451B';
@@ -209,38 +228,7 @@ export default function POSPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [showCobro, showDescuento, showTiraX, showTiraZ, showMovCaja, carrito, pagos, total, esCredito, clienteId]);
 
-  // ── Atajos de teclado ────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      const isBusqueda = (e.target as HTMLElement) === busquedaRef.current;
-      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isBusqueda) return;
-      if (e.key === 'F2') { e.preventDefault(); busquedaRef.current?.focus(); busquedaRef.current?.select(); }
-      if (e.key === 'F3') { e.preventDefault(); clienteRef.current?.focus(); }
-      if (e.key === 'F4') { e.preventDefault(); agregarMetodo('EFECTIVO'); }
-      if (e.key === 'F5') { e.preventDefault(); agregarMetodo('TARJETA_DEBITO'); }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        if (showCobro)     { setShowCobro(false); return; }
-        if (showDescuento) { setShowDescuento(false); return; }
-        if (showTiraX)     { setShowTiraX(false); return; }
-        if (showTiraZ)     { setShowTiraZ(false); return; }
-        if (showMovCaja)   { setShowMovCaja(null); return; }
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
-        e.preventDefault();
-        setCarrito([]); setDescAuth(null); setDescValor(0);
-        setOcId(''); setClienteId(''); setEsCredito(false);
-        setPagos([{ method:'EFECTIVO', amount:0 }]);
-        setBusqueda('');
-      }
-      if (e.key === 'Enter' && !showCobro && carrito.length > 0) {
-        e.preventDefault(); cobrar();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [showCobro, showDescuento, showTiraX, showTiraZ, showMovCaja, carrito, total, esCredito, clienteId]);
+
 
   const canalConfig = CANALES.find(c => c.id === canal)!;
   const canalColor  = canalConfig.color;
@@ -1205,4 +1193,8 @@ export default function POSPage() {
       )}
     </div>
   );
+}
+
+export default function POSPage() {
+  return <POSErrorBoundary><POSPageInner/></POSErrorBoundary>;
 }
