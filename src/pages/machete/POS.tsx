@@ -1,5 +1,5 @@
 import AppLayout from '../../components/layout/AppLayout';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt } from '../../lib/api';
@@ -166,6 +166,45 @@ export default function POSPage() {
   const [showCobro,     setShowCobro]     = useState(false);
   const [conCuanto,     setConCuanto]     = useState(0);
   const [efectivoCobro, setEfectivoCobro] = useState<any>({});
+
+  const busquedaRef = useRef<HTMLInputElement>(null);
+  const clienteRef  = useRef<HTMLSelectElement>(null);
+
+  // ── Atajos de teclado ─────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // No activar si estamos en un input/textarea que no sea el de búsqueda
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isBusqueda = (e.target as HTMLElement) === busquedaRef.current;
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isBusqueda) return;
+
+      if (e.key === 'F2') { e.preventDefault(); busquedaRef.current?.focus(); busquedaRef.current?.select(); }
+      if (e.key === 'F3') { e.preventDefault(); clienteRef.current?.focus(); }
+      if (e.key === 'F4') { e.preventDefault(); agregarMetodo('EFECTIVO'); }
+      if (e.key === 'F5') { e.preventDefault(); agregarMetodo('TARJETA_DEBITO'); }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showCobro)    { setShowCobro(false); return; }
+        if (showDescuento){ setShowDescuento(false); return; }
+        if (showTiraX)    { setShowTiraX(false); return; }
+        if (showTiraZ)    { setShowTiraZ(false); return; }
+        if (showMovCaja)  { setShowMovCaja(null); return; }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+        e.preventDefault();
+        setCarrito([]); setDescAuth(null); setDescValor(0); setDescPin('');
+        setOcId(''); setClienteId(''); setEsCredito(false);
+        setPagos([{ method:'EFECTIVO', amount:0 }]);
+        setBusqueda('');
+      }
+      if (e.key === 'Enter' && !showCobro && carrito.length > 0) {
+        e.preventDefault();
+        cobrar();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showCobro, showDescuento, showTiraX, showTiraZ, showMovCaja, carrito, pagos, total, esCredito, clienteId]);
 
   const canalConfig = CANALES.find(c => c.id === canal)!;
   const canalColor  = canalConfig.color;
@@ -436,13 +475,14 @@ export default function POSPage() {
           <div style={{ flex:1, position:'relative' }}>
             <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#475569', fontSize:14 }}>🔍</span>
             <input
+              ref={busquedaRef}
               value={busqueda} onChange={e => setBusqueda(e.target.value)}
               placeholder="Buscar producto, SKU o código...  F2"
               style={{ width:'100%', padding:'8px 10px 8px 34px', borderRadius:8, border:'1px solid #1e293b',
                 background:'#0a0f1a', color:'#f1f5f9', fontSize:12, outline:'none', boxSizing:'border-box' }}/>
           </div>
           {/* Cliente */}
-          <select value={clienteId} onChange={e => { setClienteId(e.target.value); setOcId(''); setCarrito([]); }}
+          <select ref={clienteRef} value={clienteId} onChange={e => { setClienteId(e.target.value); setOcId(''); setCarrito([]); }}
             style={{ padding:'7px 10px', borderRadius:8, fontSize:11, background:'#0a0f1a', border:`1px solid ${clienteId?'#f59e0b':'#1e293b'}`, color:clienteId?'#f59e0b':'#475569', cursor:'pointer', minWidth:140 }}>
             <option value="">👤 Cliente  F3</option>
             {(clientes as any[]).map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}

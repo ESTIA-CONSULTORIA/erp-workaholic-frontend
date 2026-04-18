@@ -1,5 +1,5 @@
 import AppLayout from '../../components/layout/AppLayout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
@@ -60,7 +60,7 @@ export default function ComprasPage() {
 
   // Queries
   // Leer prefill de Documentos OCR
-  useState(() => {
+  useEffect(() => {
     const prefill = sessionStorage.getItem('compra_prefill');
     if (prefill) {
       try {
@@ -75,7 +75,7 @@ export default function ComprasPage() {
         setVista('nueva');
       } catch(e) {}
     }
-  });
+  }, []);
 
   const { data: compras = [], isLoading } = useQuery({
     queryKey: ['compras', cid],
