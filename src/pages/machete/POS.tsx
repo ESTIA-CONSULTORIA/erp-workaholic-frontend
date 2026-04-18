@@ -166,6 +166,9 @@ export default function POSPage() {
   const [showCobro,     setShowCobro]     = useState(false);
   const [conCuanto,     setConCuanto]     = useState(0);
   const [efectivoCobro, setEfectivoCobro] = useState<any>({});
+  const [busqueda,      setBusqueda]      = useState('');
+  const [filtroGrupo,   setFiltroGrupo]   = useState<string>('TODOS');
+  const [vistaNav,      setVistaNav]      = useState<'venta'|'historial'>('venta');
 
   const busquedaRef = useRef<HTMLInputElement>(null);
   const clienteRef  = useRef<HTMLSelectElement>(null);
@@ -355,10 +358,7 @@ export default function POSPage() {
   const GRUPOS:Record<string,{label:string,familias:string[],color:string}>={RES:{label:'Res',familias:['Machete','Chicali','Escarchado','Scrap'],color:'#B5451B'},CER:{label:'Cerdo',familias:['Cerdo'],color:'#8b5cf6'},OTROS:{label:'Otros',familias:['Machaca','Otros'],color:'#64748b'}};
   const prods=(inventory as any[]).filter((p:any)=>p.isActive!==false);
 
-  // ─── POS UI ──────────────────────────────────────────────────
-  const [busqueda,    setBusqueda]    = useState('');
-  const [filtroGrupo, setFiltroGrupo] = useState<string>('TODOS');
-  const [vistaNav,    setVistaNav]    = useState<'venta'|'historial'>('venta');
+  // ─── POS UI ───────────────────────────────────────────────────
 
   const FILTROS = [
     { id:'TODOS',       label:'Todos' },
