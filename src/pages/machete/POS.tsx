@@ -187,6 +187,7 @@ function POSPageInner() {
   const [efectivoCobro, setEfectivoCobro] = useState<any>({});
   const [busqueda,      setBusqueda]      = useState('');
   const [filtroGrupo,   setFiltroGrupo]   = useState('TODOS');
+  const [vistaNav,      setVistaNav]      = useState<'venta'|'historial'>('venta');
 
   const busquedaRef = useRef<HTMLInputElement>(null);
   const clienteRef  = useRef<HTMLSelectElement>(null);
