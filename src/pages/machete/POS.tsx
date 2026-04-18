@@ -385,11 +385,21 @@ function POSPageInner() {
   const prods=(inventory as any[]).filter((p:any)=>p.isActive!==false);
   const FILTROS = [
     {id:'TODOS',label:'Todos'},{id:'RES',label:'Res'},{id:'CHICALI',label:'Chicali'},
-    {id:'ESCARCHADO',label:'Escarchado'},{id:'CERDO',label:'Cerdo'},{id:'MACHACA',label:'Machaca'},{id:'SCRAP',label:'Scrap'},
+    {id:'ESCARCHADO',label:'Escarchado'},{id:'CERDO',label:'Cerdo'},{id:'MACHACA',label:'Machaca'},
   ];
+  const FAMILIA_GRUPO: Record<string, string> = {
+    'Machete':    'RES',
+    'Chicali':    'RES',
+    'Escarchado': 'RES',
+    'Scrap':      'SCRAP',
+    'Cerdo':      'CERDO',
+    'Machaca':    'MACHACA',
+    'Otros':      'OTROS',
+  };
   const prodsFiltrados = prods.filter((p:any) => {
-    const fam = getFamilia(p).toUpperCase();
-    const passGrupo = filtroGrupo === 'TODOS' || fam.includes(filtroGrupo);
+    const fam     = getFamilia(p);
+    const grupo   = FAMILIA_GRUPO[fam] || 'OTROS';
+    const passGrupo  = filtroGrupo === 'TODOS' || grupo === filtroGrupo || fam.toUpperCase() === filtroGrupo;
     const passSearch = !busqueda || p.name?.toLowerCase().includes(busqueda.toLowerCase()) || (p.sku||'').toLowerCase().includes(busqueda.toLowerCase());
     return passGrupo && passSearch;
   });
@@ -508,8 +518,8 @@ function POSPageInner() {
           {clienteId && (
             <select value={ocId} onChange={e => { if(e.target.value){const oc=(ocsPendientes as any[]).find((o:any)=>o.id===e.target.value);if(oc)cargarDesdeOC(oc);}else{setOcId('');setCarrito([]);setEsCredito(true);} }}
               style={{ padding:'7px 10px', borderRadius:8, fontSize:11, background:'#0a0f1a', border:`1px solid ${ocId?'#10b981':'#1e293b'}`, color:ocId?'#10b981':'#475569', cursor:'pointer', minWidth:140 }}>
-              <option value="">📋 OC pendiente</option>
-              {(ocsPendientes as any[]).map((oc:any) => <option key={oc.id} value={oc.id}>{oc.numero}</option>)}
+              <option value="">💳 Venta libre a crédito</option>
+              {(ocsPendientes as any[]).map((oc:any) => <option key={oc.id} value={oc.id}>📋 {oc.numero}</option>)}
             </select>
           )}
           <div style={{ display:'flex', gap:6 }}>
