@@ -290,13 +290,26 @@ export default function RHPage() {
                       placeholder="Motivo o comentario adicional"/>
                   </div>
                 </div>
-                {/* Indicador de goce */}
-                <div style={{ marginBottom:12, padding:'8px 12px', borderRadius:8,
-                  background: solForm.conGoce ? '#10b98111' : '#f8717111',
-                  border: `1px solid ${solForm.conGoce ? '#10b98133' : '#f8717133'}` }}>
-                  <span style={{ fontSize:12, color: solForm.conGoce ? '#10b981' : '#f87171' }}>
-                    {solForm.conGoce ? '✓ Con goce de sueldo — no afecta nómina' : '✕ Sin goce de sueldo — se descuenta en nómina'}
-                  </span>
+                {/* Indicador de goce + días calculados */}
+                <div style={{ marginBottom:12, display:'flex', gap:8 }}>
+                  <div style={{ flex:1, padding:'8px 12px', borderRadius:8,
+                    background: solForm.conGoce ? '#10b98111' : '#f8717111',
+                    border: `1px solid ${solForm.conGoce ? '#10b98133' : '#f8717133'}` }}>
+                    <span style={{ fontSize:12, color: solForm.conGoce ? '#10b981' : '#f87171' }}>
+                      {solForm.conGoce ? '✓ Con goce de sueldo' : '✕ Sin goce — descuenta en nómina'}
+                    </span>
+                  </div>
+                  {solForm.startDate && solForm.endDate && (() => {
+                    // Estimate days (backend calculates exact business days)
+                    const start = new Date(solForm.startDate);
+                    const end   = new Date(solForm.endDate);
+                    const total = Math.ceil((end.getTime() - start.getTime()) / (24*60*60*1000)) + 1;
+                    return (
+                      <div style={{ padding:'8px 12px', borderRadius:8, background:'#1e293b', border:'1px solid #334155' }}>
+                        <span style={{ fontSize:12, color:'#94a3b8' }}>~{total} días naturales</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
                   <button className="btn-secondary" style={{ fontSize:12 }} onClick={() => setShowSolicitud(false)}>Cancelar</button>
