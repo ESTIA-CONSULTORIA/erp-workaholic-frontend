@@ -50,6 +50,7 @@ export default function ComprasPage() {
   const [lineas, setLineas] = useState<any[]>([]);
   const [saving,     setSaving]     = useState(false);
   const [cancelId,   setCancelId]   = useState<string|null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [pagina,     setPagina]     = useState(1);
   const POR_PAGINA = 20;
 

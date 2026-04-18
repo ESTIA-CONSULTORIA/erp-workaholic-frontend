@@ -389,13 +389,20 @@ export default function POSPage() {
   const masVendidos = [...prods].sort((a: any, b: any) => Number(b.stock || 0) - Number(a.stock || 0)).slice(0, 6);
 
   return(
-    <AppLayout noPadding>
-    <div style={{ display:'flex', height:'100%', flex:1, background:'#0a0f1a', fontFamily:'system-ui,-apple-system,sans-serif', overflow:'hidden' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', height:'100vh', background:'#0a0f1a', fontFamily:'system-ui,-apple-system,sans-serif', overflow:'hidden' }}>
 
       {/* ── SIDEBAR IZQUIERDO ────────────────────────── */}
       <div style={{ width:180, background:'#0f172a', borderRight:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
+        {/* Back button */}
+        <div style={{ padding:'8px 10px', borderBottom:'1px solid #1e293b', display:'flex', justifyContent:'flex-end' }}>
+          <button onClick={() => window.history.back()}
+            style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #334155', background:'none',
+              color:'#64748b', cursor:'pointer', fontSize:11, display:'flex', alignItems:'center', gap:4 }}>
+            ← Salir
+          </button>
+        </div>
         {/* Logo */}
-        <div style={{ padding:'16px 14px', borderBottom:'1px solid #1e293b' }}>
+        <div style={{ padding:'12px 14px', borderBottom:'1px solid #1e293b' }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <div style={{ width:32, height:32, borderRadius:8, background:color, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:14, color:'#fff' }}>M</div>
             <div>
@@ -1179,6 +1186,5 @@ export default function POSPage() {
         </div>
       )}
     </div>
-    </AppLayout>
   );
 }

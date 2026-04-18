@@ -7,6 +7,8 @@ import { useERPStore } from '../store/erp.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, fmt, fmtDate, fmtPct } from '../lib/api';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ImportCSV from '../components/ImportCSV';
 
 // ── CORTES ────────────────────────────────────────────────────
 export function CortesPage() {
@@ -531,6 +533,7 @@ export function ConciliacionPage() {
   const qc    = useQueryClient();
 
   const esAdmin = ['admin','administrador','gerente'].includes(role);
+  const [tab, setTab] = useState<'arqueo'|'movimientos'>('arqueo');
 
   const [editId,   setEditId]   = useState<string|null>(null);
   const [editName, setEditName] = useState('');
