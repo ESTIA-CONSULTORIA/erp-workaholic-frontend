@@ -193,6 +193,27 @@ function POSPageInner() {
 
 
   // ── Atajos de teclado ─────────────────────────────────────
+
+
+
+  const canalConfig = CANALES.find(c => c.id === canal)!;
+  const canalColor  = canalConfig.color;
+  const priceKey    = canalConfig.priceKey;
+
+  const subtotal       = carrito.reduce((t,i) => t+i.precio*i.cantidad, 0);
+  const descMonto      = tipoDesc==='cortesia' ? subtotal : (descValor > 0 ? Math.min(descValor, subtotal) : 0);
+  const total          = descAuth ? Math.max(0, subtotal - descMonto) : subtotal;
+  const totalPagado    = pagos.reduce((t,p) => t+(Number(p.amount)||0), 0);
+  const esMixto        = pagos.length > 1;
+  const tieneEfectivo  = pagos.some(p => p.method === 'EFECTIVO');
+  const otrosPagos     = pagos.filter(p => p.method !== 'EFECTIVO').reduce((t,p) => t+(Number(p.amount)||0), 0);
+  const faltaEfectivo  = Math.max(0, total - otrosPagos);
+  const metodoPrincipal = pagos[0]?.method || 'EFECTIVO';
+
+  const { data: inventory = [] } = useQuery({ queryKey:['pt-inventory',cid], queryFn:()=>api.get(`/companies/${cid}/machete/inventory/pt`).then(r=>r.data), enabled:!!cid });
+  const { data: clientes  = [] } = useQuery({ queryKey:['clients',cid],       queryFn:()=>api.get(`/companies/${cid}/clients`).then(r=>r.data),                enabled:!!cid });
+  const { data: ocsPendientes=[] } = useQuery({ queryKey:['ocs-pendientes',cid,clienteId], queryFn:()=>api.get(`/companies/${cid}/ordenes?clientId=${clienteId}&status=ACTIVAS`).then(r=>r.data), enabled:!!cid&&!!clienteId });
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // No activar si estamos en un input/textarea que no sea el de búsqueda
@@ -227,26 +248,6 @@ function POSPageInner() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [showCobro, showDescuento, showTiraX, showTiraZ, showMovCaja, carrito, pagos, total, esCredito, clienteId]);
-
-
-
-  const canalConfig = CANALES.find(c => c.id === canal)!;
-  const canalColor  = canalConfig.color;
-  const priceKey    = canalConfig.priceKey;
-
-  const subtotal       = carrito.reduce((t,i) => t+i.precio*i.cantidad, 0);
-  const descMonto      = tipoDesc==='cortesia' ? subtotal : (descValor > 0 ? Math.min(descValor, subtotal) : 0);
-  const total          = descAuth ? Math.max(0, subtotal - descMonto) : subtotal;
-  const totalPagado    = pagos.reduce((t,p) => t+(Number(p.amount)||0), 0);
-  const esMixto        = pagos.length > 1;
-  const tieneEfectivo  = pagos.some(p => p.method === 'EFECTIVO');
-  const otrosPagos     = pagos.filter(p => p.method !== 'EFECTIVO').reduce((t,p) => t+(Number(p.amount)||0), 0);
-  const faltaEfectivo  = Math.max(0, total - otrosPagos);
-  const metodoPrincipal = pagos[0]?.method || 'EFECTIVO';
-
-  const { data: inventory = [] } = useQuery({ queryKey:['pt-inventory',cid], queryFn:()=>api.get(`/companies/${cid}/machete/inventory/pt`).then(r=>r.data), enabled:!!cid });
-  const { data: clientes  = [] } = useQuery({ queryKey:['clients',cid],       queryFn:()=>api.get(`/companies/${cid}/clients`).then(r=>r.data),                enabled:!!cid });
-  const { data: ocsPendientes=[] } = useQuery({ queryKey:['ocs-pendientes',cid,clienteId], queryFn:()=>api.get(`/companies/${cid}/ordenes?clientId=${clienteId}&status=ACTIVAS`).then(r=>r.data), enabled:!!cid&&!!clienteId });
 
   const agregar = (p:any) => {
     if (ocId) return;
