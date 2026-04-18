@@ -14,6 +14,7 @@ import IntercompanyPage from './pages/Intercompany';
 import IntercompanyPage from './pages/Intercompany';
 import MacheteReportesPage, { VentasReportePage, CxCReportePage, CxPReportePage } from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
+import MiPerfilPage from './pages/rh/MiPerfil';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
 import { CortesPage, GastosPage, ConciliacionPage, CxCPage, CxPPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage, BitacoraPage } from './pages/AllPages';
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/machete/produccion" element={<ProduccionPage/>}/>
         <Route path="/machete/inventario" element={<InventarioPage/>}/>
         <Route path="/rh" element={<RHPage/>}/>
+        <Route path="/mi-perfil" element={<MiPerfilPage/>}/>
         <Route path="/rh/empleados/:id" element={<ExpedientePage/>}/>
         <Route path="/rh/nomina" element={<NominaPage/>}/>
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
