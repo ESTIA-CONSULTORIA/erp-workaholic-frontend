@@ -1,47 +1,3 @@
-import AppLayout from '../../components/layout/AppLayout';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate, fmtPct } from '../../lib/api';
-
-type TabId = 'ventas' | 'cxc' | 'cxp';
-
-export default function MacheteReportesPage() {
-  const { activeCompany, activePeriod } = useERPStore();
-  const cid   = activeCompany?.companyId;
-  const color = activeCompany?.color || '#B5451B';
-  const [tab, setTab] = useState<TabId>('ventas');
-
-  const TABS: { id: TabId; label: string }[] = [
-    { id: 'ventas', label: 'Ventas' },
-    { id: 'cxc',   label: 'CxC multicliente' },
-    { id: 'cxp',   label: 'CxP' },
-  ];
-
-  return (
-    <AppLayout>
-      <div style={{ maxWidth:1100 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Reportes</h1>
-        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
-                borderBottom: tab===t.id ? `2px solid ${color}` : '2px solid transparent',
-                color: tab===t.id ? color : '#64748b', cursor:'pointer' }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {tab === 'ventas' && <VentasTab    cid={cid!} color={color} activePeriod={activePeriod}/>}
-        {tab === 'cxc'    && <CxCReporteTab cid={cid!} color={color}/>}
-        {tab === 'cxp'    && <CxPReporteTab cid={cid!} color={color}/>}
-      </div>
-    </AppLayout>
-  );
-}
-
-// ── VENTAS ────────────────────────────────────────────────────
-const hoy = new Date().toISOString().slice(0,10);
 function VentasTab({ cid, color, activePeriod }: any) {
   const [tipoFiltro,  setTipoFiltro]  = useState<'mes'|'dia'|'rango'>('mes');
   const [periodo,     setPeriodo]     = useState(activePeriod || hoy.slice(0,7));
@@ -243,7 +199,6 @@ function VentasTab({ cid, color, activePeriod }: any) {
   );
 }
 
-// ── CxC MULTICLIENTE ─────────────────────────────────────────
 function CxCReporteTab({ cid, color }: any) {
   const hoyStr = new Date().toISOString().slice(0,10);
   const [tipoFiltro,  setTipoFiltro]  = useState<'mes'|'dia'|'rango'>('mes');
@@ -393,7 +348,6 @@ function CxCReporteTab({ cid, color }: any) {
   );
 }
 
-// ── CxP ───────────────────────────────────────────────────────
 function CxPReporteTab({ cid, color }: any) {
   const hoyStr = new Date().toISOString().slice(0,10);
   const [tipoFiltro,  setTipoFiltro]  = useState<'mes'|'dia'|'rango'>('mes');
@@ -542,6 +496,55 @@ function CxPReporteTab({ cid, color }: any) {
     </div>
   );
 }
+
+import AppLayout from '../../components/layout/AppLayout';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useERPStore } from '../../store/erp.store';
+import { api, fmt, fmtDate, fmtPct } from '../../lib/api';
+
+type TabId = 'ventas' | 'cxc' | 'cxp';
+
+export default function MacheteReportesPage() {
+  const { activeCompany, activePeriod } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#B5451B';
+  const [tab, setTab] = useState<TabId>('ventas');
+
+  const TABS: { id: TabId; label: string }[] = [
+    { id: 'ventas', label: 'Ventas' },
+    { id: 'cxc',   label: 'CxC multicliente' },
+    { id: 'cxp',   label: 'CxP' },
+  ];
+
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1100 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Reportes</h1>
+        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
+                borderBottom: tab===t.id ? `2px solid ${color}` : '2px solid transparent',
+                color: tab===t.id ? color : '#64748b', cursor:'pointer' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {tab === 'ventas' && <VentasTab    cid={cid!} color={color} activePeriod={activePeriod}/>}
+        {tab === 'cxc'    && <CxCReporteTab cid={cid!} color={color}/>}
+        {tab === 'cxp'    && <CxPReporteTab cid={cid!} color={color}/>}
+      </div>
+    </AppLayout>
+  );
+}
+
+// ── VENTAS ────────────────────────────────────────────────────
+const hoy = new Date().toISOString().slice(0,10);
+
+// ── CxC MULTICLIENTE ─────────────────────────────────────────
+
+// ── CxP ───────────────────────────────────────────────────────
 
 // ── STANDALONE REPORT PAGES ───────────────────────────────────
 export function VentasReportePage() {

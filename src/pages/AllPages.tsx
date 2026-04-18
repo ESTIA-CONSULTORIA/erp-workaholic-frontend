@@ -1432,42 +1432,6 @@ function ERRow({ label, value, antValue, color, bold, indent, showComp }: any) {
   );
 }
 
-export function ReportesPage() {
-  const { activeCompany, activePeriod } = useERPStore();
-  const cid   = activeCompany?.companyId;
-  const color = activeCompany?.color || '#3b82f6';
-  const [tab, setTab] = useState<'er'|'flujo'|'balance'>('er');
-
-  const TABS = [
-    { id:'er',      label:'Estado de Resultados' },
-    { id:'flujo',   label:'Flujo de Efectivo' },
-    { id:'balance', label:'Balance General' },
-  ] as const;
-
-  return (
-    <AppLayout>
-      <div style={{ maxWidth:1000 }}>
-        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Estados Financieros</h1>
-        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
-                borderBottom: tab===t.id ? `2px solid ${color}` : '2px solid transparent',
-                color: tab===t.id ? color : '#64748b', cursor:'pointer' }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {/* Todos los tabs se montan desde el inicio para cargar en paralelo */}
-        <div style={{ display: tab === 'er'      ? 'block' : 'none' }}><ERTab      cid={cid!} color={color} activePeriod={activePeriod}/></div>
-        <div style={{ display: tab === 'flujo'   ? 'block' : 'none' }}><FlujoTab   cid={cid!} color={color} activePeriod={activePeriod}/></div>
-        <div style={{ display: tab === 'balance' ? 'block' : 'none' }}><BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/></div>
-      </div>
-    </AppLayout>
-  );
-}
-
-// ── Flujo de Efectivo ─────────────────────────────────────────
 function FlujoTab({ cid, color, activePeriod }: any) {
   const { data: flujo, isLoading } = useQuery({
     queryKey: ['cash-flow', cid, activePeriod],
@@ -1575,7 +1539,6 @@ function FlujoTab({ cid, color, activePeriod }: any) {
   );
 }
 
-// ── Balance General ───────────────────────────────────────────
 function BalanceTab({ cid, color, activePeriod }: any) {
   const { data: balance, isLoading } = useQuery({
     queryKey: ['balance-sheet', cid, activePeriod],
@@ -1642,9 +1605,6 @@ function BalanceTab({ cid, color, activePeriod }: any) {
   );
 }
 
-
-
-// ── Estado de Resultados ──────────────────────────────────────
 function ERTab({ cid, color, activePeriod }: any) {
   // Calcular mes anterior
   const mesAnterior = (() => {
@@ -1750,6 +1710,49 @@ function ERTab({ cid, color, activePeriod }: any) {
     </div>
   );
 }
+
+export function ReportesPage() {
+  const { activeCompany, activePeriod } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#3b82f6';
+  const [tab, setTab] = useState<'er'|'flujo'|'balance'>('er');
+
+  const TABS = [
+    { id:'er',      label:'Estado de Resultados' },
+    { id:'flujo',   label:'Flujo de Efectivo' },
+    { id:'balance', label:'Balance General' },
+  ] as const;
+
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1000 }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>Estados Financieros</h1>
+        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
+                borderBottom: tab===t.id ? `2px solid ${color}` : '2px solid transparent',
+                color: tab===t.id ? color : '#64748b', cursor:'pointer' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {/* Todos los tabs se montan desde el inicio para cargar en paralelo */}
+        <div style={{ display: tab === 'er'      ? 'block' : 'none' }}><ERTab      cid={cid!} color={color} activePeriod={activePeriod}/></div>
+        <div style={{ display: tab === 'flujo'   ? 'block' : 'none' }}><FlujoTab   cid={cid!} color={color} activePeriod={activePeriod}/></div>
+        <div style={{ display: tab === 'balance' ? 'block' : 'none' }}><BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/></div>
+      </div>
+    </AppLayout>
+  );
+}
+
+// ── Flujo de Efectivo ─────────────────────────────────────────
+
+// ── Balance General ───────────────────────────────────────────
+
+
+
+// ── Estado de Resultados ──────────────────────────────────────
 
 // ── Reporte de Ventas ─────────────────────────────────────────
 const hoy = new Date().toISOString().slice(0,10);

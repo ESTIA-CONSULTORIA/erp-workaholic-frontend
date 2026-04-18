@@ -1,54 +1,3 @@
-import AppLayout from '../../components/layout/AppLayout';
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate } from '../../lib/api';
-
-type Vista = 'productos' | 'insumos' | 'clientes';
-
-const MEAT_TYPES = ['RES','CER'];
-const FLAVORS    = ['NAT','CHI','BBQ','MIX'];
-const UNITS      = ['kg','lt','pza','g','ml','bolsa','caja'];
-const GROUPS     = ['CARNE','CONDIMENTO','EMPAQUE','LIMPIEZA','GENERAL'];
-
-export default function CatalogoPage() {
-  const { activeCompany } = useERPStore();
-  const cid   = activeCompany?.companyId;
-  const color = activeCompany?.color || '#B5451B';
-  const qc    = useQueryClient();
-  const [vista, setVista] = useState<Vista>('productos');
-
-  const TABS: { id: Vista; label: string }[] = [
-    { id: 'productos', label: 'Productos' },
-    { id: 'insumos',   label: 'Insumos' },
-    { id: 'clientes',  label: 'Clientes / OC' },
-  ];
-
-  return (
-    <AppLayout>
-      <div style={{ maxWidth:1100 }}>
-        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setVista(t.id)}
-              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
-                borderBottom: vista===t.id ? `2px solid ${color}` : '2px solid transparent',
-                color: vista===t.id ? color : '#64748b', cursor:'pointer' }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {vista === 'productos' && <ProductosTab cid={cid!} color={color} qc={qc}/>}
-        {vista === 'insumos'   && <InsumosTab   cid={cid!} color={color} qc={qc}/>}
-        {vista === 'clientes'  && <ClientesTab  cid={cid!} color={color} qc={qc}/>}
-      </div>
-    </AppLayout>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-//  TAB PRODUCTOS
-// ══════════════════════════════════════════════════════════════
 function ProductosTab({ cid, color, qc }: any) {
   const [showNew,   setShowNew]   = useState(false);
   const [editProd,  setEditProd]  = useState<any>(null);
@@ -325,9 +274,6 @@ function ProductosTab({ cid, color, qc }: any) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════
-//  TAB INSUMOS
-// ══════════════════════════════════════════════════════════════
 function InsumosTab({ cid, color, qc }: any) {
   const [showNew, setShowNew] = useState(false);
   const [editId,  setEditId]  = useState<string|null>(null);
@@ -738,6 +684,63 @@ function ClientesTab({ cid, color, qc }: any) {
     </div>
   );
 }
+
+import AppLayout from '../../components/layout/AppLayout';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useERPStore } from '../../store/erp.store';
+import { api, fmt, fmtDate } from '../../lib/api';
+
+type Vista = 'productos' | 'insumos' | 'clientes';
+
+const MEAT_TYPES = ['RES','CER'];
+const FLAVORS    = ['NAT','CHI','BBQ','MIX'];
+const UNITS      = ['kg','lt','pza','g','ml','bolsa','caja'];
+const GROUPS     = ['CARNE','CONDIMENTO','EMPAQUE','LIMPIEZA','GENERAL'];
+
+export default function CatalogoPage() {
+  const { activeCompany } = useERPStore();
+  const cid   = activeCompany?.companyId;
+  const color = activeCompany?.color || '#B5451B';
+  const qc    = useQueryClient();
+  const [vista, setVista] = useState<Vista>('productos');
+
+  const TABS: { id: Vista; label: string }[] = [
+    { id: 'productos', label: 'Productos' },
+    { id: 'insumos',   label: 'Insumos' },
+    { id: 'clientes',  label: 'Clientes / OC' },
+  ];
+
+  return (
+    <AppLayout>
+      <div style={{ maxWidth:1100 }}>
+        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:24 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setVista(t.id)}
+              style={{ padding:'10px 20px', fontSize:13, fontWeight:500, background:'none', border:'none',
+                borderBottom: vista===t.id ? `2px solid ${color}` : '2px solid transparent',
+                color: vista===t.id ? color : '#64748b', cursor:'pointer' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {vista === 'productos' && <ProductosTab cid={cid!} color={color} qc={qc}/>}
+        {vista === 'insumos'   && <InsumosTab   cid={cid!} color={color} qc={qc}/>}
+        {vista === 'clientes'  && <ClientesTab  cid={cid!} color={color} qc={qc}/>}
+      </div>
+    </AppLayout>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TAB PRODUCTOS
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+//  TAB INSUMOS
+// ══════════════════════════════════════════════════════════════
+
 
 // ══════════════════════════════════════════════════════════════
 //  SECCIÓN OC (sin cambios)

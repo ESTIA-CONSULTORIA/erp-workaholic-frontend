@@ -1,3 +1,75 @@
+function NuevoEmpleadoForm({ companyId, color, onSuccess }: any) {
+  const today = new Date().toISOString().slice(0,10);
+  const [form, setForm] = useState({
+    firstName:'', lastName:'', secondLastName:'',
+    rfc:'', curp:'', nss:'', phone:'', email:'',
+    position:'', department:'', startDate:today,
+    contractType:'INDEFINIDO', grossSalary:'', dailySalary:'',
+    bankAccount:'', bankName:'',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
+  const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
+
+  const guardar = async () => {
+    if (!form.firstName||!form.lastName||!form.position||!form.grossSalary) {
+      setError('Nombre, puesto y salario son obligatorios'); return;
+    }
+    setError(''); setSaving(true);
+    try {
+      await api.post(`/companies/${companyId}/rh/employees`, {
+        ...form,
+        grossSalary: Number(form.grossSalary),
+        dailySalary: Number(form.dailySalary)||Number(form.grossSalary)/30,
+      });
+      onSuccess();
+    } catch(e:any) { setError(e.response?.data?.message||'Error'); }
+    finally { setSaving(false); }
+  };
+
+  const campos = [
+    ['Nombre *','firstName','text'], ['Apellido paterno *','lastName','text'],
+    ['Apellido materno','secondLastName','text'], ['RFC','rfc','text'],
+    ['CURP','curp','text'], ['NSS','nss','text'],
+    ['Teléfono','phone','text'], ['Email','email','email'],
+    ['Puesto *','position','text'], ['Área','department','text'],
+  ];
+
+  return (
+    <div className="card" style={{ marginBottom:16 }}>
+      <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:16 }}>Alta de empleado</h3>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+        {campos.map(([label,key,type]) => (
+          <div key={key}>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>{label}</label>
+            <input className="input-base" type={type} value={(form as any)[key]}
+              onChange={e => set(key,e.target.value)} style={{ fontSize:13 }}/>
+          </div>
+        ))}
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha ingreso</label>
+          <input type="date" className="input-base" value={form.startDate} onChange={e=>set('startDate',e.target.value)} style={{ fontSize:13 }}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Salario bruto *</label>
+          <input type="number" min="0" className="input-base" value={form.grossSalary} onChange={e=>set('grossSalary',e.target.value)} style={{ fontSize:13, textAlign:'right' }}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Salario diario (IMSS)</label>
+          <input type="number" min="0" className="input-base" value={form.dailySalary} onChange={e=>set('dailySalary',e.target.value)} style={{ fontSize:13, textAlign:'right' }}/>
+        </div>
+      </div>
+      {error && <p style={{ color:'#f87171', fontSize:13, marginTop:8 }}>{error}</p>}
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
+        <button className="btn-secondary" onClick={onSuccess}>Cancelar</button>
+        <button className="btn-primary" style={{ background:color }} onClick={guardar} disabled={saving}>
+          {saving?'Guardando…':'Dar de alta'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // src/pages/rh/RH.tsx
 import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
@@ -164,74 +236,3 @@ export default function RHPage() {
   );
 }
 
-function NuevoEmpleadoForm({ companyId, color, onSuccess }: any) {
-  const today = new Date().toISOString().slice(0,10);
-  const [form, setForm] = useState({
-    firstName:'', lastName:'', secondLastName:'',
-    rfc:'', curp:'', nss:'', phone:'', email:'',
-    position:'', department:'', startDate:today,
-    contractType:'INDEFINIDO', grossSalary:'', dailySalary:'',
-    bankAccount:'', bankName:'',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
-  const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
-
-  const guardar = async () => {
-    if (!form.firstName||!form.lastName||!form.position||!form.grossSalary) {
-      setError('Nombre, puesto y salario son obligatorios'); return;
-    }
-    setError(''); setSaving(true);
-    try {
-      await api.post(`/companies/${companyId}/rh/employees`, {
-        ...form,
-        grossSalary: Number(form.grossSalary),
-        dailySalary: Number(form.dailySalary)||Number(form.grossSalary)/30,
-      });
-      onSuccess();
-    } catch(e:any) { setError(e.response?.data?.message||'Error'); }
-    finally { setSaving(false); }
-  };
-
-  const campos = [
-    ['Nombre *','firstName','text'], ['Apellido paterno *','lastName','text'],
-    ['Apellido materno','secondLastName','text'], ['RFC','rfc','text'],
-    ['CURP','curp','text'], ['NSS','nss','text'],
-    ['Teléfono','phone','text'], ['Email','email','email'],
-    ['Puesto *','position','text'], ['Área','department','text'],
-  ];
-
-  return (
-    <div className="card" style={{ marginBottom:16 }}>
-      <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:16 }}>Alta de empleado</h3>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
-        {campos.map(([label,key,type]) => (
-          <div key={key}>
-            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>{label}</label>
-            <input className="input-base" type={type} value={(form as any)[key]}
-              onChange={e => set(key,e.target.value)} style={{ fontSize:13 }}/>
-          </div>
-        ))}
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha ingreso</label>
-          <input type="date" className="input-base" value={form.startDate} onChange={e=>set('startDate',e.target.value)} style={{ fontSize:13 }}/>
-        </div>
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Salario bruto *</label>
-          <input type="number" min="0" className="input-base" value={form.grossSalary} onChange={e=>set('grossSalary',e.target.value)} style={{ fontSize:13, textAlign:'right' }}/>
-        </div>
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Salario diario (IMSS)</label>
-          <input type="number" min="0" className="input-base" value={form.dailySalary} onChange={e=>set('dailySalary',e.target.value)} style={{ fontSize:13, textAlign:'right' }}/>
-        </div>
-      </div>
-      {error && <p style={{ color:'#f87171', fontSize:13, marginTop:8 }}>{error}</p>}
-      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
-        <button className="btn-secondary" onClick={onSuccess}>Cancelar</button>
-        <button className="btn-primary" style={{ background:color }} onClick={guardar} disabled={saving}>
-          {saving?'Guardando…':'Dar de alta'}
-        </button>
-      </div>
-    </div>
-  );
-}

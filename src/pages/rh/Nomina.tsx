@@ -1,3 +1,50 @@
+function NuevoPeriodoForm({ cid, color, onSuccess }: any) {
+  const today = new Date().toISOString().slice(0,10);
+  const [form, setForm] = useState({ type:'QUINCENAL', period:today, periodEnd:today, periodLabel:'' });
+  const [saving, setSaving] = useState(false);
+  const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
+
+  const guardar = async () => {
+    if (!form.periodLabel) { alert('Escribe un nombre'); return; }
+    setSaving(true);
+    try { const { data } = await api.post(`/companies/${cid}/payroll/periods`, form); onSuccess(data); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom:16 }}>
+      <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:12 }}>Nuevo período</h3>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Tipo</label>
+          <select className="input-base" style={{ fontSize:13 }} value={form.type} onChange={e=>set('type',e.target.value)}>
+            <option value="QUINCENAL">Quincenal</option>
+            <option value="MENSUAL">Mensual</option>
+            <option value="SEMANAL">Semanal</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha inicio</label>
+          <input type="date" className="input-base" style={{ fontSize:13 }} value={form.period} onChange={e=>set('period',e.target.value)}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha fin</label>
+          <input type="date" className="input-base" style={{ fontSize:13 }} value={form.periodEnd} onChange={e=>set('periodEnd',e.target.value)}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Nombre del período</label>
+          <input className="input-base" style={{ fontSize:13 }} value={form.periodLabel} onChange={e=>set('periodLabel',e.target.value)} placeholder="Ej: Quincena 1 Marzo 2026"/>
+        </div>
+      </div>
+      <div style={{ display:'flex', justifyContent:'flex-end', marginTop:12 }}>
+        <button className="btn-primary" style={{ background:color, fontSize:13 }} onClick={guardar} disabled={saving}>
+          {saving?'Creando…':'Crear período'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -185,49 +232,3 @@ export default function NominaPage() {
   );
 }
 
-function NuevoPeriodoForm({ cid, color, onSuccess }: any) {
-  const today = new Date().toISOString().slice(0,10);
-  const [form, setForm] = useState({ type:'QUINCENAL', period:today, periodEnd:today, periodLabel:'' });
-  const [saving, setSaving] = useState(false);
-  const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
-
-  const guardar = async () => {
-    if (!form.periodLabel) { alert('Escribe un nombre'); return; }
-    setSaving(true);
-    try { const { data } = await api.post(`/companies/${cid}/payroll/periods`, form); onSuccess(data); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="card" style={{ marginBottom:16 }}>
-      <h3 style={{ fontSize:14, fontWeight:600, marginTop:0, marginBottom:12 }}>Nuevo período</h3>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Tipo</label>
-          <select className="input-base" style={{ fontSize:13 }} value={form.type} onChange={e=>set('type',e.target.value)}>
-            <option value="QUINCENAL">Quincenal</option>
-            <option value="MENSUAL">Mensual</option>
-            <option value="SEMANAL">Semanal</option>
-          </select>
-        </div>
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha inicio</label>
-          <input type="date" className="input-base" style={{ fontSize:13 }} value={form.period} onChange={e=>set('period',e.target.value)}/>
-        </div>
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Fecha fin</label>
-          <input type="date" className="input-base" style={{ fontSize:13 }} value={form.periodEnd} onChange={e=>set('periodEnd',e.target.value)}/>
-        </div>
-        <div>
-          <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Nombre del período</label>
-          <input className="input-base" style={{ fontSize:13 }} value={form.periodLabel} onChange={e=>set('periodLabel',e.target.value)} placeholder="Ej: Quincena 1 Marzo 2026"/>
-        </div>
-      </div>
-      <div style={{ display:'flex', justifyContent:'flex-end', marginTop:12 }}>
-        <button className="btn-primary" style={{ background:color, fontSize:13 }} onClick={guardar} disabled={saving}>
-          {saving?'Creando…':'Crear período'}
-        </button>
-      </div>
-    </div>
-  );
-}
