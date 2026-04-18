@@ -2,6 +2,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
+import { useNavigate } from 'react-router-dom';
 import { api, fmt } from '../../lib/api';
 
 import React from 'react';
@@ -153,6 +154,7 @@ function POSPageInner() {
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#B5451B';
+  const navigate = useNavigate();
 
   const [canal,     setCanal]     = useState('MOSTRADOR');
   const [carrito,   setCarrito]   = useState<any[]>([]);
@@ -248,7 +250,8 @@ function POSPageInner() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showCobro, showDescuento, showTiraX, showTiraZ, showMovCaja, carrito, pagos, total, esCredito, clienteId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCobro, showDescuento, showTiraX, showTiraZ, showMovCaja, carrito.length, total, esCredito, clienteId]);
 
   const agregar = (p:any) => {
     if (ocId) return;
@@ -403,7 +406,7 @@ function POSPageInner() {
       <div style={{ width:180, background:'#0f172a', borderRight:'1px solid #1e293b', display:'flex', flexDirection:'column', flexShrink:0 }}>
         {/* Back button */}
         <div style={{ padding:'8px 10px', borderBottom:'1px solid #1e293b', display:'flex', justifyContent:'flex-end' }}>
-          <button onClick={() => window.history.back()}
+          <button onClick={() => navigate('/')}
             style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #334155', background:'none',
               color:'#64748b', cursor:'pointer', fontSize:11, display:'flex', alignItems:'center', gap:4 }}>
             ← Salir
