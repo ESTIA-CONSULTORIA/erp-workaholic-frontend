@@ -1404,6 +1404,34 @@ export function CxPPage() {
 // de ReportesPage (antes de "// ── Estado de Resultados")
 // ── ESTADOS FINANCIEROS ───────────────────────────────────────
 // REEMPLAZA todo desde "export function ReportesPage()" hasta antes de "function ERTab("
+function ERRow({ label, value, antValue, color, bold, indent, showComp }: any) {
+  const diff = (showComp && antValue !== undefined) ? value - antValue : null;
+  const pct  = diff !== null && antValue !== 0 ? (diff / Math.abs(antValue)) * 100 : null;
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+      padding: indent ? '3px 0 3px 16px' : '4px 0',
+      borderBottom: bold ? '1px solid #334155' : 'none',
+      marginBottom: bold ? 8 : 0 }}>
+      <span style={{ fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 400,
+        color: bold ? '#f1f5f9' : '#94a3b8', flex:1 }}>{label}</span>
+      {showComp && antValue !== undefined && (
+        <span style={{ fontSize:11, color:'#475569', marginRight:12, minWidth:72, textAlign:'right' }}>
+          {fmt(Math.abs(antValue))}
+        </span>
+      )}
+      {showComp && diff !== null && (
+        <span style={{ fontSize:11, minWidth:52, textAlign:'right', marginRight:12,
+          color: diff >= 0 ? '#10b981' : '#f87171' }}>
+          {pct !== null ? (diff>=0?'+':'')+pct.toFixed(1)+'%' : '—'}
+        </span>
+      )}
+      <span style={{ fontSize: bold ? 14 : 12, fontWeight: bold ? 700 : 500, color, minWidth:72, textAlign:'right' }}>
+        {fmt(Math.abs(value))}
+      </span>
+    </div>
+  );
+}
+
 export function ReportesPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -2081,33 +2109,6 @@ function CxCReporteTab({ cid, color }: any) {
   );
 }
 
-function ERRow({ label, value, antValue, color, bold, indent, showComp }: any) {
-  const diff = (showComp && antValue !== undefined) ? value - antValue : null;
-  const pct  = diff !== null && antValue !== 0 ? (diff / Math.abs(antValue)) * 100 : null;
-  return (
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-      padding: indent ? '3px 0 3px 16px' : '4px 0',
-      borderBottom: bold ? '1px solid #334155' : 'none',
-      marginBottom: bold ? 8 : 0 }}>
-      <span style={{ fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 400,
-        color: bold ? '#f1f5f9' : '#94a3b8', flex:1 }}>{label}</span>
-      {showComp && antValue !== undefined && (
-        <span style={{ fontSize:11, color:'#475569', marginRight:12, minWidth:72, textAlign:'right' }}>
-          {fmt(Math.abs(antValue))}
-        </span>
-      )}
-      {showComp && diff !== null && (
-        <span style={{ fontSize:11, minWidth:52, textAlign:'right', marginRight:12,
-          color: diff >= 0 ? '#10b981' : '#f87171' }}>
-          {pct !== null ? (diff>=0?'+':'')+pct.toFixed(1)+'%' : '—'}
-        </span>
-      )}
-      <span style={{ fontSize: bold ? 14 : 12, fontWeight: bold ? 700 : 500, color, minWidth:72, textAlign:'right' }}>
-        {fmt(Math.abs(value))}
-      </span>
-    </div>
-  );
-}
 
 // ── Reporte CxP ───────────────────────────────────────────────
 function CxPReporteTab({ cid, color }: any) {
