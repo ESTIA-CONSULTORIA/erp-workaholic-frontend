@@ -37,6 +37,9 @@ export default function ExpedientePage() {
   const [vacModal,    setVacModal]    = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState('');
+  const [linkModal, setLinkModal] = useState(false);
+  const [linkUserId, setLinkUserId] = useState('');
+  const [linkSaving, setLinkSaving] = useState(false);
 
   const [eventoForm, setEventoForm] = useState({
     type: 'PERMISO',
@@ -47,6 +50,12 @@ export default function ExpedientePage() {
   });
   const [vacForm, setVacForm] = useState({
     type: 'VACACIONES', startDate: '', endDate: '', days: 0, notes: '',
+  });
+
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['company-users', cid],
+    queryFn:  () => api.get(`/companies/${cid}/users`).then(r => r.data),
+    enabled:  !!cid && !!esAdmin,
   });
 
   const { data: emp, isLoading, refetch } = useQuery({
@@ -129,6 +138,10 @@ export default function ExpedientePage() {
                 <button onClick={() => { setEditForm({...emp}); setEditando(true); setTab('datos'); }}
                   style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`, background:'none', color, cursor:'pointer', fontSize:12 }}>
                   ✏ Editar
+                </button>
+                <button onClick={() => { setLinkUserId(emp.userId || ''); setLinkModal(true); }}
+                  style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #8b5cf6', background: emp.userId ? '#8b5cf622' : 'none', color:'#8b5cf6', cursor:'pointer', fontSize:12 }}>
+                  {emp.userId ? '🔗 Usuario vinculado' : '🔗 Vincular usuario'}
                 </button>
 
                 {emp.status !== 'BAJA' && (
@@ -517,6 +530,51 @@ export default function ExpedientePage() {
               <button className="btn-primary" style={{flex:1,fontSize:13,background:color}}
                 onClick={()=>vacM.mutate()} disabled={vacM.isPending||!vacForm.startDate||!vacForm.endDate}>
                 {vacM.isPending?'Guardando…':'Registrar solicitud'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal vincular usuario */}
+      {linkModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:420, border:'1px solid #334155' }}>
+            <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 16px' }}>Vincular usuario del sistema</h3>
+            <p style={{ fontSize:12, color:'#64748b', margin:'0 0 12px' }}>
+              Esto permite que el empleado acceda a <strong style={{color:'#8b5cf6'}}>Mi Perfil</strong> y solicite permisos/vacaciones desde su cuenta.
+            </p>
+            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Usuario del sistema</label>
+            <select className="input-base" style={{ fontSize:13, marginBottom:16 }}
+              value={linkUserId} onChange={e => setLinkUserId(e.target.value)}>
+              <option value="">— Sin vincular —</option>
+              {(usuarios as any[]).map((u: any) => (
+                <option key={u.user?.id || u.id} value={u.user?.id || u.id}>
+                  {u.user?.name || u.name} ({u.user?.email || u.email})
+                </option>
+              ))}
+            </select>
+            {emp.userId && (
+              <p style={{ fontSize:11, color:'#10b981', margin:'0 0 12px' }}>
+                ✓ Actualmente vinculado — al cambiar se actualizará
+              </p>
+            )}
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={() => setLinkModal(false)}
+                style={{ padding:'7px 16px', borderRadius:7, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
+                Cancelar
+              </button>
+              <button disabled={linkSaving} onClick={async () => {
+                  setLinkSaving(true);
+                  try {
+                    await api.put(`/companies/${cid}/rh/employees/${id}/link-user`, { userId: linkUserId || null });
+                    setLinkModal(false);
+                    refetch();
+                  } catch(e:any) {
+                    alert(e.response?.data?.message || 'Error al vincular');
+                  } finally { setLinkSaving(false); }
+                }}
+                style={{ padding:'7px 16px', borderRadius:7, border:'none', background:'#8b5cf6', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                {linkSaving ? 'Guardando…' : 'Guardar vínculo'}
               </button>
             </div>
           </div>
