@@ -73,8 +73,10 @@ export default function ProduccionPage() {
   const hornoM = useMutation({
     mutationFn: () => api.put(`/companies/${cid}/machete/lotes/${loteActivo.id}/salida-horno`, hornoForm),
     onSuccess: (data) => {
-      setLoteActivo((prev: any) => ({ ...prev, ...data, status: data.status || prev.status }));
+      // Actualizar lote activo con datos del horno + nuevo status EMPACADO
+      setLoteActivo((prev: any) => ({ ...prev, ...data, status: 'EMPACADO' }));
       setHornoForm({ kgSalida:0, kgGrasa:0, kgEscarchado:0 });
+      setTab('empaque'); // Ir directo a empaque
       qc.invalidateQueries({ queryKey: ['lotes', cid] });
     },
   });
@@ -83,15 +85,23 @@ export default function ProduccionPage() {
     mutationFn: () => api.put(`/companies/${cid}/machete/lotes/${loteActivo.id}/empaque`, {
       lineas: empaqueLineas.filter(l => l.cantidad > 0 && l.productId),
     }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setEmpaqueLineas([]);
       qc.invalidateQueries({ queryKey: ['lotes', cid] });
       qc.invalidateQueries({ queryKey: ['pt-inventory', cid] });
-      // Refresh lote activo
-      api.get(`/companies/${cid}/machete/lotes`).then(r => {
-        const updated = r.data.find((l:any) => l.id === loteActivo.id);
-        if (updated) setLoteActivo(updated);
-      });
+      // Actualizar lote activo con empaques acumulados del backend
+      if (data) {
+        setLoteActivo((prev: any) => ({ ...prev, ...data }));
+        // Si el lote se cerró automáticamente (todos los kg empacados), cerrar modal
+        if (data.status === 'CERRADO') {
+          setTimeout(() => setLoteActivo(null), 1500);
+        }
+      } else {
+        api.get(`/companies/${cid}/machete/lotes`).then(r => {
+          const updated = r.data.find((l:any) => l.id === loteActivo.id);
+          if (updated) setLoteActivo(updated);
+        });
+      }
     },
   });
 
@@ -305,26 +315,14 @@ export default function ProduccionPage() {
                     </td>
                     <td>
                       <div style={{ display:'flex', gap:6 }}>
-                        <button onClick={() => { setLoteActivo(l); setTab('horno'); setEmpaqueLineas([]); }}
+                        <button onClick={() => { setLoteActivo(l); setTab(l.kgSalida > 0 ? 'empaque' : 'horno'); setEmpaqueLineas([]); }}
                           style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
-                          Ver
+                          {l.status === 'CERRADO' ? 'Ver' : l.kgSalida > 0 ? '📦 Empacar' : '🔥 Horno'}
                         </button>
-                        {l.status === 'EN_PROCESO' && (
-                          <button onClick={() => { setLoteActivo(l); setTab('horno'); }}
-                            style={{ background:'none', border:'none', color:'#f59e0b', cursor:'pointer', fontSize:12 }}>
-                            Horno
-                          </button>
-                        )}
-                        {l.status !== 'CERRADO' && l.kgSalida > 0 && (
-                          <button onClick={() => { setLoteActivo(l); setTab('empaque'); setEmpaqueLineas([]); }}
-                            style={{ background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontSize:12 }}>
-                            Empacar
-                          </button>
-                        )}
                         {l.status === 'EMPACADO' && (
-                          <button onClick={() => cerrarM.mutate(l.id)}
+                          <button onClick={() => { if(window.confirm('¿Cerrar lote manualmente?')) cerrarM.mutate(l.id); }}
                             style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
-                            Cerrar
+                            ✓ Cerrar
                           </button>
                         )}
                       </div>
@@ -436,8 +434,13 @@ export default function ProduccionPage() {
 
               {/* Si está cerrado, no mostrar formularios */}
               {loteEsCerrado ? (
-                <div style={{ textAlign:'center', padding:'16px 0', color:'#64748b', fontSize:13 }}>
-                  Este lote está cerrado y no admite más modificaciones.
+                <div style={{ background:'#10b98111', border:'1px solid #10b98133', borderRadius:8,
+                  padding:'16px', textAlign:'center' }}>
+                  <p style={{ fontSize:20, margin:'0 0 6px' }}>✅</p>
+                  <p style={{ fontSize:13, fontWeight:600, color:'#10b981', margin:'0 0 4px' }}>Lote cerrado</p>
+                  <p style={{ fontSize:12, color:'#64748b', margin:0 }}>
+                    Todos los kg fueron empacados. El inventario se actualizó automáticamente.
+                  </p>
                 </div>
               ) : (
                 <>
