@@ -48,8 +48,10 @@ export default function ComprasPage() {
     notas:         '',
   });
   const [lineas, setLineas] = useState<any[]>([]);
-  const [saving,     setSaving]     = useState(false);
-  const [cancelId,   setCancelId]   = useState<string|null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [cancelId,      setCancelId]      = useState<string|null>(null);
+  const [insumoQ,       setInsumoQ]       = useState('');
+  const [showInsumoOpts,setShowInsumoOpts]= useState(false);
   const [showImport, setShowImport] = useState(false);
   const [pagina,     setPagina]     = useState(1);
   const POR_PAGINA = 20;
@@ -114,7 +116,7 @@ export default function ComprasPage() {
       costoUnitario: form.costoUnitario,
       total:         form.cantidad * form.costoUnitario,
     }]);
-    setF('insumoId', ''); setF('cantidad', 0); setF('costoUnitario', 0);
+    setF('insumoId', ''); setF('cantidad', 0); setF('costoUnitario', 0); setInsumoQ('');
   };
 
   const quitarLinea = (idx: number) => setLineas(ls => ls.filter((_,i) => i !== idx));
