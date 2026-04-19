@@ -250,12 +250,22 @@ export default function CorteCajaPage() {
                       </td>
                       <td>
                         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                          <span style={{ fontSize:11, padding:'3px 8px', borderRadius:99,
-                            background: STATUS_COLOR[c.status]+'22', color: STATUS_COLOR[c.status],
-                            fontWeight: c.status==='RECHAZADO' ? 700 : 400,
-                            border: c.status==='RECHAZADO' ? '1px solid #f87171' : 'none' }}>
-                            {c.status === 'RECHAZADO' ? '⚠ RECHAZADO' : c.status}
-                          </span>
+                          {(()=>{
+                            const hist = parsearHistorial(c.notasCajero);
+                            const ultimoEsCajero = hist.length > 0 && hist[hist.length-1].tipo === 'cajero';
+                            const tieneRespuestaCajero = ultimoEsCajero && c.status === 'PENDIENTE' && puedeValidar;
+                            return (
+                              <span style={{ fontSize:11, padding:'3px 8px', borderRadius:99,
+                                background: tieneRespuestaCajero ? '#f59e0b22' : STATUS_COLOR[c.status]+'22',
+                                color: tieneRespuestaCajero ? '#f59e0b' : STATUS_COLOR[c.status],
+                                fontWeight: c.status==='RECHAZADO' || tieneRespuestaCajero ? 700 : 400,
+                                border: c.status==='RECHAZADO' ? '1px solid #f87171' :
+                                        tieneRespuestaCajero ? '1px solid #f59e0b' : 'none' }}>
+                                {c.status === 'RECHAZADO' ? '⚠ RECHAZADO' :
+                                 tieneRespuestaCajero ? '💬 Cajero respondió' : c.status}
+                              </span>
+                            );
+                          })()}
                           {tieneConversacion && (
                             <span style={{ fontSize:10, color:'#60a5fa', cursor:'pointer' }}
                               onClick={() => setCorteDetalle(c)}>
@@ -355,10 +365,26 @@ export default function CorteCajaPage() {
                   padding:'10px 14px', marginBottom:12 }}>
                   <p style={{ fontSize:12, fontWeight:700, color:'#f87171', margin:'0 0 4px' }}>⚠ Corte rechazado por el contador</p>
                   <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>
-                    Revisa el motivo abajo y usa el botón "Responder al contador" para aclarar.
+                    Revisa el motivo abajo y usa "Responder al contador" para aclarar.
                   </p>
                 </div>
               )}
+              {(()=>{
+                const hist = parsearHistorial(corteDetalle.notasCajero);
+                const ultimoEsCajero = hist.length > 0 && hist[hist.length-1].tipo === 'cajero';
+                if (puedeValidar && ultimoEsCajero && corteDetalle.status === 'PENDIENTE') {
+                  return (
+                    <div style={{ background:'rgba(245,158,11,0.1)', border:'1px solid #f59e0b', borderRadius:8,
+                      padding:'10px 14px', marginBottom:12 }}>
+                      <p style={{ fontSize:12, fontWeight:700, color:'#f59e0b', margin:'0 0 4px' }}>💬 El cajero respondió</p>
+                      <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>
+                        Revisa la respuesta abajo. Puedes validar el corte o rechazarlo nuevamente.
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               {(() => {
                 const historial = parsearHistorial(corteDetalle.notasCajero);
                 if (historial.length === 0) {
@@ -397,6 +423,11 @@ export default function CorteCajaPage() {
                   📩 Responder al contador
                 </button>
               )}
+              {/* Cualquier rol puede agregar mensaje a la conversación */}
+              <button onClick={() => { setCorteRespuesta(corteDetalle); setRespuestaTexto(''); setTicketImg(null); setTicketNombre(''); setCorteDetalle(null); }}
+                style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#94a3b8', cursor:'pointer', fontSize:12 }}>
+                💬 Agregar mensaje
+              </button>
               <button onClick={() => setCorteDetalle(null)}
                 style={{ padding:'8px 20px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
                 Cerrar
