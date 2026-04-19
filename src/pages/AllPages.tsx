@@ -1749,24 +1749,6 @@ export function ReportesPage() {
         <div style={{ display: tab === 'balance' ? 'block' : 'none' }}><BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/></div>
       </div>
 
-      {showImportCxP && (
-        <ImportCSV title="CxP" color={color}
-          columns={[
-            { key:'concepto',       label:'Concepto',     required:true              },
-            { key:'proveedor',      label:'Proveedor'                                },
-            { key:'fecha',          label:'Fecha',        required:true, type:'date' },
-            { key:'fechaVenc',      label:'Vencimiento',               type:'date'  },
-            { key:'monto',          label:'Monto',        required:true, type:'number'},
-            { key:'notas',          label:'Notas'                                    },
-          ]}
-          onImport={async (rows) => {
-            const res = await api.post(`/companies/${cid}/import/cxp`, { rows });
-            qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] });
-            return res.data;
-          }}
-          onClose={() => setShowImportCxP(false)}
-        />
-      )}
     </AppLayout>
   );
 }
