@@ -24,7 +24,6 @@ const NAV_GROUPS = [
       { to:'/machete/produccion', icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
       { to:'/catalogo',           icon:'≋',  label:'Catálogo',     companies:['MACHETE'] },
       { to:'/ordenes-compra',    icon:'📋', label:'OC',            companies:['MACHETE'] },
-      { to:'/clientes',      icon:'👤', label:'Clientes',     roles:['admin','administrador','gerente','contador'] },
     ]
   },
   {
