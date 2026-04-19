@@ -298,22 +298,67 @@ function POSPageInner() {
     catch{setPinError('PIN incorrecto');}
   };
 
+  // Mapeo SKU → familia
+  const getFamiliaFromSku=(sku:string)=>{
+    const s=(sku||'').toUpperCase();
+    if(s.startsWith('MCH'))return'Machete';
+    if(s.startsWith('CHI'))return'Chicali';
+    if(s.startsWith('ESC'))return'Escarchado';
+    if(s.startsWith('CER'))return'Cerdo';
+    if(s.startsWith('MAC'))return'Machaca';
+    if(s.startsWith('SCR'))return'Scrap';
+    return'Otros';
+  };
+
   const cargarTira=async()=>{
     const today=new Date().toISOString().slice(0,10);
     const{data}=await api.get(`/companies/${cid}/machete/sales?period=${today.slice(0,7)}`);
-    const hoy=data.filter((s:any)=>s.date.slice(0,10)===today);
+    const hoy=data.filter((s:any)=>s.date?.slice(0,10)===today);
+
     const porMetodo:Record<string,number>={};
-    const porFamilia:Record<string,number>={};
+    const porFamilia:Record<string,{bruto:number,iva:number,neto:number}>={};
+    const IVA_RATE=0.16;
     let totalBruto=0;
+    let numVentas=0;
+
     for(const s of hoy){
-      totalBruto+=Number(s.total);
-      if(s.paymentSplits?.length){for(const sp of s.paymentSplits){porMetodo[sp.method]=(porMetodo[sp.method]||0)+Number(sp.amount);}}
-      else{const met=s.paymentMethod||'EFECTIVO';porMetodo[met]=(porMetodo[met]||0)+Number(s.total);}
-      for(const l of s.lines||[]){const fam=l.product?.name?.split(' ').slice(0,2).join(' ')||'Otros';porFamilia[fam]=(porFamilia[fam]||0)+Number(l.total);}
+      const monto=Number(s.total);
+      totalBruto+=monto;
+      numVentas++;
+
+      // Formas de pago
+      if(s.paymentSplits?.length){
+        for(const sp of s.paymentSplits){
+          porMetodo[sp.method]=(porMetodo[sp.method]||0)+Number(sp.amount);
+        }
+      } else {
+        const met=s.paymentMethod||'EFECTIVO';
+        porMetodo[met]=(porMetodo[met]||0)+monto;
+      }
+
+      // Ventas por familia (usando SKU del producto)
+      for(const l of s.lines||[]){
+        const sku=l.product?.sku||'';
+        const fam=getFamiliaFromSku(sku);
+        const subtotal=Number(l.total)||0;
+        const neto=subtotal/1.16;
+        const iva=subtotal-neto;
+        if(!porFamilia[fam]) porFamilia[fam]={bruto:0,iva:0,neto:0};
+        porFamilia[fam].bruto+=subtotal;
+        porFamilia[fam].iva+=iva;
+        porFamilia[fam].neto+=neto;
+      }
     }
+
     let movimientos:any[]=[];
     try{const{data:movs}=await api.get(`/companies/${cid}/flow/movements?fecha=${today}`);movimientos=movs||[];}catch(e){}
-    setTiraData({hoy,porMetodo,porFamilia,movimientos,totalBruto,fecha:today});
+
+    const totalEfectivoDeclarado=DENOMINACIONES.reduce((t,d)=>t+d*(efectivoCaja?.[`den_${d}`]||0),0);
+    const totalTerminalDeclarado=['TARJETA_DEBITO','TARJETA_CREDITO','TRANSFERENCIA'].reduce((t,k)=>t+(efectivoCaja?.[`term_${k}`]||0),0);
+    const totalDeliveryDeclarado=['rappi','ubereats','didi'].reduce((t,k)=>t+(efectivoCaja?.[`del_${k}`]||0),0);
+
+    setTiraData({hoy,porMetodo,porFamilia,movimientos,totalBruto,fecha:today,numVentas,
+      declarado:{efectivo:totalEfectivoDeclarado,terminal:totalTerminalDeclarado,delivery:totalDeliveryDeclarado}});
   };
 
   const saleM=useMutation({
@@ -1096,98 +1141,216 @@ function POSPageInner() {
 
       {/* Modal Tira Z */}
       {showTiraZ&&tiraData&&tiraXGuardada&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}}>
-          <div style={{background:'#1e293b',borderRadius:12,padding:20,width:'90vw',maxWidth:820,border:'1px solid #334155'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,borderBottom:'1px solid #334155',paddingBottom:10}}>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16}}>
+          <div style={{background:'#0f172a',borderRadius:12,width:'95vw',maxWidth:900,maxHeight:'92vh',overflowY:'auto',border:'2px solid #f59e0b',display:'flex',flexDirection:'column'}}>
+
+            {/* Header */}
+            <div style={{background:'#0f172a',padding:'14px 20px',borderBottom:'1px solid #334155',display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:10}}>
               <div>
-                <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 2px',color:'#f59e0b'}}>Tira Z — Corte de caja</h3>
-                <p style={{fontSize:11,color:'#64748b',margin:0}}>{tiraData.fecha} · {tiraData.hoy?.length||0} ventas</p>
+                <h3 style={{fontSize:16,fontWeight:800,margin:'0 0 2px',color:'#f59e0b'}}>⚡ TIRA Z — Corte de Caja</h3>
+                <p style={{fontSize:11,color:'#64748b',margin:0}}>{tiraData.fecha} · {tiraData.numVentas||tiraData.hoy?.length||0} ventas del día</p>
               </div>
-              <button onClick={()=>setShowTiraZ(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
+              <button onClick={()=>setShowTiraZ(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:22}}>✕</button>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:10}}>
-              <div style={{background:'#0f172a',borderRadius:8,padding:10}}>
-                <p style={{fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 8px'}}>Ventas por familia</p>
-                {Object.entries(tiraData.porFamilia||{}).map(([fam,monto]:any)=>(
-                  <div key={fam} style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                    <span style={{fontSize:11,color:'#94a3b8'}}>{fam}</span>
-                    <span style={{fontSize:11,fontWeight:600,color:'#f1f5f9'}}>{fmt(monto)}</span>
+
+            <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:14}}>
+
+              {/* 1. VENTAS POR FAMILIA CON IVA */}
+              <div style={{background:'#1e293b',borderRadius:10,padding:14,border:'1px solid #334155'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 10px'}}>Ventas por familia</p>
+                <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:6,marginBottom:6}}>
+                  <span style={{fontSize:10,color:'#475569',fontWeight:600}}>FAMILIA</span>
+                  <span style={{fontSize:10,color:'#475569',fontWeight:600,textAlign:'right'}}>NETO (sin IVA)</span>
+                  <span style={{fontSize:10,color:'#475569',fontWeight:600,textAlign:'right'}}>IVA 16%</span>
+                  <span style={{fontSize:10,color:'#475569',fontWeight:600,textAlign:'right'}}>TOTAL</span>
+                </div>
+                {Object.entries(tiraData.porFamilia||{}).map(([fam,datos]:any)=>(
+                  <div key={fam} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:6,marginBottom:5,padding:'4px 0',borderBottom:'1px solid #1e293b'}}>
+                    <span style={{fontSize:12,color:'#94a3b8'}}>{fam}</span>
+                    <span style={{fontSize:12,color:'#f1f5f9',textAlign:'right'}}>{fmt(datos.neto||datos.bruto/1.16)}</span>
+                    <span style={{fontSize:12,color:'#64748b',textAlign:'right'}}>{fmt(datos.iva||(datos.bruto-datos.bruto/1.16))}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:'#f59e0b',textAlign:'right'}}>{fmt(datos.bruto)}</span>
                   </div>
                 ))}
-                <div style={{borderTop:'1px solid #334155',marginTop:6,paddingTop:6,display:'flex',justifyContent:'space-between'}}>
-                  <span style={{fontSize:12,fontWeight:700,color:'#64748b'}}>Total</span>
-                  <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>{fmt(tiraData.totalBruto)}</span>
+                {(()=>{
+                  const totalNeto=Object.values(tiraData.porFamilia||{}).reduce((t:number,d:any)=>t+(d.neto||d.bruto/1.16),0);
+                  const totalIva=Object.values(tiraData.porFamilia||{}).reduce((t:number,d:any)=>t+(d.iva||(d.bruto-d.bruto/1.16)),0);
+                  return(
+                    <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:6,borderTop:'2px solid #334155',marginTop:6,paddingTop:8}}>
+                      <span style={{fontSize:12,fontWeight:700,color:'#f1f5f9'}}>TOTAL</span>
+                      <span style={{fontSize:13,fontWeight:700,color:'#f1f5f9',textAlign:'right'}}>{fmt(totalNeto)}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:'#64748b',textAlign:'right'}}>{fmt(totalIva)}</span>
+                      <span style={{fontSize:14,fontWeight:800,color:'#f59e0b',textAlign:'right'}}>{fmt(tiraData.totalBruto)}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* 2. FORMAS DE PAGO */}
+              <div style={{background:'#1e293b',borderRadius:10,padding:14,border:'1px solid #334155'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 10px'}}>Formas de pago (sistema)</p>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  {[
+                    {key:'EFECTIVO',         label:'💵 Efectivo',         col:'#10b981'},
+                    {key:'TARJETA_DEBITO',   label:'💳 T. Débito',        col:'#3b82f6'},
+                    {key:'TARJETA_CREDITO',  label:'💳 T. Crédito',       col:'#8b5cf6'},
+                    {key:'TRANSFERENCIA',    label:'🏦 Transferencia',     col:'#06b6d4'},
+                    {key:'CREDITO_CLIENTE',  label:'📋 Crédito cliente',   col:'#f59e0b'},
+                    {key:'rappi',            label:'🛵 Rappi',             col:'#f97316'},
+                    {key:'ubereats',         label:'🛵 Uber Eats',         col:'#84cc16'},
+                    {key:'didi',             label:'🛵 DiDi Food',         col:'#facc15'},
+                  ].filter(fp=>(tiraData.porMetodo?.[fp.key]||0)>0).map(fp=>(
+                    <div key={fp.key} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'#0f172a',borderRadius:8}}>
+                      <span style={{fontSize:12,color:fp.col}}>{fp.label}</span>
+                      <span style={{fontSize:14,fontWeight:700,color:'#f1f5f9'}}>{fmt(tiraData.porMetodo?.[fp.key]||0)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div style={{background:'#0f172a',borderRadius:8,padding:10}}>
-                <p style={{fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 8px'}}>Formas de pago (sistema)</p>
-                {[
-                  {key:'EFECTIVO',label:'Efectivo',col:'#10b981'},
-                  {key:'TARJETA_DEBITO',label:'Tarjeta débito',col:'#3b82f6'},
-                  {key:'TARJETA_CREDITO',label:'Tarjeta crédito',col:'#8b5cf6'},
-                  {key:'TRANSFERENCIA',label:'Transferencia',col:'#06b6d4'},
-                  {key:'CREDITO_CLIENTE',label:'Crédito cliente',col:'#f59e0b'},
-                  {key:'rappi',label:'Rappi',col:'#f97316'},
-                  {key:'ubereats',label:'Uber Eats',col:'#84cc16'},
-                  {key:'didi',label:'DiDi Food',col:'#facc15'},
-                ].filter(fp=>(tiraData.porMetodo[fp.key]||0)>0).map(fp=>(
-                  <div key={fp.key} style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                    <span style={{fontSize:11,color:fp.col}}>{fp.label}</span>
-                    <span style={{fontSize:11,fontWeight:600,color:'#f1f5f9'}}>{fmt(tiraData.porMetodo[fp.key]||0)}</span>
+
+              {/* 3. MOVIMIENTOS DE CAJA */}
+              {(tiraData.movimientos||[]).length>0&&(
+                <div style={{background:'#1e293b',borderRadius:10,padding:14,border:'1px solid #334155'}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 10px'}}>Movimientos de caja</p>
+                  {(tiraData.movimientos||[]).map((m:any,i:number)=>(
+                    <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6,padding:'5px 0',borderBottom:'1px solid #334155'}}>
+                      <div>
+                        <span style={{fontSize:12,color:m.type==='ENTRADA'?'#10b981':'#f87171',fontWeight:600}}>
+                          {m.type==='ENTRADA'?'↑ Depósito':'↓ Retiro'}
+                        </span>
+                        {m.notes&&<span style={{fontSize:11,color:'#64748b',marginLeft:8}}>{m.notes}</span>}
+                      </div>
+                      <span style={{fontSize:13,fontWeight:700,color:m.type==='ENTRADA'?'#10b981':'#f87171'}}>
+                        {m.type==='SALIDA'?'-':''}{fmt(m.amount)}
+                      </span>
+                    </div>
+                  ))}
+                  {(()=>{
+                    const deps=(tiraData.movimientos||[]).filter((m:any)=>m.type==='ENTRADA').reduce((t:number,m:any)=>t+Number(m.amount),0);
+                    const rets=(tiraData.movimientos||[]).filter((m:any)=>m.type==='SALIDA').reduce((t:number,m:any)=>t+Number(m.amount),0);
+                    return(
+                      <div style={{display:'flex',justifyContent:'space-between',paddingTop:8}}>
+                        <span style={{fontSize:12,color:'#64748b'}}>Neto movimientos</span>
+                        <span style={{fontSize:13,fontWeight:700,color:deps-rets>=0?'#10b981':'#f87171'}}>{deps-rets>=0?'+':''}{fmt(deps-rets)}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* 4. DECLARADO VS SISTEMA (DIFERENCIAS) */}
+              <div style={{background:'#1e293b',borderRadius:10,padding:14,border:'1px solid #334155'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 10px'}}>Lo declarado por cajero vs sistema</p>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+                  {(()=>{
+                    const efDeclarado=DENOMINACIONES.reduce((t,d)=>t+d*(efectivoCaja?.[`den_${d}`]||0),0);
+                    const efEsperado=tiraData.porMetodo?.['EFECTIVO']||0;
+                    const termDeclarado=['TARJETA_DEBITO','TARJETA_CREDITO','TRANSFERENCIA'].reduce((t,k)=>t+(efectivoCaja?.[`term_${k}`]||0),0);
+                    const termEsperado=(tiraData.porMetodo?.['TARJETA_DEBITO']||0)+(tiraData.porMetodo?.['TARJETA_CREDITO']||0)+(tiraData.porMetodo?.['TRANSFERENCIA']||0);
+                    const delDeclarado=['rappi','ubereats','didi'].reduce((t,k)=>t+(efectivoCaja?.[`del_${k}`]||0),0);
+                    const delEsperado=['rappi','ubereats','didi'].reduce((t,k)=>t+(tiraData.porMetodo?.[k]||0),0);
+                    return[
+                      {label:'💵 Efectivo',declarado:efDeclarado,esperado:efEsperado},
+                      {label:'💳 Terminal',declarado:termDeclarado,esperado:termEsperado},
+                      {label:'🛵 Delivery',declarado:delDeclarado,esperado:delEsperado},
+                    ].map(r=>{
+                      const dif=r.declarado-r.esperado;
+                      return(
+                        <div key={r.label} style={{background:'#0f172a',borderRadius:8,padding:12}}>
+                          <p style={{fontSize:11,fontWeight:700,color:'#64748b',margin:'0 0 8px'}}>{r.label}</p>
+                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                            <span style={{fontSize:10,color:'#475569'}}>Cajero declara</span>
+                            <span style={{fontSize:12,fontWeight:700,color:'#f1f5f9'}}>{fmt(r.declarado)}</span>
+                          </div>
+                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                            <span style={{fontSize:10,color:'#475569'}}>Sistema registra</span>
+                            <span style={{fontSize:12,color:'#94a3b8'}}>{fmt(r.esperado)}</span>
+                          </div>
+                          <div style={{borderTop:'1px solid #334155',paddingTop:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                            <span style={{fontSize:10,color:'#64748b'}}>Diferencia</span>
+                            <span style={{fontSize:15,fontWeight:800,color:dif===0?'#10b981':Math.abs(dif)<5?'#f59e0b':'#f87171'}}>
+                              {dif===0?'✓':dif>0?'+':''}{fmt(dif)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Desglose de denominaciones */}
+                {DENOMINACIONES.some(d=>(efectivoCaja?.[`den_${d}`]||0)>0)&&(
+                  <div style={{marginTop:12,background:'#0f172a',borderRadius:8,padding:10}}>
+                    <p style={{fontSize:10,color:'#64748b',margin:'0 0 8px',fontWeight:600}}>Desglose denominaciones efectivo</p>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6}}>
+                      {DENOMINACIONES.filter(d=>(efectivoCaja?.[`den_${d}`]||0)>0).map(d=>(
+                        <div key={d} style={{textAlign:'center',background:'#1e293b',borderRadius:6,padding:'5px 4px'}}>
+                          <p style={{fontSize:9,color:'#64748b',margin:'0 0 2px'}}>${d}</p>
+                          <p style={{fontSize:11,fontWeight:600,color:'#f1f5f9',margin:'0 0 2px'}}>×{efectivoCaja?.[`den_${d}`]}</p>
+                          <p style={{fontSize:10,color,margin:0}}>{fmt(d*(efectivoCaja?.[`den_${d}`]||0))}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-            {(tiraData.movimientos||[]).length>0&&(
-              <div style={{background:'#0f172a',borderRadius:8,padding:10,marginBottom:10}}>
-                <p style={{fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 8px'}}>Movimientos de caja</p>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
-                  {(()=>{const deps=(tiraData.movimientos||[]).filter((m:any)=>m.type==='ENTRADA').reduce((t:number,m:any)=>t+Number(m.amount),0);const rets=(tiraData.movimientos||[]).filter((m:any)=>m.type==='SALIDA').reduce((t:number,m:any)=>t+Number(m.amount),0);return[{label:'Depósitos',value:deps,col:'#10b981'},{label:'Retiros',value:rets,col:'#f87171'},{label:'Neto',value:deps-rets,col:deps-rets>=0?'#10b981':'#f87171'}].map(r=>(<div key={r.label} style={{textAlign:'center'}}><p style={{fontSize:10,color:'#64748b',margin:'0 0 2px'}}>{r.label}</p><p style={{fontSize:14,fontWeight:700,color:r.col,margin:0}}>{fmt(r.value)}</p></div>));})()}
+
+              {/* 5. RESUMEN FINAL */}
+              <div style={{background:'#0f172a',borderRadius:10,padding:14,border:'2px solid #f59e0b'}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+                  {[
+                    {label:'Total ventas del día',value:fmt(tiraData.totalBruto),col:'#f59e0b',big:true},
+                    {label:'Efectivo esperado',value:fmt(tiraData.porMetodo?.['EFECTIVO']||0),col:'#10b981',big:false},
+                    {label:'Efectivo declarado',value:fmt(DENOMINACIONES.reduce((t,d)=>t+d*(efectivoCaja?.[`den_${d}`]||0),0)),col:'#f1f5f9',big:false},
+                  ].map(k=>(
+                    <div key={k.label} style={{textAlign:'center'}}>
+                      <p style={{fontSize:10,color:'#64748b',margin:'0 0 4px'}}>{k.label}</p>
+                      <p style={{fontSize:k.big?22:16,fontWeight:800,color:k.col,margin:0}}>{k.value}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
-            <div style={{background:'#0f172a',borderRadius:8,padding:10,marginBottom:14}}>
-              <p style={{fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:1,margin:'0 0 8px'}}>Cajero declaró vs sistema</p>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
-                {[
-                  {label:'Efectivo',declarado:DENOMINACIONES.reduce((t,d)=>t+d*(efectivoCaja?.[`den_${d}`]||0),0),esperado:tiraData.porMetodo['EFECTIVO']||0},
-                  {label:'Terminal',declarado:['TARJETA_DEBITO','TARJETA_CREDITO','TRANSFERENCIA'].reduce((t,k)=>t+(efectivoCaja?.[`term_${k}`]||0),0),esperado:(tiraData.porMetodo['TARJETA_DEBITO']||0)+(tiraData.porMetodo['TARJETA_CREDITO']||0)+(tiraData.porMetodo['TRANSFERENCIA']||0)},
-                  {label:'Delivery',declarado:['rappi','ubereats','didi'].reduce((t,k)=>t+(efectivoCaja?.[`del_${k}`]||0),0),esperado:['rappi','ubereats','didi'].reduce((t,k)=>t+(tiraData.porMetodo[k]||0),0)},
-                ].map(r=>{const dif=r.declarado-r.esperado;return(
-                  <div key={r.label} style={{background:'#1e293b',borderRadius:6,padding:8}}>
-                    <p style={{fontSize:10,fontWeight:700,color:'#64748b',margin:'0 0 6px',textTransform:'uppercase'}}>{r.label}</p>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}><span style={{fontSize:10,color:'#64748b'}}>Declarado</span><span style={{fontSize:12,color:'#f1f5f9',fontWeight:600}}>{fmt(r.declarado)}</span></div>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{fontSize:10,color:'#64748b'}}>Esperado</span><span style={{fontSize:12,color:'#94a3b8'}}>{fmt(r.esperado)}</span></div>
-                    <div style={{borderTop:'1px solid #334155',paddingTop:4,display:'flex',justifyContent:'space-between'}}><span style={{fontSize:10,color:'#64748b'}}>Diferencia</span><span style={{fontSize:13,fontWeight:700,color:dif===0?'#10b981':dif>0?'#3b82f6':'#f87171'}}>{dif>0?'+':''}{fmt(dif)}</span></div>
-                  </div>
-                );})}
-              </div>
             </div>
-            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+
+            {/* Footer buttons */}
+            <div style={{padding:'12px 20px',borderTop:'1px solid #334155',display:'flex',gap:8,justifyContent:'flex-end',background:'#0f172a',position:'sticky',bottom:0}}>
               <button onClick={()=>setShowTiraZ(false)} style={{padding:'8px 20px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>Cancelar</button>
               <button onClick={async()=>{
                 try{
+                  const efDeclarado=DENOMINACIONES.reduce((t,d)=>t+d*(efectivoCaja?.[`den_${d}`]||0),0);
+                  const termDeclarado=['TARJETA_DEBITO','TARJETA_CREDITO','TRANSFERENCIA'].reduce((t,k)=>t+(efectivoCaja?.[`term_${k}`]||0),0);
+                  const delDeclarado=['rappi','ubereats','didi'].reduce((t,k)=>t+(efectivoCaja?.[`del_${k}`]||0),0);
                   await api.post(`/companies/${cid}/corte-caja`,{
-                    fecha:tiraData.fecha,totalVentas:tiraData.totalBruto,
-                    totalEfectivo:tiraData.porMetodo['EFECTIVO']||0,
-                    totalTarjeta:(tiraData.porMetodo['TARJETA_DEBITO']||0)+(tiraData.porMetodo['TARJETA_CREDITO']||0),
-                    totalTransfer:tiraData.porMetodo['TRANSFERENCIA']||0,
-                    totalCredito:tiraData.porMetodo['CREDITO_CLIENTE']||0,
-                    efectivoContado:DENOMINACIONES.reduce((t,d)=>t+d*(efectivoCaja?.[`den_${d}`]||0),0),
-                    desgloseDenominaciones:efectivoCaja,desgloseTerminales:efectivoCaja,desgloseDelivery:efectivoCaja,
+                    fecha:tiraData.fecha,
+                    totalVentas:tiraData.totalBruto,
+                    totalEfectivo:tiraData.porMetodo?.['EFECTIVO']||0,
+                    totalTarjeta:(tiraData.porMetodo?.['TARJETA_DEBITO']||0)+(tiraData.porMetodo?.['TARJETA_CREDITO']||0),
+                    totalTransfer:tiraData.porMetodo?.['TRANSFERENCIA']||0,
+                    totalCredito:tiraData.porMetodo?.['CREDITO_CLIENTE']||0,
+                    totalDelivery:['rappi','ubereats','didi'].reduce((t,k)=>t+(tiraData.porMetodo?.[k]||0),0),
+                    efectivoContado:efDeclarado,
+                    totalTerminal:termDeclarado,
+                    desgloseDenominaciones:efectivoCaja,
+                    desgloseTerminales:{
+                      TARJETA_DEBITO:efectivoCaja?.term_TARJETA_DEBITO||0,
+                      TARJETA_CREDITO:efectivoCaja?.term_TARJETA_CREDITO||0,
+                      TRANSFERENCIA:efectivoCaja?.term_TRANSFERENCIA||0,
+                    },
+                    desgloseDelivery:{rappi:efectivoCaja?.del_rappi||0,ubereats:efectivoCaja?.del_ubereats||0,didi:efectivoCaja?.del_didi||0},
+                    detalleVentas:JSON.stringify({porFamilia:tiraData.porFamilia,porMetodo:tiraData.porMetodo,movimientos:tiraData.movimientos}),
                   });
                   setShowTiraZ(false);setTiraXGuardada(false);setEfectivoCaja({});
                   alert('✔ Corte enviado al contador');
-                }catch(e:any){alert(e.response?.data?.message||'Error');}
-              }} style={{padding:'8px 24px',borderRadius:8,border:'none',background:'#f59e0b',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
-                Confirmar Tira Z
+                }catch(e:any){alert(e.response?.data?.message||'Error al enviar corte');}
+              }} style={{padding:'8px 28px',borderRadius:8,border:'none',background:'#f59e0b',color:'#000',cursor:'pointer',fontSize:14,fontWeight:700}}>
+                ⚡ Confirmar Tira Z y enviar al contador
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal crédito bloqueado */}
+      {/* Modal crédito bloqueado */}      {/* Modal crédito bloqueado */}
       {showCreditBlock&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'#1e293b',borderRadius:12,padding:24,width:380,border:'1px solid #f87171'}}>
