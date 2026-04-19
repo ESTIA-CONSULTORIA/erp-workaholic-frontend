@@ -9,6 +9,9 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('erp_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Evitar caché del navegador
+  config.headers['Cache-Control'] = 'no-cache';
+  config.headers['Pragma'] = 'no-cache';
   return config;
 });
 
