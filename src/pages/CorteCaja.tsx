@@ -251,8 +251,10 @@ export default function CorteCajaPage() {
                       <td>
                         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                           <span style={{ fontSize:11, padding:'3px 8px', borderRadius:99,
-                            background: STATUS_COLOR[c.status]+'22', color: STATUS_COLOR[c.status] }}>
-                            {c.status}
+                            background: STATUS_COLOR[c.status]+'22', color: STATUS_COLOR[c.status],
+                            fontWeight: c.status==='RECHAZADO' ? 700 : 400,
+                            border: c.status==='RECHAZADO' ? '1px solid #f87171' : 'none' }}>
+                            {c.status === 'RECHAZADO' ? '⚠ RECHAZADO' : c.status}
                           </span>
                           {tieneConversacion && (
                             <span style={{ fontSize:10, color:'#60a5fa', cursor:'pointer' }}
@@ -348,6 +350,15 @@ export default function CorteCajaPage() {
 
             {/* Conversación */}
             <div style={{ flex:1, overflowY:'auto', padding:'16px 20px' }}>
+              {corteDetalle.status === 'RECHAZADO' && !puedeValidar && (
+                <div style={{ background:'rgba(248,113,113,0.1)', border:'1px solid #f87171', borderRadius:8,
+                  padding:'10px 14px', marginBottom:12 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:'#f87171', margin:'0 0 4px' }}>⚠ Corte rechazado por el contador</p>
+                  <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>
+                    Revisa el motivo abajo y usa el botón "Responder al contador" para aclarar.
+                  </p>
+                </div>
+              )}
               {(() => {
                 const historial = parsearHistorial(corteDetalle.notasCajero);
                 if (historial.length === 0) {
@@ -366,18 +377,24 @@ export default function CorteCajaPage() {
                 <>
                   <button onClick={() => { setCorteSeleccionado(corteDetalle); setEfectivoReal(Number(corteDetalle.efectivoContado)); setNotasValid(''); setCorteDetalle(null); }}
                     style={{ flex:1, padding:'8px', borderRadius:8, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:13 }}>
-                    Validar corte
+                    ✓ Validar corte
                   </button>
-                  <button onClick={() => { setCorteSeleccionado(corteDetalle); setEfectivoReal(0); setNotasValid(''); setCorteDetalle(null); }}
+                  <button onClick={() => { setCorteSeleccionado(corteDetalle); setEfectivoReal(0); setNotasValid('RECHAZAR'); setCorteDetalle(null); }}
                     style={{ flex:1, padding:'8px', borderRadius:8, border:'none', background:'#f87171', color:'#fff', cursor:'pointer', fontSize:13 }}>
-                    Rechazar
+                    ✕ Rechazar
                   </button>
                 </>
               )}
+              {puedeValidar && corteDetalle.status === 'RECHAZADO' && (
+                <button onClick={() => { setCorteSeleccionado(corteDetalle); setEfectivoReal(Number(corteDetalle.efectivoContado)); setNotasValid(''); setCorteDetalle(null); }}
+                  style={{ flex:1, padding:'8px', borderRadius:8, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:13 }}>
+                  ✓ Validar ahora
+                </button>
+              )}
               {!puedeValidar && corteDetalle.status === 'RECHAZADO' && (
                 <button onClick={() => { setCorteRespuesta(corteDetalle); setRespuestaTexto(''); setTicketImg(null); setCorteDetalle(null); }}
-                  style={{ flex:1, padding:'8px', borderRadius:8, border:'none', background:'#f59e0b', color:'#fff', cursor:'pointer', fontSize:13 }}>
-                  Responder al contador
+                  style={{ flex:1, padding:'8px', borderRadius:8, border:'none', background:'#f59e0b', color:'#000', cursor:'pointer', fontSize:13, fontWeight:700 }}>
+                  📩 Responder al contador
                 </button>
               )}
               <button onClick={() => setCorteDetalle(null)}
