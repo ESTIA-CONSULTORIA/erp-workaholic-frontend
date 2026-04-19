@@ -19,6 +19,7 @@ import MembresiasPage from './pages/palestra/Membresias';
 import PalestraPOSPage from './pages/palestra/POS';
 import ServiciosPage from './pages/palestra/Servicios';
 import SoftRestaurantPage from './pages/palestra/SoftRestaurant';
+import ComisionesPage from './pages/palestra/Comisiones';
 import MiPerfilPage from './pages/rh/MiPerfil';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/palestra/membresias" element={<MembresiasPage/>}/>
         <Route path="/palestra/servicios" element={<ServiciosPage/>}/>
         <Route path="/palestra/soft-restaurant" element={<SoftRestaurantPage/>}/>
+        <Route path="/palestra/comisiones" element={<ComisionesPage/>}/>
         <Route path="/rh" element={<RHPage/>}/>
         <Route path="/mi-perfil" element={<MiPerfilPage/>}/>
         <Route path="/rh/empleados/:id" element={<ExpedientePage/>}/>

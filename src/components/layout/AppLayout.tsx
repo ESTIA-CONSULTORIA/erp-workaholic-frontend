@@ -69,6 +69,7 @@ const NAV_GROUPS = [
       { to:'/palestra/membresias',     icon:'👥', label:'Membresías',           companies:['PALESTRA'] },
       { to:'/palestra/servicios',      icon:'⚙',  label:'Servicios',            companies:['PALESTRA'] },
       { to:'/palestra/soft-restaurant',icon:'🍽',  label:'Restaurante (Soft)',   companies:['PALESTRA'] },
+      { to:'/palestra/comisiones',      icon:'💰', label:'Comisiones Coaches',   companies:['PALESTRA'] },
       { to:'/mi-perfil', icon:'👤', label:'Mi Perfil',  roles:['cajero','rh','admin','administrador','gerente','contador','director'] },
       { to:'/rh',        icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
       { to:'/rh/nomina', icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
