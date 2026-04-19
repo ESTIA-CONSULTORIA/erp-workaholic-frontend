@@ -23,6 +23,7 @@ const NAV_GROUPS = [
       { to:'/machete/compras',    icon:'🛒', label:'Compras',      companies:['MACHETE'] },
       { to:'/machete/produccion', icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
       { to:'/catalogo',           icon:'≋',  label:'Catálogo',     companies:['MACHETE'] },
+      { to:'/ordenes-compra',    icon:'📋', label:'OC',            companies:['MACHETE'] },
       { to:'/clientes',      icon:'👤', label:'Clientes',     roles:['admin','administrador','gerente','contador'] },
     ]
   },
@@ -37,7 +38,6 @@ const NAV_GROUPS = [
       { to:'/conciliacion',    icon:'⊜', label:'Arqueo',  roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxc',             icon:'◷', label:'CxC',           roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxp',             icon:'◶', label:'CxP',           roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/ordenes-compra',  icon:'📋', label:'OC',            companies:['MACHETE'] },
       { to:'/documentos',      icon:'⊞', label:'Documentos',    roles:['admin','administrador','gerente','contador','cajero'] },
     ]
   },
