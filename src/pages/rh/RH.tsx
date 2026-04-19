@@ -3,7 +3,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate } from '../../lib/api';
+import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import ImportCSV from '../../components/ImportCSV';
 
@@ -159,10 +159,21 @@ export default function RHPage() {
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Recursos Humanos</h1>
           <div style={{ display:'flex', gap:8 }}>
             {esRH && (
-              <button className="btn-secondary" style={{ fontSize:12 }}
-                onClick={() => setShowImport(s => !s)}>
-                ⬆ Importar CSV
-              </button>
+              <>
+                <button onClick={() => exportCSV('empleados', employees as any[], [
+                  {key:'employeeNumber',label:'#'},{key:'firstName',label:'Nombre'},
+                  {key:'lastName',label:'Apellido'},{key:'position',label:'Puesto'},
+                  {key:'department',label:'Área'},{key:'grossSalary',label:'Salario'},
+                  {key:'startDate',label:'Ingreso'},{key:'status',label:'Estado'},
+                ])}
+                  style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                  ⬇ Exportar CSV
+                </button>
+                <button className="btn-secondary" style={{ fontSize:12 }}
+                  onClick={() => setShowImport(s => !s)}>
+                  ⬆ Importar CSV
+                </button>
+              </>
             )}
             {(esRH || esJefe) && (
               <button className="btn-primary" style={{ background:color, fontSize:12 }}

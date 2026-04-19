@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ImportCSV from '../../components/ImportCSV';
 import { useERPStore } from '../../store/erp.store';
-import { api, fmt } from '../../lib/api';
+import { api, fmt, exportCSV } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function InventarioPage() {
@@ -89,6 +89,14 @@ export default function InventarioPage() {
         {tab === 'productos' && (
           <>
             <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+          <button onClick={() => exportCSV('inventario', productos as any[], [
+            {key:'sku',label:'SKU'},{key:'name',label:'Nombre'},
+            {key:'stock',label:'Stock'},{key:'minStock',label:'Mínimo'},
+            {key:'maxStock',label:'Máximo'},{key:'priceMostrador',label:'Precio Mostrador'},
+          ])}
+            style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+            ⬇ Exportar CSV
+          </button>
               <button onClick={() => setShowImport('productos')}
                 style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
                   background:'none', color, cursor:'pointer', fontSize:12 }}>
@@ -164,6 +172,14 @@ export default function InventarioPage() {
         {tab === 'insumos' && (
           <>
             <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+          <button onClick={() => exportCSV('inventario', productos as any[], [
+            {key:'sku',label:'SKU'},{key:'name',label:'Nombre'},
+            {key:'stock',label:'Stock'},{key:'minStock',label:'Mínimo'},
+            {key:'maxStock',label:'Máximo'},{key:'priceMostrador',label:'Precio Mostrador'},
+          ])}
+            style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+            ⬇ Exportar CSV
+          </button>
               <button onClick={() => setShowImport('insumos')}
                 style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
                   background:'none', color, cursor:'pointer', fontSize:12 }}>

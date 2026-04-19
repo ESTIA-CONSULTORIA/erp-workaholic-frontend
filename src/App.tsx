@@ -47,7 +47,7 @@ export default function App() {
         <Route path="/catalogo" element={<CatalogoPage/>}/>
         <Route path="/ordenes-compra" element={<OrdenesCompraPage/>}/>
         <Route path="/machete/compras" element={<ComprasPage/>}/>
-        <Route path="/proveedores" element={<ProveedoresPage/>}/>
+        <Route path="/proveedores" element={<Navigate to="/catalogo" replace/>}/>
         <Route path="/clientes" element={<ClientesPage/>}/>
         <Route path="/intercompany" element={<IntercompanyPage/>}/>
         <Route path="/bitacora" element={<BitacoraPage/>}/>

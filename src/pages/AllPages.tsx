@@ -1173,10 +1173,16 @@ export function CxPPage() {
       <div style={{ maxWidth:1000 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
           <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Cuentas por Pagar</h1>
-          <button className="btn-primary" style={{ background:color, fontSize:13 }}
-            onClick={() => setNuevaModal(true)}>
-            + Nueva CxP
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button className="btn-secondary" style={{ fontSize:12 }}
+              onClick={() => setShowImportCxP(s => !s)}>
+              ⬆ Importar CSV
+            </button>
+            <button className="btn-primary" style={{ background:color, fontSize:13 }}
+              onClick={() => setNuevaModal(true)}>
+              + Nueva CxP
+            </button>
+          </div>
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:16 }}>
@@ -1742,6 +1748,25 @@ export function ReportesPage() {
         <div style={{ display: tab === 'flujo'   ? 'block' : 'none' }}><FlujoTab   cid={cid!} color={color} activePeriod={activePeriod}/></div>
         <div style={{ display: tab === 'balance' ? 'block' : 'none' }}><BalanceTab cid={cid!} color={color} activePeriod={activePeriod}/></div>
       </div>
+
+      {showImportCxP && (
+        <ImportCSV title="CxP" color={color}
+          columns={[
+            { key:'concepto',       label:'Concepto',     required:true              },
+            { key:'proveedor',      label:'Proveedor'                                },
+            { key:'fecha',          label:'Fecha',        required:true, type:'date' },
+            { key:'fechaVenc',      label:'Vencimiento',               type:'date'  },
+            { key:'monto',          label:'Monto',        required:true, type:'number'},
+            { key:'notas',          label:'Notas'                                    },
+          ]}
+          onImport={async (rows) => {
+            const res = await api.post(`/companies/${cid}/import/cxp`, { rows });
+            qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] });
+            return res.data;
+          }}
+          onClose={() => setShowImportCxP(false)}
+        />
+      )}
     </AppLayout>
   );
 }
