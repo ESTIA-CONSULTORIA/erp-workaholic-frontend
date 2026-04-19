@@ -32,7 +32,7 @@ export default function App() {
       <Route path="/*" element={<RequireAuth><Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="/dashboard" element={<DashboardPage/>}/>
-        <Route path="/cortes" element={<CortesPage/>}/>
+        <Route path="/cortes" element={<Navigate to="/corte-caja" replace/>}/>
         <Route path="/corte-caja" element={<CorteCajaPage/>}/>
         <Route path="/gastos" element={<GastosPage/>}/>
         <Route path="/conciliacion" element={<ConciliacionPage/>}/>
@@ -43,15 +43,15 @@ export default function App() {
         <Route path="/consolidado" element={<ConsolidadoPage/>}/>
         <Route path="/admin" element={<AdminPage/>}/>
         <Route path="/pos" element={<POSPage/>}/>
-        <Route path="/produccion" element={<ProduccionPage/>}/>
+        <Route path="/produccion" element={<Navigate to="/machete/produccion" replace/>}/>
         <Route path="/catalogo" element={<CatalogoPage/>}/>
         <Route path="/ordenes-compra" element={<OrdenesCompraPage/>}/>
         <Route path="/machete/compras" element={<ComprasPage/>}/>
         <Route path="/proveedores" element={<Navigate to="/catalogo" replace/>}/>
-        <Route path="/clientes" element={<ClientesPage/>}/>
+        <Route path="/clientes" element={<Navigate to="/catalogo" replace/>}/>
         <Route path="/intercompany" element={<IntercompanyPage/>}/>
         <Route path="/bitacora" element={<BitacoraPage/>}/>
-        <Route path="/machete-reportes" element={<MacheteReportesPage/>}/>
+        <Route path="/machete-reportes" element={<Navigate to="/reportes" replace/>}/>
         <Route path="/reportes/ventas" element={<VentasReportePage/>}/>
         <Route path="/reportes/cxc"    element={<CxCReportePage/>}/>
         <Route path="/reportes/cxp"    element={<CxPReportePage/>}/>
