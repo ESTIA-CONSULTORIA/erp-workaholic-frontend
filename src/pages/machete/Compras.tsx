@@ -98,7 +98,7 @@ export default function ComprasPage() {
 
   const { data: cuentas = [] } = useQuery({
     queryKey: ['cuentas', cid],
-    queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
+    queryFn:  () => api.get(`/companies/${cid}/cash-accounts`).then(r => r.data),
     enabled:  !!cid,
   });
 
@@ -224,17 +224,45 @@ export default function ComprasPage() {
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr auto', gap:8, alignItems:'end' }}>
                 <div>
                   <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:3 }}>Insumo</label>
-                  <select className="input-base" style={{ fontSize:12 }} value={form.insumoId}
-                    onChange={e => {
-                      const ins = (insumos as any[]).find(i => i.id === e.target.value);
-                      setF('insumoId', e.target.value);
-                      if (ins) { setF('unidad', ins.unit); setF('costoUnitario', ins.costUnit || 0); }
-                    }}>
-                    <option value="">— Seleccionar —</option>
-                    {(insumos as any[]).map((ins:any) => (
-                      <option key={ins.id} value={ins.id}>{ins.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ position:'relative' }}>
+                    <input className="input-base" style={{ fontSize:12, paddingRight: form.insumoId ? 24 : undefined }}
+                      placeholder="Buscar insumo..."
+                      value={insumoQ}
+                      autoComplete="off"
+                      onChange={e => { setInsumoQ(e.target.value); setShowInsumoOpts(true); setF('insumoId',''); }}
+                      onFocus={() => setShowInsumoOpts(true)}
+                      onBlur={() => setTimeout(()=>setShowInsumoOpts(false), 200)}
+                    />
+                    {form.insumoId && <span style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', fontSize:10, color:'#10b981' }}>✓</span>}
+                    {showInsumoOpts && insumoQ.length >= 1 && (
+                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#1e293b',
+                        border:'1px solid #334155', borderRadius:8, zIndex:200, maxHeight:180,
+                        overflowY:'auto', boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
+                        {(insumos as any[])
+                          .filter((i:any) => i.name?.toLowerCase().includes(insumoQ.toLowerCase()))
+                          .slice(0,8).map((i:any) => (
+                            <div key={i.id}
+                              onMouseDown={() => {
+                                setF('insumoId', i.id);
+                                setF('unidad', i.unit || 'kg');
+                                setF('costoUnitario', i.costUnit || 0);
+                                setInsumoQ(i.name);
+                                setShowInsumoOpts(false);
+                              }}
+                              style={{ padding:'7px 10px', cursor:'pointer', borderBottom:'1px solid #1e293b',
+                                display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                              onMouseEnter={e=>(e.currentTarget.style.background='#334155')}
+                              onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
+                              <span style={{ fontSize:12, color:'#f1f5f9' }}>{i.name}</span>
+                              <span style={{ fontSize:10, color:'#64748b' }}>{i.stock} {i.unit}</span>
+                            </div>
+                          ))}
+                        {(insumos as any[]).filter((i:any)=>i.name?.toLowerCase().includes(insumoQ.toLowerCase())).length===0&&(
+                          <p style={{ padding:'8px 10px', fontSize:11, color:'#64748b', margin:0 }}>Sin resultados</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:3 }}>Cantidad</label>
