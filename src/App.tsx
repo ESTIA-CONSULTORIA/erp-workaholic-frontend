@@ -14,6 +14,11 @@ import IntercompanyPage from './pages/Intercompany';
 import IntercompanyPage from './pages/Intercompany';
 import MacheteReportesPage, { VentasReportePage, CxCReportePage, CxPReportePage } from './pages/machete/MacheteReportes';
 import RHPage from './pages/rh/RH';
+import PalestraDashboardPage from './pages/palestra/PalestraDashboard';
+import MembresiasPage from './pages/palestra/Membresias';
+import PalestraPOSPage from './pages/palestra/POS';
+import ServiciosPage from './pages/palestra/Servicios';
+import SoftRestaurantPage from './pages/palestra/SoftRestaurant';
 import MiPerfilPage from './pages/rh/MiPerfil';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
@@ -57,6 +62,11 @@ export default function App() {
         <Route path="/reportes/cxp"    element={<CxPReportePage/>}/>
         <Route path="/machete/produccion" element={<ProduccionPage/>}/>
         <Route path="/machete/inventario" element={<InventarioPage/>}/>
+        <Route path="/palestra" element={<PalestraDashboardPage/>}/>
+        <Route path="/palestra/pos" element={<PalestraPOSPage/>}/>
+        <Route path="/palestra/membresias" element={<MembresiasPage/>}/>
+        <Route path="/palestra/servicios" element={<ServiciosPage/>}/>
+        <Route path="/palestra/soft-restaurant" element={<SoftRestaurantPage/>}/>
         <Route path="/rh" element={<RHPage/>}/>
         <Route path="/mi-perfil" element={<MiPerfilPage/>}/>
         <Route path="/rh/empleados/:id" element={<ExpedientePage/>}/>
