@@ -570,7 +570,13 @@ export default function ExpedientePage() {
                     setLinkModal(false);
                     refetch();
                   } catch(e:any) {
-                    alert(e.response?.data?.message || 'Error al vincular');
+                    const msg = e.response?.data?.message || e.response?.data?.error || 'Error al vincular';
+                    const status = e.response?.status;
+                    if (status === 500 && msg.includes('Unique')) {
+                      alert('Este usuario ya está vinculado a otro empleado. Primero desvincúlalo desde ese expediente.');
+                    } else {
+                      alert(`Error ${status || ''}: ${msg}`);
+                    }
                   } finally { setLinkSaving(false); }
                 }}
                 style={{ padding:'7px 16px', borderRadius:7, border:'none', background:'#8b5cf6', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
