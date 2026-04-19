@@ -70,6 +70,7 @@ const NAV_GROUPS = [
       { to:'/palestra/servicios',      icon:'⚙',  label:'Servicios',            companies:['PALESTRA'] },
       { to:'/palestra/soft-restaurant',icon:'🍽',  label:'Restaurante (Soft)',   companies:['PALESTRA'] },
       { to:'/palestra/comisiones',      icon:'💰', label:'Comisiones Coaches',   companies:['PALESTRA'] },
+      { to:'/palestra/productos',       icon:'📦', label:'Productos/Inventario', companies:['PALESTRA'] },
       { to:'/mi-perfil', icon:'👤', label:'Mi Perfil',  roles:['cajero','rh','admin','administrador','gerente','contador','director'] },
       { to:'/rh',        icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
       { to:'/rh/nomina', icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
@@ -79,7 +80,8 @@ const NAV_GROUPS = [
     id: 'admin',
     label: null,
     items: [
-      { to:'/admin', icon:'⊛', label:'Admin', roles:['admin','administrador'] },
+      { to:'/admin',     icon:'⊛', label:'Admin',    roles:['admin','administrador'] },
+      { to:'/permisos',  icon:'🔒', label:'Permisos', roles:['admin','administrador'] },
     ]
   },
 ];

@@ -20,7 +20,9 @@ import PalestraPOSPage from './pages/palestra/POS';
 import ServiciosPage from './pages/palestra/Servicios';
 import SoftRestaurantPage from './pages/palestra/SoftRestaurant';
 import ComisionesPage from './pages/palestra/Comisiones';
+import PalestraProductosPage from './pages/palestra/Productos';
 import MiPerfilPage from './pages/rh/MiPerfil';
+import PermisosPage from './pages/Permisos';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
 import { CortesPage, GastosPage, ConciliacionPage, CxCPage, CxPPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage, BitacoraPage } from './pages/AllPages';
@@ -48,6 +50,7 @@ export default function App() {
         <Route path="/documentos" element={<DocumentosPage/>}/>
         <Route path="/consolidado" element={<ConsolidadoPage/>}/>
         <Route path="/admin" element={<AdminPage/>}/>
+        <Route path="/permisos" element={<PermisosPage/>}/>
         <Route path="/pos" element={<POSPage/>}/>
         <Route path="/produccion" element={<Navigate to="/machete/produccion" replace/>}/>
         <Route path="/catalogo" element={<CatalogoPage/>}/>
@@ -69,6 +72,7 @@ export default function App() {
         <Route path="/palestra/servicios" element={<ServiciosPage/>}/>
         <Route path="/palestra/soft-restaurant" element={<SoftRestaurantPage/>}/>
         <Route path="/palestra/comisiones" element={<ComisionesPage/>}/>
+        <Route path="/palestra/productos" element={<PalestraProductosPage/>}/>
         <Route path="/rh" element={<RHPage/>}/>
         <Route path="/mi-perfil" element={<MiPerfilPage/>}/>
         <Route path="/rh/empleados/:id" element={<ExpedientePage/>}/>

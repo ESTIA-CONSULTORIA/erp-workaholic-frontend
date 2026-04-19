@@ -13,7 +13,8 @@ const METODOS = [
 ];
 
 const TIPO_ICON: Record<string,string> = {
-  MEMBRESIA:'👥', SERVICIO:'⚙', CLASE:'🎾', CLINICA:'🏆', RENTA:'📅', MANTENIMIENTO:'🔄'
+  MEMBRESIA:'👥', SERVICIO:'⚙', CLASE:'🎾', CLINICA:'🏆', RENTA:'📅', MANTENIMIENTO:'🔄',
+  ROPA:'👕', ACCESORIOS:'🎒', SUPLEMENTOS:'💊', GENERAL:'📦', PRODUCTO:'📦'
 };
 
 export default function PalestraPOSPage() {
@@ -38,6 +39,20 @@ export default function PalestraPOSPage() {
     enabled:  !!cid,
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ['palestra-products', cid],
+    queryFn:  () => api.get(`/companies/${cid}/palestra/products`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  // Combinar servicios y productos en un solo catálogo
+  const catalog = [
+    ...(services as any[]).map(s => ({ ...s, itemType:'SERVICIO' })),
+    ...(products as any[]).map(p => ({ ...p, type: p.category || 'PRODUCTO', itemType:'PRODUCTO',
+      price: p.price, coachable: false, duration: null,
+      name: p.name + (p.stock <= 0 ? ' (Sin stock)' : '') })),
+  ];
+
   const { data: coaches = [] } = useQuery({
     queryKey: ['coaches', cid],
     queryFn:  () => api.get(`/companies/${cid}/rh/employees?status=ACTIVO`).then(r => r.data),
@@ -47,11 +62,14 @@ export default function PalestraPOSPage() {
   const total = carrito.reduce((t, l) => t + l.price * l.qty, 0);
 
   const agregar = (srv: any) => {
+    if (srv.itemType === 'PRODUCTO' && srv.stock <= 0) return;
     setCarrito(c => {
       const existing = c.find(l => l.id === srv.id);
       if (existing) return c.map(l => l.id === srv.id ? {...l, qty: l.qty+1} : l);
       return [...c, { id:srv.id, name:srv.name, price:Number(srv.price), qty:1,
-                      coachable:srv.coachable, coachRate:Number(srv.coachRate||0) }];
+                      coachable:srv.coachable||false, coachRate:Number(srv.coachRate||0),
+                      productId: srv.itemType==='PRODUCTO'?srv.id:null,
+                      type: srv.itemType }];
     });
   };
 
@@ -94,8 +112,8 @@ export default function PalestraPOSPage() {
     saleM.mutate();
   };
 
-  const filtered = (services as any[]).filter(s =>
-    !busqueda || s.name.toLowerCase().includes(busqueda.toLowerCase())
+  const filtered = catalog.filter(s =>
+    !busqueda || s.name.toLowerCase().includes(busqueda.toLowerCase()) || s.type === busqueda
   );
 
   const hasCoachable = carrito.some(l => l.coachable);
@@ -112,7 +130,7 @@ export default function PalestraPOSPage() {
           <p style={{ fontSize:13, fontWeight:800, color:'#f1f5f9', margin:0 }}>PALESTRA</p>
           <p style={{ fontSize:9, color, margin:0, letterSpacing:1 }}>POS</p>
         </div>
-        {['MEMBRESIA','SERVICIO','CLASE','CLINICA','RENTA','MANTENIMIENTO'].map(tipo => {
+        {['MEMBRESIA','SERVICIO','CLASE','CLINICA','RENTA','MANTENIMIENTO','ROPA','ACCESORIOS','SUPLEMENTOS','GENERAL'].map(tipo => {
           const count = (services as any[]).filter(s => s.type === tipo).length;
           if (!count) return null;
           return (
@@ -147,6 +165,11 @@ export default function PalestraPOSPage() {
               <p style={{ fontSize:12, fontWeight:600, color:'#f1f5f9', margin:'0 0 4px', lineHeight:1.3 }}>{s.name}</p>
               <p style={{ fontSize:13, fontWeight:800, color, margin:'0 0 4px' }}>{fmt(s.price)}</p>
               {s.duration && <p style={{ fontSize:10, color:'#64748b', margin:0 }}>{s.duration} min</p>}
+              {s.itemType==='PRODUCTO' && (
+                <p style={{ fontSize:9, margin:'2px 0 0', color: s.stock<=0?'#f87171':s.stock<=s.minStock?'#f59e0b':'#10b981' }}>
+                  {s.stock<=0?'Sin stock':`Stock: ${s.stock}`}
+                </p>
+              )}
               {s.coachable && <p style={{ fontSize:9, color:'#f59e0b', margin:'2px 0 0' }}>★ Comisión coach</p>}
             </div>
           ))}
