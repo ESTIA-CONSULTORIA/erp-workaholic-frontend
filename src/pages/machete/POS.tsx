@@ -884,6 +884,19 @@ function POSPageInner() {
                   <button onClick={()=>{
                       const pagado=pagos.reduce((t,p)=>t+Number(p.amount||0),0);
                       if(pagado<total){setError('El pago no cubre el total');return;}
+                      
+                      // Validar referencias por método
+                      for(const pago of pagos.filter(p=>Number(p.amount)>0)){
+                        if(pago.method==='TARJETA_DEBITO'||pago.method==='TARJETA_CREDITO'){
+                          const ref=(pago.reference||'').trim();
+                          if(ref.length<4){setError('Ingresa los últimos 4 dígitos de autorización de tarjeta');return;}
+                        }
+                        if(pago.method==='TRANSFERENCIA'){
+                          const ref=(pago.reference||'').trim();
+                          if(ref.length<10){setError('Ingresa la clave de rastreo de la transferencia (mínimo 10 dígitos)');return;}
+                        }
+                      }
+                      
                       saleM.mutate();setShowCobro(false);
                     }}
                     style={{display:'flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:8,border:'none',background:'#10b981',color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700}}>
@@ -894,6 +907,7 @@ function POSPageInner() {
                     ✕ <span style={{fontSize:11,opacity:.7}}>Esc</span>
                   </button>
                 </div>
+              {error&&<p style={{fontSize:12,color:'#f87171',margin:'4px 0 0',fontWeight:600}}>{error}</p>}
               </div>
             </div>
 
@@ -1051,17 +1065,35 @@ function POSPageInner() {
                 <span style={{fontSize:12,color:'#64748b',flexShrink:0}}>
                   {metodoCobro==='TRANSFERENCIA'?'Clave de rastreo:':'No. autorización:'}
                 </span>
-                <input
-                  placeholder={metodoCobro==='TRANSFERENCIA'?'Ej: 2024041600123456':'Últimos 4 dígitos'}
-                  value={pagos.find(p=>p.method===metodoCobro)?.reference||''}
-                  onChange={e=>actualizarReferencia(metodoCobro,e.target.value)}
-                  style={{flex:1,padding:'7px 12px',borderRadius:8,border:'1px solid #334155',background:'#1e293b',color:'#f1f5f9',fontSize:13}}/>
-                {metodoCobro==='TRANSFERENCIA'&&(pagos.find(p=>p.method===metodoCobro)?.reference||'').length>=10&&(
-                  <button onClick={()=>window.open(`https://www.banxico.org.mx/cep/?n=${pagos.find(p=>p.method===metodoCobro)?.reference}`,'_blank')}
-                    style={{padding:'6px 12px',borderRadius:6,border:'1px solid #06b6d4',background:'none',color:'#06b6d4',cursor:'pointer',fontSize:11}}>
-                    Verificar CEP
-                  </button>
-                )}
+                {(()=>{
+                  const ref=pagos.find(p=>p.method===metodoCobro)?.reference||'';
+                  const monto=pagos.find(p=>p.method===metodoCobro)?.amount||0;
+                  const necesitaRef=Number(monto)>0;
+                  const esValida=metodoCobro==='TRANSFERENCIA'?ref.length>=10:ref.length>=4;
+                  const borderColor=!necesitaRef?'#334155':esValida?'#10b981':'#f87171';
+                  return(
+                    <input
+                      placeholder={metodoCobro==='TRANSFERENCIA'?'Ej: 2024041600123456 (obligatorio)':'Últimos 4 dígitos (obligatorio)'}
+                      value={ref}
+                      onChange={e=>actualizarReferencia(metodoCobro,e.target.value)}
+                      style={{flex:1,padding:'7px 12px',borderRadius:8,border:`1px solid ${borderColor}`,background:'#1e293b',color:'#f1f5f9',fontSize:13}}/>
+                  );
+                })()}
+                {metodoCobro==='TRANSFERENCIA'&&(()=>{
+                  const ref=pagos.find(p=>p.method===metodoCobro)?.reference||'';
+                  if(ref.length<10) return null;
+                  return(
+                    <div style={{display:'flex',flexDirection:'column',gap:4,alignItems:'center'}}>
+                      <button onClick={()=>{
+                          window.open(`https://www.banxico.org.mx/cep/?n=${ref}`,'_blank');
+                        }}
+                        style={{padding:'6px 12px',borderRadius:6,border:'1px solid #06b6d4',background:'#06b6d422',color:'#06b6d4',cursor:'pointer',fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>
+                        🔍 Verificar CEP
+                      </button>
+                      <span style={{fontSize:9,color:'#475569',textAlign:'center'}}>Abre Banxico<br/>para confirmar</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
