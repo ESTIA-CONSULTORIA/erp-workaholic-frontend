@@ -183,4 +183,230 @@ const MODULE_SECTIONS: ModuleSection[] = [
       { key: 'facturacion', label: 'Facturación', actions: ACCIONES.filter(a => a.key === 'crear' || a.key === 'ver') },
       { key: 'cuentas_por_cobrar', label: 'Cuentas por cobrar', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'editar') },
       { key: 'imprimir_nota_consumo', label: 'Imprimir nota de consumo nueva', actions: ACCIONES.filter(a => a.key === 'crear') },
-      { key: 'reimprimir_folios', label: 'Reimprimir folios', actions: ACCIONES.filter(a
+      { key: 'reimprimir_folios', label: 'Reimprimir folios', actions: ACCIONES.filter(a => a.key === 'crear') },
+      { key: 'tarjeta_credito', label: 'Tarjeta de crédito bancaria', actions: ACCIONES.filter(a => a.key === 'crear' || a.key === 'ver') },
+      { key: 'consultar_saldo_monedero', label: 'Consultar saldo a tarjeta monedero', actions: ACCIONES.filter(a => a.key === 'ver') },
+      { key: 'abonar_saldo_monedero', label: 'Abonar saldo a tarjeta monedero', actions: ACCIONES.filter(a => a.key === 'crear') },
+      { key: 'autorizar_productos_emenu', label: 'Autorizar productos e-Menu', actions: ACCIONES.filter(a => a.key === 'aprobar') },
+    ],
+  },
+  {
+    key: 'mantenimiento',
+    label: 'Mantenimiento',
+    modules: [
+      { key: 'base_datos', label: 'Base de datos', actions: ACCIONES.filter(a => a.key === 'editar' || a.key === 'ver') },
+      { key: 'respaldo_recuperacion', label: 'Respaldo y recuperación', actions: ACCIONES.filter(a => a.key === 'crear' || a.key === 'ver') },
+      { key: 'inicializar', label: 'Inicializar', actions: ACCIONES.filter(a => a.key === 'crear') },
+      { key: 'exportar_importar', label: 'Exportar / Importar datos', actions: ACCIONES.filter(a => a.key === 'crear' || a.key === 'ver') },
+      { key: 'herramientas_admin', label: 'Herramientas para administradores', actions: ACCIONES.filter(a => a.key === 'editar' || a.key === 'ver') },
+      { key: 'actualizar_sistema', label: 'Actualizar sistema', actions: ACCIONES.filter(a => a.key === 'editar') },
+    ],
+  },
+];
+
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
+const Permisos: React.FC = () => {
+  const [permissions, setPermissions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [modifiedCells, setModifiedCells] = useState<Set<string>>(new Set());
+
+  // Obtener companyId desde el store global (erp-store)
+  const getActiveCompanyId = (): string => {
+    try {
+      const raw = localStorage.getItem('erp-store');
+      if (!raw) return '';
+      const parsed = JSON.parse(raw);
+      return parsed?.state?.activeCompany?.companyId || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const [companyId] = useState(getActiveCompanyId());
+
+  // Cargar permisos desde el backend
+  useEffect(() => {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+    fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions?companyId=${companyId}`)
+      .then(res => res.json())
+      .then(data => {
+        setPermissions(data);
+        const modified = new Set<string>();
+        data.forEach((perm: any) => {
+          if (!perm.allowed) {
+            modified.add(`${perm.roleCode}|${perm.module}|${perm.action}`);
+          }
+        });
+        setModifiedCells(modified);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error cargando permisos:', err);
+        setLoading(false);
+      });
+  }, [companyId]);
+
+  const getPermissionValue = (role: string, module: string, action: string) => {
+    const perm = permissions.find(p => p.roleCode === role && p.module === module && p.action === action);
+    return perm?.allowed ?? true;
+  };
+
+  const isModified = (role: string, module: string, action: string) => {
+    return modifiedCells.has(`${role}|${module}|${action}`);
+  };
+
+  const togglePermission = async (role: string, module: string, action: string, current: boolean) => {
+    const key = `${role}|${module}|${action}`;
+    setSaving(key);
+    const newValue = !current;
+    try {
+      const res = await fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roleCode: role, module, action, allowed: newValue, companyId }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPermissions(prev => [
+          ...prev.filter(p => !(p.roleCode === role && p.module === module && p.action === action)),
+          updated,
+        ]);
+        setModifiedCells(prev => {
+          const newSet = new Set(prev);
+          if (!newValue) {
+            newSet.add(key);
+          } else {
+            newSet.delete(key);
+          }
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Error al guardar:', error);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const restoreDefaults = async (role: string) => {
+    if (!confirm(`¿Restaurar todos los permisos del rol ${role} a sus valores por defecto?`)) return;
+    setSaving(`role-${role}`);
+    try {
+      for (const section of MODULE_SECTIONS) {
+        for (const mod of section.modules) {
+          for (const acc of mod.actions) {
+            await fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ roleCode: role, module: mod.key, action: acc.key, allowed: true, companyId }),
+            });
+          }
+        }
+      }
+      const res = await fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions?companyId=${companyId}`);
+      const data = await res.json();
+      setPermissions(data);
+      setModifiedCells(new Set());
+    } catch (error) {
+      console.error('Error al restaurar:', error);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-500">Cargando configuración de permisos...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Gestión de Permisos por Rol</h1>
+
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="min-w-full bg-white">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left">Módulo / Acción</th>
+              {ROLES.map(role => (
+                <th key={role.code} className="p-3 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span>{role.name}</span>
+                    <button
+                      onClick={() => restoreDefaults(role.code)}
+                      disabled={saving === `role-${role.code}`}
+                      className="text-xs text-gray-500 hover:text-blue-600 disabled:opacity-50"
+                    >
+                      Restaurar
+                    </button>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {MODULE_SECTIONS.map(section => (
+              <React.Fragment key={section.key}>
+                {/* Encabezado de sección */}
+                <tr className="bg-gray-50">
+                  <td colSpan={ROLES.length + 1} className="p-3 font-semibold text-gray-700">
+                    {section.label}
+                  </td>
+                </tr>
+                {/* Módulos de la sección */}
+                {section.modules.map(mod =>
+                  mod.actions.map(acc => (
+                    <tr key={`${mod.key}-${acc.key}`} className="border-t hover:bg-gray-50">
+                      <td className="p-3 pl-6">
+                        <span className="font-medium">{mod.label}</span>
+                        <span className={`ml-2 text-sm text-${acc.color.replace('bg-', '')}-600`}>({acc.label})</span>
+                      </td>
+                      {ROLES.map(role => {
+                        const val = getPermissionValue(role.code, mod.key, acc.key);
+                        const modified = isModified(role.code, mod.key, acc.key);
+                        const isSaving = saving === `${role.code}|${mod.key}|${acc.key}`;
+                        return (
+                          <td key={role.code} className="p-3 text-center">
+                            <div className="flex flex-col items-center">
+                              <button
+                                onClick={() => togglePermission(role.code, mod.key, acc.key, val)}
+                                disabled={isSaving}
+                                className={`w-8 h-8 rounded-md text-white flex items-center justify-center transition-all ${
+                                  val ? acc.color : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
+                                } ${isSaving ? 'opacity-50 cursor-wait' : ''} ${
+                                  modified ? 'ring-2 ring-yellow-400 ring-offset-1' : ''
+                                }`}
+                              >
+                                {val ? '✓' : '✗'}
+                              </button>
+                              {modified && (
+                                <span className="text-[10px] text-yellow-600 font-medium mt-0.5">
+                                  Modificado
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default Permisos;
