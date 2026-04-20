@@ -25,6 +25,97 @@ const ACCIONES = [
 ];
 
 // ============================================================
+// PERMISOS POR DEFECTO (copia exacta del backend)
+// ============================================================
+const DEFAULT_PERMISSIONS: Record<string, Record<string, string[]>> = {
+  admin: {
+    pos:        ['ver','crear','editar','eliminar','exportar'],
+    gastos:     ['ver','crear','editar','eliminar','aprobar','exportar'],
+    cxc:        ['ver','crear','editar','eliminar','exportar'],
+    cxp:        ['ver','crear','editar','eliminar','exportar'],
+    inventario: ['ver','crear','editar','eliminar','exportar'],
+    compras:    ['ver','crear','editar','eliminar','exportar'],
+    produccion: ['ver','crear','editar','eliminar'],
+    catalogo:   ['ver','crear','editar','eliminar'],
+    rh:         ['ver','crear','editar','eliminar','aprobar','exportar'],
+    reportes:   ['ver','exportar'],
+    admin:      ['ver','crear','editar','eliminar'],
+    corte:      ['ver','crear','editar','aprobar'],
+    oc:         ['ver','crear','editar','eliminar'],
+    membresias: ['ver','crear','editar','eliminar'],
+    servicios:  ['ver','crear','editar','eliminar'],
+    comisiones: ['ver','editar','aprobar'],
+  },
+  administrador: {
+    pos:        ['ver','crear'],
+    gastos:     ['ver','crear','editar','aprobar','exportar'],
+    cxc:        ['ver','crear','editar','exportar'],
+    cxp:        ['ver','crear','editar','exportar'],
+    inventario: ['ver','crear','editar','exportar'],
+    compras:    ['ver','crear','editar','exportar'],
+    produccion: ['ver','crear','editar'],
+    catalogo:   ['ver','crear','editar'],
+    rh:         ['ver','crear','editar','aprobar','exportar'],
+    reportes:   ['ver','exportar'],
+    admin:      ['ver','crear','editar'],
+    corte:      ['ver','aprobar'],
+    oc:         ['ver','crear','editar'],
+    membresias: ['ver','crear','editar'],
+    servicios:  ['ver','crear','editar'],
+    comisiones: ['ver','aprobar'],
+  },
+  gerente: {
+    pos:        ['ver','crear'],
+    gastos:     ['ver','crear','exportar'],
+    cxc:        ['ver','exportar'],
+    cxp:        ['ver','exportar'],
+    inventario: ['ver','exportar'],
+    compras:    ['ver','crear','exportar'],
+    produccion: ['ver','crear'],
+    catalogo:   ['ver'],
+    rh:         ['ver','aprobar'],
+    reportes:   ['ver','exportar'],
+    corte:      ['ver','aprobar'],
+    oc:         ['ver','crear'],
+    membresias: ['ver','crear'],
+    servicios:  ['ver'],
+    comisiones: ['ver','aprobar'],
+  },
+  contador: {
+    gastos:     ['ver','crear','editar','exportar'],
+    cxc:        ['ver','crear','editar','exportar'],
+    cxp:        ['ver','crear','editar','exportar'],
+    inventario: ['ver','exportar'],
+    compras:    ['ver','crear','exportar'],
+    reportes:   ['ver','exportar'],
+    corte:      ['ver','aprobar'],
+    oc:         ['ver','exportar'],
+    membresias: ['ver','exportar'],
+  },
+  cajero: {
+    pos:        ['ver','crear'],
+    gastos:     ['ver','crear'],
+    corte:      ['ver','crear'],
+    oc:         ['ver'],
+    membresias: ['ver','crear'],
+  },
+  rh: {
+    rh:         ['ver','crear','editar','aprobar','exportar'],
+    reportes:   ['ver'],
+    comisiones: ['ver','aprobar'],
+  },
+  director: {
+    gastos:     ['ver','exportar'],
+    cxc:        ['ver','exportar'],
+    cxp:        ['ver','exportar'],
+    reportes:   ['ver','exportar'],
+    rh:         ['ver'],
+    membresias: ['ver'],
+    comisiones: ['ver'],
+  },
+};
+
+// ============================================================
 // SECCIONES Y MÓDULOS (completo según tu imagen)
 // ============================================================
 interface ModuleSection {
@@ -42,7 +133,7 @@ const MODULE_SECTIONS: ModuleSection[] = [
     key: 'catalogos',
     label: 'Catálogos',
     modules: [
-      { key: 'productos_venta', label: 'Productos para venta', actions: ACCIONES },
+      { key: 'catalogo', label: 'Productos para venta', actions: ACCIONES },
       { key: 'meseros', label: 'Meseros / Repartidores', actions: ACCIONES },
       { key: 'clientes', label: 'Clientes', actions: ACCIONES },
       { key: 'promociones', label: 'Promociones', actions: ACCIONES },
@@ -60,7 +151,7 @@ const MODULE_SECTIONS: ModuleSection[] = [
     label: 'Operaciones',
     modules: [
       { key: 'gastos', label: 'Gastos', actions: ACCIONES },
-      { key: 'cuentas_por_pagar', label: 'Cuentas por pagar', actions: ACCIONES },
+      { key: 'cxp', label: 'Cuentas por pagar', actions: ACCIONES },
       { key: 'reservaciones', label: 'Reservaciones', actions: ACCIONES },
       { key: 'pago_comisiones', label: 'Pago de comisiones', actions: ACCIONES },
       { key: 'cortesias_monedero', label: 'Cortesías monedero', actions: ACCIONES },
@@ -71,9 +162,9 @@ const MODULE_SECTIONS: ModuleSection[] = [
     key: 'almacen',
     label: 'Almacén',
     modules: [
-      { key: 'pedidos', label: 'Pedidos', actions: ACCIONES },
+      { key: 'inventario', label: 'Pedidos', actions: ACCIONES },
       { key: 'cedis', label: 'CEDIS', actions: ACCIONES },
-      { key: 'ordenes_compra', label: 'Órdenes de compra', actions: ACCIONES },
+      { key: 'oc', label: 'Órdenes de compra', actions: ACCIONES },
       { key: 'compras', label: 'Compras', actions: ACCIONES },
       { key: 'movimientos_almacen', label: 'Movimientos de almacén', actions: ACCIONES },
       { key: 'traspasos', label: 'Traspasos', actions: ACCIONES },
@@ -95,7 +186,7 @@ const MODULE_SECTIONS: ModuleSection[] = [
       { key: 'consulta_cuentas', label: 'Consulta de cuentas', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'consulta_facturas', label: 'Consulta de facturas', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'retiros_depositos', label: 'Consulta de retiros y depósitos', actions: ACCIONES.filter(a => a.key === 'ver') },
-      { key: 'cuentas_por_cobrar', label: 'Consulta de cuentas por cobrar', actions: ACCIONES.filter(a => a.key === 'ver') },
+      { key: 'cxc', label: 'Consulta de cuentas por cobrar', actions: ACCIONES.filter(a => a.key === 'ver') },
       { key: 'saldo_tarjetas', label: 'Saldo de tarjetas promocionales', actions: ACCIONES.filter(a => a.key === 'ver') },
       { key: 'impresora_fiscal', label: 'Impresora fiscal - Consultas', actions: ACCIONES.filter(a => a.key === 'ver') },
       { key: 'hotel_bitacora', label: 'Hotel - Bitácora cargos a hotel', actions: ACCIONES.filter(a => a.key === 'ver') },
@@ -114,7 +205,7 @@ const MODULE_SECTIONS: ModuleSection[] = [
       { key: 'compras', label: 'Compras', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'almacen', label: 'Almacén', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'costos', label: 'Costos', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
-      { key: 'cuentas_por_pagar', label: 'Cuentas por pagar', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
+      { key: 'cxp', label: 'Cuentas por pagar', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'contabilidad', label: 'Contabilidad', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'consolidados', label: 'Consolidados', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
       { key: 'formas_pago', label: 'Formas de pago', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'exportar') },
@@ -174,14 +265,14 @@ const MODULE_SECTIONS: ModuleSection[] = [
     key: 'ventas',
     label: 'Ventas',
     modules: [
-      { key: 'servicio_comedor', label: 'Servicio Comedor', actions: ACCIONES.filter(a => a.key !== 'exportar') },
+      { key: 'pos', label: 'Servicio Comedor', actions: ACCIONES.filter(a => a.key !== 'exportar') },
       { key: 'folios_comandos', label: 'Folios de comandos', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'crear') },
       { key: 'servicio_domicilio', label: 'Servicio Domicilio', actions: ACCIONES.filter(a => a.key !== 'exportar') },
       { key: 'repartidores', label: 'Repartidores', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'editar') },
       { key: 'servicio_rapido', label: 'Servicio Rápido', actions: ACCIONES.filter(a => a.key !== 'exportar') },
       { key: 'comedor_empleados', label: 'Comedor empleados', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'crear') },
       { key: 'facturacion', label: 'Facturación', actions: ACCIONES.filter(a => a.key === 'crear' || a.key === 'ver') },
-      { key: 'cuentas_por_cobrar', label: 'Cuentas por cobrar', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'editar') },
+      { key: 'cxc', label: 'Cuentas por cobrar', actions: ACCIONES.filter(a => a.key === 'ver' || a.key === 'editar') },
       { key: 'imprimir_nota_consumo', label: 'Imprimir nota de consumo nueva', actions: ACCIONES.filter(a => a.key === 'crear') },
       { key: 'reimprimir_folios', label: 'Reimprimir folios', actions: ACCIONES.filter(a => a.key === 'crear') },
       { key: 'tarjeta_credito', label: 'Tarjeta de crédito bancaria', actions: ACCIONES.filter(a => a.key === 'crear' || a.key === 'ver') },
@@ -205,52 +296,17 @@ const MODULE_SECTIONS: ModuleSection[] = [
 ];
 
 // ============================================================
-// COMPONENTE PRINCIPAL (Adaptado a la API real)
+// COMPONENTE PRINCIPAL (Modo local, 100% funcional visualmente)
 // ============================================================
 const Permisos: React.FC = () => {
-  const [permissions, setPermissions] = useState<Record<string, Record<string, string[]>>>({});
+  const [permissions, setPermissions] = useState<Record<string, Record<string, string[]>>>(DEFAULT_PERMISSIONS);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const getToken = () => localStorage.getItem('erp_token') || '';
-
-  const getActiveCompanyId = (): string => {
-    try {
-      const raw = localStorage.getItem('erp-store');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.state?.activeCompany?.companyId || '';
-    } catch {
-      return '';
-    }
-  };
-
-  const companyId = getActiveCompanyId();
-
   useEffect(() => {
-    if (!companyId) {
-      setError('No se pudo obtener la empresa activa.');
-      setLoading(false);
-      return;
-    }
-
-    const url = `https://erp-grupo-workaholic-production.up.railway.app/permissions/all?companyId=${companyId}`;
-    fetch(url, {
-      headers: { 'Authorization': `Bearer ${getToken()}` },
-    })
-      .then(async res => {
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data = await res.json();
-        setPermissions(data);
-        setError(null);
-      })
-      .catch(err => {
-        console.error('Error cargando permisos:', err);
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  }, [companyId]);
+    // Simula carga inicial
+    setTimeout(() => setLoading(false), 200);
+  }, []);
 
   const hasPermission = (role: string, module: string, action: string): boolean => {
     const rolePerms = permissions[role];
@@ -258,21 +314,12 @@ const Permisos: React.FC = () => {
     return (rolePerms[module] || []).includes(action);
   };
 
-  const togglePermission = async (role: string, module: string, action: string, current: boolean) => {
+  const togglePermission = (role: string, module: string, action: string, current: boolean) => {
     const key = `${role}|${module}|${action}`;
     setSaving(key);
     const newValue = !current;
-    try {
-      const url = `https://erp-grupo-workaholic-production.up.railway.app/permissions/roles/${role}/modules/${module}/actions/${action}`;
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ allowed: newValue, companyId }),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+
+    setTimeout(() => {
       setPermissions(prev => {
         const newPerms = { ...prev };
         if (!newPerms[role]) newPerms[role] = {};
@@ -286,47 +333,33 @@ const Permisos: React.FC = () => {
         }
         return newPerms;
       });
-    } catch (error) {
-      console.error('Error al guardar:', error);
-      alert('No se pudo guardar el permiso.');
-    } finally {
       setSaving(null);
-    }
+    }, 150);
   };
 
-  const restoreDefaults = async (role: string) => {
+  const restoreDefaults = (role: string) => {
     if (!confirm(`¿Restaurar permisos de ${role} a valores por defecto?`)) return;
     setSaving(`role-${role}`);
-    try {
-      const url = `https://erp-grupo-workaholic-production.up.railway.app/permissions/roles/${role}/reset`;
-      await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ companyId }),
-      });
-      const dataUrl = `https://erp-grupo-workaholic-production.up.railway.app/permissions/all?companyId=${companyId}`;
-      const res = await fetch(dataUrl, {
-        headers: { 'Authorization': `Bearer ${getToken()}` },
-      });
-      const data = await res.json();
-      setPermissions(data);
-    } catch (error) {
-      console.error('Error al restaurar:', error);
-      alert('Error al restaurar defaults.');
-    } finally {
+    setTimeout(() => {
+      setPermissions(prev => ({
+        ...prev,
+        [role]: DEFAULT_PERMISSIONS[role] || {},
+      }));
       setSaving(null);
-    }
+    }, 200);
   };
 
-  if (loading) return <div className="p-6 text-center">Cargando permisos...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (loading) return <div className="p-6 text-center text-gray-500">Cargando permisos...</div>;
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Gestión de Permisos por Rol</h1>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Gestión de Permisos por Rol</h1>
+        <p className="text-sm text-yellow-600 bg-yellow-50 px-3 py-1 rounded inline-block mt-2">
+          ⚠️ Modo demostración local (los cambios no se guardan en el servidor)
+        </p>
+      </div>
+
       <div className="overflow-x-auto border rounded-lg">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
