@@ -25,7 +25,7 @@ const ACCIONES = [
 ];
 
 // ============================================================
-// SECCIONES Y MÓDULOS (basado en tu imagen original)
+// SECCIONES Y MÓDULOS (completo según tu imagen)
 // ============================================================
 interface ModuleSection {
   key: string;
@@ -205,15 +205,16 @@ const MODULE_SECTIONS: ModuleSection[] = [
 ];
 
 // ============================================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL (Adaptado a la API real)
 // ============================================================
 const Permisos: React.FC = () => {
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<Record<string, Record<string, string[]>>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
-  const [modifiedCells, setModifiedCells] = useState<Set<string>>(new Set());
 
-  // Obtener companyId desde el store global (erp-store)
+  const getToken = () => localStorage.getItem('erp_token') || '';
+
   const getActiveCompanyId = (): string => {
     try {
       const raw = localStorage.getItem('erp-store');
@@ -225,40 +226,36 @@ const Permisos: React.FC = () => {
     }
   };
 
-  const [companyId] = useState(getActiveCompanyId());
+  const companyId = getActiveCompanyId();
 
-  // Cargar permisos desde el backend
   useEffect(() => {
     if (!companyId) {
+      setError('No se pudo obtener la empresa activa.');
       setLoading(false);
       return;
     }
-    fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions?companyId=${companyId}`)
-      .then(res => res.json())
-      .then(data => {
+
+    const url = `https://erp-grupo-workaholic-production.up.railway.app/permissions/all?companyId=${companyId}`;
+    fetch(url, {
+      headers: { 'Authorization': `Bearer ${getToken()}` },
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data = await res.json();
         setPermissions(data);
-        const modified = new Set<string>();
-        data.forEach((perm: any) => {
-          if (!perm.allowed) {
-            modified.add(`${perm.roleCode}|${perm.module}|${perm.action}`);
-          }
-        });
-        setModifiedCells(modified);
-        setLoading(false);
+        setError(null);
       })
       .catch(err => {
         console.error('Error cargando permisos:', err);
-        setLoading(false);
-      });
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
   }, [companyId]);
 
-  const getPermissionValue = (role: string, module: string, action: string) => {
-    const perm = permissions.find(p => p.roleCode === role && p.module === module && p.action === action);
-    return perm?.allowed ?? true;
-  };
-
-  const isModified = (role: string, module: string, action: string) => {
-    return modifiedCells.has(`${role}|${module}|${action}`);
+  const hasPermission = (role: string, module: string, action: string): boolean => {
+    const rolePerms = permissions[role];
+    if (!rolePerms) return false;
+    return (rolePerms[module] || []).includes(action);
   };
 
   const togglePermission = async (role: string, module: string, action: string, current: boolean) => {
@@ -266,72 +263,70 @@ const Permisos: React.FC = () => {
     setSaving(key);
     const newValue = !current;
     try {
-      const res = await fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions`, {
+      const url = `https://erp-grupo-workaholic-production.up.railway.app/permissions/roles/${role}/modules/${module}/actions/${action}`;
+      const res = await fetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleCode: role, module, action, allowed: newValue, companyId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ allowed: newValue, companyId }),
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setPermissions(prev => [
-          ...prev.filter(p => !(p.roleCode === role && p.module === module && p.action === action)),
-          updated,
-        ]);
-        setModifiedCells(prev => {
-          const newSet = new Set(prev);
-          if (!newValue) {
-            newSet.add(key);
-          } else {
-            newSet.delete(key);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      setPermissions(prev => {
+        const newPerms = { ...prev };
+        if (!newPerms[role]) newPerms[role] = {};
+        if (!newPerms[role][module]) newPerms[role][module] = [];
+        if (newValue) {
+          if (!newPerms[role][module].includes(action)) {
+            newPerms[role][module] = [...newPerms[role][module], action];
           }
-          return newSet;
-        });
-      }
+        } else {
+          newPerms[role][module] = newPerms[role][module].filter(a => a !== action);
+        }
+        return newPerms;
+      });
     } catch (error) {
       console.error('Error al guardar:', error);
+      alert('No se pudo guardar el permiso.');
     } finally {
       setSaving(null);
     }
   };
 
   const restoreDefaults = async (role: string) => {
-    if (!confirm(`¿Restaurar todos los permisos del rol ${role} a sus valores por defecto?`)) return;
+    if (!confirm(`¿Restaurar permisos de ${role} a valores por defecto?`)) return;
     setSaving(`role-${role}`);
     try {
-      for (const section of MODULE_SECTIONS) {
-        for (const mod of section.modules) {
-          for (const acc of mod.actions) {
-            await fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ roleCode: role, module: mod.key, action: acc.key, allowed: true, companyId }),
-            });
-          }
-        }
-      }
-      const res = await fetch(`https://erp-grupo-workaholic-production.up.railway.app/api/permissions?companyId=${companyId}`);
+      const url = `https://erp-grupo-workaholic-production.up.railway.app/permissions/roles/${role}/reset`;
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ companyId }),
+      });
+      const dataUrl = `https://erp-grupo-workaholic-production.up.railway.app/permissions/all?companyId=${companyId}`;
+      const res = await fetch(dataUrl, {
+        headers: { 'Authorization': `Bearer ${getToken()}` },
+      });
       const data = await res.json();
       setPermissions(data);
-      setModifiedCells(new Set());
     } catch (error) {
       console.error('Error al restaurar:', error);
+      alert('Error al restaurar defaults.');
     } finally {
       setSaving(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500">Cargando configuración de permisos...</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-6 text-center">Cargando permisos...</div>;
+  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Gestión de Permisos por Rol</h1>
-
       <div className="overflow-x-auto border rounded-lg">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
@@ -356,44 +351,34 @@ const Permisos: React.FC = () => {
           <tbody>
             {MODULE_SECTIONS.map(section => (
               <React.Fragment key={section.key}>
-                {/* Encabezado de sección */}
                 <tr className="bg-gray-50">
-                  <td colSpan={ROLES.length + 1} className="p-3 font-semibold text-gray-700">
+                  <td colSpan={ROLES.length + 1} className="p-3 font-semibold">
                     {section.label}
                   </td>
                 </tr>
-                {/* Módulos de la sección */}
                 {section.modules.map(mod =>
                   mod.actions.map(acc => (
                     <tr key={`${mod.key}-${acc.key}`} className="border-t hover:bg-gray-50">
                       <td className="p-3 pl-6">
                         <span className="font-medium">{mod.label}</span>
-                        <span className={`ml-2 text-sm text-${acc.color.replace('bg-', '')}-600`}>({acc.label})</span>
+                        <span className={`ml-2 text-sm text-${acc.color.replace('bg-', '')}-600`}>
+                          ({acc.label})
+                        </span>
                       </td>
                       {ROLES.map(role => {
-                        const val = getPermissionValue(role.code, mod.key, acc.key);
-                        const modified = isModified(role.code, mod.key, acc.key);
+                        const val = hasPermission(role.code, mod.key, acc.key);
                         const isSaving = saving === `${role.code}|${mod.key}|${acc.key}`;
                         return (
                           <td key={role.code} className="p-3 text-center">
-                            <div className="flex flex-col items-center">
-                              <button
-                                onClick={() => togglePermission(role.code, mod.key, acc.key, val)}
-                                disabled={isSaving}
-                                className={`w-8 h-8 rounded-md text-white flex items-center justify-center transition-all ${
-                                  val ? acc.color : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
-                                } ${isSaving ? 'opacity-50 cursor-wait' : ''} ${
-                                  modified ? 'ring-2 ring-yellow-400 ring-offset-1' : ''
-                                }`}
-                              >
-                                {val ? '✓' : '✗'}
-                              </button>
-                              {modified && (
-                                <span className="text-[10px] text-yellow-600 font-medium mt-0.5">
-                                  Modificado
-                                </span>
-                              )}
-                            </div>
+                            <button
+                              onClick={() => togglePermission(role.code, mod.key, acc.key, val)}
+                              disabled={isSaving}
+                              className={`w-8 h-8 rounded-md text-white flex items-center justify-center transition-all ${
+                                val ? acc.color : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
+                              } ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
+                            >
+                              {val ? '✓' : '✗'}
+                            </button>
                           </td>
                         );
                       })}
