@@ -44,13 +44,19 @@ export const useERPStore = create<ERPStore>()(
         set({ user: null, token: null, activeCompany: null });
         window.location.href = '/login';
       },
-      setActiveCompany: (c) => set({ activeCompany: c }),
-      setActivePeriod:  (p) => set({ activePeriod: p }),
-      isAdmin: () => get().activeCompany?.roleCode === 'admin',
-    }),
-    {
-      name: 'erp-store',
-      partialize: s => ({ user:s.user, token:s.token, activeCompany:s.activeCompany, activePeriod:s.activePeriod }),
-    }
-  )
-);
+      setActiveCompany: (companyId: string) => {
+  const { user } = get();
+  const company = user?.companies?.find(c => c.companyId === companyId);
+  if (company) {
+    set({
+      activeCompany: {
+        companyId: company.companyId,
+        companyCode: company.companyCode,
+        companyName: company.companyName,
+        color: company.color || '#3b82f6',
+        roleCode: company.roleCode,   // <-- AGREGAR ESTA LÍNEA
+        permissions: company.permissions || [],
+      }
+    });
+  }
+}
