@@ -25,6 +25,7 @@ export interface LoginTheme {
   textSecondary: string;
   buttonText: string;
   backgroundImage: string;
+  overlay: string;
   estiaLogo: string;
   estiaLogoWidth: number;
   showSeasonBadge: boolean;
@@ -33,24 +34,24 @@ export interface LoginTheme {
   brandLogos: BrandLogo[];
 }
 
-const brandLogosBase: BrandLogo[] = [
+const buildLogos = (season: SeasonKey): BrandLogo[] => [
   {
     name: 'Palestra',
-    src: '/assets/logos/palestra.png',
-    alt: 'Logo Palestra',
-    width: 120,
+    src: `/assets/logos/${season}/palestra.png`,
+    alt: 'Palestra',
+    width: 110,
   },
   {
     name: 'Machete',
-    src: '/assets/logos/machete.png',
-    alt: 'Logo Machete',
-    width: 120,
+    src: `/assets/logos/${season}/machete.png`,
+    alt: 'Machete',
+    width: 110,
   },
   {
     name: 'Workaholic',
-    src: '/assets/logos/workaholic.png',
-    alt: 'Logo Workaholic',
-    width: 140,
+    src: `/assets/logos/${season}/workaholic.png`,
+    alt: 'Workaholic',
+    width: 130,
   },
 ];
 
@@ -66,11 +67,12 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     textPrimary: '#f8fafc',
     textSecondary: '#cbd5e1',
     buttonText: '#0b0b0b',
-    backgroundImage: '/assets/login/background-default.jpg',
-    estiaLogo: '/assets/logos/estia.png',
-    estiaLogoWidth: 110,
+    backgroundImage: '/assets/login/default/background.jpg',
+    overlay: 'rgba(5,8,12,0.62)',
+    estiaLogo: '/assets/logos/default/estia.png',
+    estiaLogoWidth: 84,
     showSeasonBadge: false,
-    brandLogos: brandLogosBase,
+    brandLogos: buildLogos('default'),
   },
 
   navidad: {
@@ -84,13 +86,14 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     textPrimary: '#f8fafc',
     textSecondary: '#dbe4ee',
     buttonText: '#0b0b0b',
-    backgroundImage: '/assets/login/background-navidad.jpg',
-    estiaLogo: '/assets/logos/estia.png',
-    estiaLogoWidth: 96,
+    backgroundImage: '/assets/login/navidad/background.jpg',
+    overlay: 'rgba(16,8,8,0.58)',
+    estiaLogo: '/assets/logos/navidad/estia.png',
+    estiaLogoWidth: 78,
     showSeasonBadge: true,
     seasonBadgeText: 'Especial navideño',
     decorativeEmoji: '🎄',
-    brandLogos: brandLogosBase,
+    brandLogos: buildLogos('navidad'),
   },
 
   pascua: {
@@ -104,13 +107,14 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     textPrimary: '#f8fafc',
     textSecondary: '#dbe4ee',
     buttonText: '#0b0b0b',
-    backgroundImage: '/assets/login/background-pascua.jpg',
-    estiaLogo: '/assets/logos/estia.png',
-    estiaLogoWidth: 96,
+    backgroundImage: '/assets/login/pascua/background.jpg',
+    overlay: 'rgba(11,10,18,0.5)',
+    estiaLogo: '/assets/logos/pascua/estia.png',
+    estiaLogoWidth: 78,
     showSeasonBadge: true,
     seasonBadgeText: 'Especial de pascua',
     decorativeEmoji: '🐣',
-    brandLogos: brandLogosBase,
+    brandLogos: buildLogos('pascua'),
   },
 
   dia_muertos: {
@@ -124,13 +128,14 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     textPrimary: '#f8fafc',
     textSecondary: '#dbe4ee',
     buttonText: '#0b0b0b',
-    backgroundImage: '/assets/login/background-dia-muertos.jpg',
-    estiaLogo: '/assets/logos/estia.png',
-    estiaLogoWidth: 96,
+    backgroundImage: '/assets/login/dia_muertos/background.jpg',
+    overlay: 'rgba(12,7,14,0.66)',
+    estiaLogo: '/assets/logos/dia_muertos/estia.png',
+    estiaLogoWidth: 78,
     showSeasonBadge: true,
     seasonBadgeText: 'Día de Muertos',
     decorativeEmoji: '💀',
-    brandLogos: brandLogosBase,
+    brandLogos: buildLogos('dia_muertos'),
   },
 
   dia_trabajo: {
@@ -144,15 +149,16 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     textPrimary: '#f8fafc',
     textSecondary: '#dbe4ee',
     buttonText: '#0b0b0b',
-    backgroundImage: '/assets/login/background-dia-trabajo.jpg',
-    estiaLogo: '/assets/logos/estia.png',
-    estiaLogoWidth: 96,
+    backgroundImage: '/assets/login/dia_trabajo/background.jpg',
+    overlay: 'rgba(7,11,18,0.58)',
+    estiaLogo: '/assets/logos/dia_trabajo/estia.png',
+    estiaLogoWidth: 78,
     showSeasonBadge: true,
     seasonBadgeText: 'Día del Trabajo',
     decorativeEmoji: '⚒️',
-    brandLogos: brandLogosBase,
+    brandLogos: buildLogos('dia_trabajo'),
   },
 };
 
-// Cambia aquí la temporada activa
+// 🔧 CAMBIAS SOLO ESTA LÍNEA PARA FORZAR TEMPORADA
 export const activeLoginTheme: SeasonKey = 'default';
