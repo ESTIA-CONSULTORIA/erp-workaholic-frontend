@@ -109,14 +109,5 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
   },
 };
 
-// 🔥 AUTOMÁTICO POR FECHA (NO LO VUELVES A TOCAR)
-export function getActiveTheme(): SeasonKey {
-  const month = new Date().getMonth() + 1;
-
-  if (month === 12) return 'navidad';
-  if (month === 4) return 'pascua';
-  if (month === 11) return 'dia_muertos';
-  if (month === 5) return 'dia_trabajo';
-
-  return 'default';
-}
+// 🔧 SOLO CAMBIA ESTA LÍNEA CUANDO QUIERAS CAMBIAR TEMA
+export const activeLoginTheme: SeasonKey = 'default';
