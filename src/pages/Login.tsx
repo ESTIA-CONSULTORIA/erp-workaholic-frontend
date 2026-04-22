@@ -6,22 +6,30 @@ import { api } from '../lib/api';
 export default function LoginPage() {
   const navigate = useNavigate();
   const setUser = useERPStore((s) => s.setUser);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const currentYear = useMemo(() => new Date().getFullYear(), []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const { data } = await api.post('/auth/login', {
+        email,
+        password,
+      });
+
       setUser(data.user, data.accessToken);
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       const backendMessage = err?.response?.data?.message;
+
       setError(
         Array.isArray(backendMessage)
           ? backendMessage.join(', ')
@@ -38,40 +46,34 @@ export default function LoginPage() {
         minHeight: '100vh',
         position: 'relative',
         backgroundImage:
-          "linear-gradient(rgba(5,8,12,0.18), rgba(5,8,12,0.30)), url('/assets/login/background.jpg')",
+          "linear-gradient(rgba(5,8,12,0.25), rgba(5,8,12,0.45)), url('/assets/login/background.jpg')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        overflow: 'hidden',
       }}
     >
       <div
         style={{
           minHeight: '100vh',
-          display: 'grid',
-          gridTemplateColumns: '1fr 430px',
-          gap: 32,
+          display: 'flex',
           alignItems: 'center',
-          maxWidth: 1380,
-          margin: '0 auto',
-          padding: '28px 40px',
+          justifyContent: 'center',
+          padding: '24px',
         }}
       >
-        <div />
-
         <div
           style={{
             width: '100%',
-            maxWidth: 430,
-            justifySelf: 'end',
-            background: 'rgba(7, 10, 14, 0.76)',
-            border: '1px solid rgba(202,163,107,0.16)',
+            maxWidth: 420,
+            background: 'rgba(7, 10, 14, 0.78)',
+            border: '1px solid rgba(202,163,107,0.18)',
             borderRadius: 24,
             padding: 32,
-            backdropFilter: 'blur(14px)',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.36)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 25px 80px rgba(0,0,0,0.45)',
           }}
         >
+          {/* HEADER */}
           <div style={{ marginBottom: 24 }}>
             <div
               style={{
@@ -81,6 +83,7 @@ export default function LoginPage() {
                 textTransform: 'uppercase',
                 fontSize: 12,
                 marginBottom: 10,
+                textAlign: 'center',
               }}
             >
               Bienvenido a
@@ -88,26 +91,18 @@ export default function LoginPage() {
 
             <div
               style={{
-                color: '#fff',
-                fontSize: 40,
+                color: '#ffffff',
+                fontSize: 34,
                 fontWeight: 800,
-                lineHeight: 1,
+                textAlign: 'center',
+                lineHeight: 1.1,
               }}
             >
-              GRUPO
-            </div>
-            <div
-              style={{
-                color: '#fff',
-                fontSize: 40,
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
-              WORKAHOLIC
+              GRUPO WORKAHOLIC
             </div>
           </div>
 
+          {/* FORM */}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>Usuario</label>
@@ -116,7 +111,6 @@ export default function LoginPage() {
                 placeholder="Ingresa tu usuario"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete="username"
                 required
                 style={input}
               />
@@ -129,7 +123,6 @@ export default function LoginPage() {
                 placeholder="Ingresa tu contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
                 required
                 style={input}
               />
@@ -171,7 +164,7 @@ export default function LoginPage() {
           <div
             style={{
               textAlign: 'center',
-              marginTop: 16,
+              marginTop: 18,
               fontSize: 12,
               color: '#94a3b8',
             }}
@@ -184,24 +177,26 @@ export default function LoginPage() {
   );
 }
 
+/* ===== STYLES ===== */
+
 const label: React.CSSProperties = {
   display: 'block',
   color: '#e7c693',
   fontSize: 13,
   fontWeight: 600,
-  marginBottom: 8,
+  marginBottom: 6,
 };
 
 const input: React.CSSProperties = {
   width: '100%',
   padding: '14px 16px',
   borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.16)',
+  border: '1px solid rgba(255,255,255,0.15)',
   background: 'rgba(255,255,255,0.04)',
   color: '#fff',
-  boxSizing: 'border-box',
   outline: 'none',
   fontSize: 15,
+  boxSizing: 'border-box',
 };
 
 const button: React.CSSProperties = {
