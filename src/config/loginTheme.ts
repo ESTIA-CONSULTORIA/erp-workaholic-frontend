@@ -161,4 +161,14 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
 };
 
 // 🔧 CAMBIAS SOLO ESTA LÍNEA PARA FORZAR TEMPORADA
-export const activeLoginTheme: SeasonKey = 'default';
+export function getActiveTheme(): SeasonKey {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+
+  if (month === 12) return 'navidad';
+  if (month === 4) return 'pascua';
+  if (month === 11) return 'dia_muertos';
+  if (month === 5) return 'dia_trabajo';
+
+  return 'default';
+}
