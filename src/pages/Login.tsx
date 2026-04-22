@@ -43,19 +43,19 @@ export default function LoginPage() {
   };
 
   const inputStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: '38.2%',
-    width: '22.9%',
-    height: '4.8%',
-    border: 'none',
-    outline: 'none',
-    background: 'transparent',
-    color: '#f8fafc',
-    fontSize: '1rem',
-    paddingLeft: '3%',
-    paddingRight: '1.2%',
-    boxSizing: 'border-box',
-  };
+  position: 'absolute',
+  left: '37.15%',
+  width: '25.45%',
+  height: '4.15%',
+  border: 'none',
+  outline: 'none',
+  background: 'transparent',
+  color: '#f8fafc',
+  fontSize: '1rem',
+  paddingLeft: '2.8%',
+  paddingRight: '1.1%',
+  boxSizing: 'border-box',
+};
 
   return (
     <div
@@ -69,20 +69,20 @@ export default function LoginPage() {
         overflow: 'auto',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 1500 }}>
-        <div
-          style={{
-            position: 'relative',
-            width: 'min(96vw, 1500px)',
-            aspectRatio: '1365 / 768',
-            backgroundImage: `url(${LOGIN_BG})`,
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: 'contain',
-            borderRadius: 18,
-            margin: '0 auto',
-          }}
-        >
+      <div style={{ width: '100%', maxWidth: 1320 }}>
+  <div
+    style={{
+      position: 'relative',
+      width: 'min(94vw, calc(90vh * 1.7777778), 1320px)',
+      aspectRatio: '2048 / 1152',
+      backgroundImage: `url(${LOGIN_BG})`,
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'contain',
+      borderRadius: 18,
+      margin: '0 auto',
+    }}
+  >
           <form onSubmit={handleLogin} style={{ position: 'absolute', inset: 0 }}>
             <label htmlFor="login-email" style={hiddenLabel}>Usuario</label>
             <input
@@ -92,7 +92,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
               required
-              style={{ ...inputStyle, top: '35.9%' }}
+              style={{ ...inputStyle, top: '37.25%' }}
             />
 
             <label htmlFor="login-password" style={hiddenLabel}>Contraseña</label>
@@ -103,7 +103,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              style={{ ...inputStyle, top: '49%' }}
+              style={{ ...inputStyle, top: '47.95%' }}
             />
 
             <button
@@ -111,10 +111,10 @@ export default function LoginPage() {
               disabled={loading}
               style={{
                 position: 'absolute',
-                left: '40.6%',
-                top: '66.9%',
-                width: '18%',
-                height: '5.8%',
+                left: '39.55%',
+                top: '64.55%',
+                width: '20.55%',
+                height: '5.35%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -126,10 +126,10 @@ export default function LoginPage() {
               type="button"
               style={{
                 position: 'absolute',
-                left: '43.2%',
-                top: '58.5%',
-                width: '13.5%',
-                height: '2.9%',
+                left: '43.45%',
+                top: '57.55%',
+                width: '13.15%',
+                height: '2.5%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -141,10 +141,10 @@ export default function LoginPage() {
               type="button"
               style={{
                 position: 'absolute',
-                left: '42.8%',
-                top: '78.5%',
-                width: '14.2%',
-                height: '2.9%',
+                left: '42.6%',
+                top: '78.1%',
+                width: '14.4%',
+                height: '2.7%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -157,9 +157,9 @@ export default function LoginPage() {
             <div
               style={{
                 position: 'absolute',
-                left: '36.8%',
-                top: '61.5%',
-                width: '26%',
+                eft: '36.7%',
+                top: '60.4%',
+                width: '26.2%',
                 padding: '8px 10px',
                 borderRadius: 10,
                 background: 'rgba(127,29,29,0.68)',
@@ -176,8 +176,8 @@ export default function LoginPage() {
             <div
               style={{
                 position: 'absolute',
-                left: '46.3%',
-                top: '68.7%',
+                left: '46.2%',
+                top: '66.35%',
                 color: '#e5d2be',
                 fontWeight: 700,
                 fontSize: '0.9rem',
