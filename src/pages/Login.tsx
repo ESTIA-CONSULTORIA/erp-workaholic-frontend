@@ -48,7 +48,7 @@ export default function LoginPage() {
 
   const inputStyle: React.CSSProperties = {
     position: 'absolute',
-    left: '38.05%',
+    left: '38.8%',
     width: '22.4%',
     height: '3.55%',
     border: 'none',
@@ -88,9 +88,9 @@ export default function LoginPage() {
           }}
         >
           <form onSubmit={handleLogin} style={{ position: 'absolute', inset: 0 }}>
-            <label htmlFor="login-email" style={hiddenLabel}>
-              Usuario
-            </label>
+            
+            {/* Usuario */}
+            <label htmlFor="login-email" style={hiddenLabel}>Usuario</label>
             <input
               id="login-email"
               type="email"
@@ -98,12 +98,11 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
               required
-              style={{ ...inputStyle, top: '34.35%' }}
+              style={{ ...inputStyle, top: '33.6%' }}
             />
 
-            <label htmlFor="login-password" style={hiddenLabel}>
-              Contraseña
-            </label>
+            {/* Contraseña */}
+            <label htmlFor="login-password" style={hiddenLabel}>Contraseña</label>
             <input
               id="login-password"
               type="password"
@@ -111,15 +110,16 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              style={{ ...inputStyle, top: '45.05%' }}
+              style={{ ...inputStyle, top: '44.2%' }}
             />
 
+            {/* Olvidaste */}
             <button
               type="button"
               style={{
                 position: 'absolute',
                 left: '43.8%',
-                top: '53.95%',
+                top: '55.9%',
                 width: '11.8%',
                 height: '2.15%',
                 border: 'none',
@@ -129,13 +129,14 @@ export default function LoginPage() {
               aria-label="¿Olvidaste tu contraseña?"
             />
 
+            {/* Ingresar */}
             <button
               type="submit"
               disabled={loading}
               style={{
                 position: 'absolute',
                 left: '40.3%',
-                top: '59.55%',
+                top: '61.8%',
                 width: '18.1%',
                 height: '4.55%',
                 border: 'none',
@@ -145,12 +146,13 @@ export default function LoginPage() {
               aria-label="Ingresar"
             />
 
+            {/* Soporte */}
             <button
               type="button"
               style={{
                 position: 'absolute',
                 left: '42.65%',
-                top: '69.45%',
+                top: '72.4%',
                 width: '13.2%',
                 height: '2.25%',
                 border: 'none',
@@ -159,6 +161,7 @@ export default function LoginPage() {
               }}
               aria-label="Soporte técnico"
             />
+
           </form>
 
           {error && (
@@ -166,7 +169,7 @@ export default function LoginPage() {
               style={{
                 position: 'absolute',
                 left: '38.2%',
-                top: '55.7%',
+                top: '57.2%',
                 width: '22.5%',
                 padding: '8px 10px',
                 borderRadius: 10,
@@ -185,7 +188,7 @@ export default function LoginPage() {
               style={{
                 position: 'absolute',
                 left: '46.15%',
-                top: '61.2%',
+                top: '63%',
                 color: '#e5d2be',
                 fontWeight: 700,
                 fontSize: '0.88rem',
@@ -196,14 +199,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div
-          style={{
-            textAlign: 'center',
-            marginTop: 8,
-            color: '#64748b',
-            fontSize: 12.5,
-          }}
-        >
+        <div style={{ textAlign: 'center', marginTop: 8, color: '#64748b', fontSize: 12.5 }}>
           Grupo Workaholic · ERP v1.0 · {currentYear}
         </div>
       </div>
