@@ -24,7 +24,11 @@ export default function LoginPage() {
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       const backendMessage = err?.response?.data?.message;
-      setError(Array.isArray(backendMessage) ? backendMessage.join(', ') : backendMessage || 'Correo o contraseña incorrectos');
+      setError(
+        Array.isArray(backendMessage)
+          ? backendMessage.join(', ')
+          : backendMessage || 'Correo o contraseña incorrectos'
+      );
     } finally {
       setLoading(false);
     }
@@ -46,7 +50,7 @@ export default function LoginPage() {
     position: 'absolute',
     left: '38.05%',
     width: '22.4%',
-    height: '3.95%',
+    height: '3.55%',
     border: 'none',
     outline: 'none',
     background: 'transparent',
@@ -84,7 +88,9 @@ export default function LoginPage() {
           }}
         >
           <form onSubmit={handleLogin} style={{ position: 'absolute', inset: 0 }}>
-            <label htmlFor="login-email" style={hiddenLabel}>Usuario</label>
+            <label htmlFor="login-email" style={hiddenLabel}>
+              Usuario
+            </label>
             <input
               id="login-email"
               type="email"
@@ -92,10 +98,12 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
               required
-              style={{ ...inputStyle, top: '36.85%' }}
+              style={{ ...inputStyle, top: '34.35%' }}
             />
 
-            <label htmlFor="login-password" style={hiddenLabel}>Contraseña</label>
+            <label htmlFor="login-password" style={hiddenLabel}>
+              Contraseña
+            </label>
             <input
               id="login-password"
               type="password"
@@ -103,7 +111,22 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              style={{ ...inputStyle, top: '47.55%' }}
+              style={{ ...inputStyle, top: '45.05%' }}
+            />
+
+            <button
+              type="button"
+              style={{
+                position: 'absolute',
+                left: '43.8%',
+                top: '53.95%',
+                width: '11.8%',
+                height: '2.15%',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+              aria-label="¿Olvidaste tu contraseña?"
             />
 
             <button
@@ -111,10 +134,10 @@ export default function LoginPage() {
               disabled={loading}
               style={{
                 position: 'absolute',
-                left: '40.25%',
-                top: '64.1%',
-                width: '18.6%',
-                height: '4.8%',
+                left: '40.3%',
+                top: '59.55%',
+                width: '18.1%',
+                height: '4.55%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -126,25 +149,10 @@ export default function LoginPage() {
               type="button"
               style={{
                 position: 'absolute',
-                left: '43.9%',
-                top: '57.25%',
-                width: '11.6%',
-                height: '2.1%',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-              }}
-              aria-label="¿Olvidaste tu contraseña?"
-            />
-
-            <button
-              type="button"
-              style={{
-                position: 'absolute',
-                left: '43.15%',
-                top: '77.8%',
-                width: '12.5%',
-                height: '2.2%',
+                left: '42.65%',
+                top: '69.45%',
+                width: '13.2%',
+                height: '2.25%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -158,7 +166,7 @@ export default function LoginPage() {
               style={{
                 position: 'absolute',
                 left: '38.2%',
-                top: '60.1%',
+                top: '55.7%',
                 width: '22.5%',
                 padding: '8px 10px',
                 borderRadius: 10,
@@ -176,11 +184,11 @@ export default function LoginPage() {
             <div
               style={{
                 position: 'absolute',
-                left: '46.2%',
-                top: '66.35%',
+                left: '46.15%',
+                top: '61.2%',
                 color: '#e5d2be',
                 fontWeight: 700,
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
               }}
             >
               Entrando…
@@ -188,7 +196,14 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 8, color: '#64748b', fontSize: 12.5 }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: 8,
+            color: '#64748b',
+            fontSize: 12.5,
+          }}
+        >
           Grupo Workaholic · ERP v1.0 · {currentYear}
         </div>
       </div>
