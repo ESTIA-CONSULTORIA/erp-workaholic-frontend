@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Building2, CircleHelp, Headphones, Lock, Mail, ShieldCheck, Trophy } from 'lucide-react';
+import { ArrowRight, Building2, HelpCircle, Headphones, Lock, Mail, ShieldCheck, Trophy } from 'lucide-react';
 import { useERPStore } from '../store/erp.store';
 import { api } from '../lib/api';
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 14, background: 'rgba(8,10,14,0.54)', border: `1px solid ${border}`, color: gold, fontSize: 13, fontWeight: 600 }}>
-            <CircleHelp size={16} /> Acceso multiempresa
+            <HelpCircle size={16} /> Acceso multiempresa
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export default function LoginPage() {
             </div>
           </section>
 
-          <section style={{ minHeight: 700, borderRadius: 30, border: `1px solid ${border}`, background: `linear-gradient(180deg, ${PANEL_DARK}, rgba(7,9,12,0.82))`, boxShadow: '0 28px 90px rgba(0,0,0,0.52)', padding: '36px 32px 26px', position: 'relative', overflow: 'hidden' }}>
+          <section style={{ minHeight: 700, borderRadius: 30, border: `1px solid ${border}`, background: 'linear-gradient(180deg, rgba(7,9,12,0.72), rgba(7,9,12,0.82))', boxShadow: '0 28px 90px rgba(0,0,0,0.52)', padding: '36px 32px 26px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top center, rgba(214,165,109,0.13), transparent 28%), linear-gradient(135deg, transparent 0%, rgba(214,165,109,0.05) 52%, transparent 100%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ marginBottom: 24 }}>
