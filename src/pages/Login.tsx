@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useERPStore } from '../store/erp.store';
 import { api } from '../lib/api';
-import { activeLoginTheme, loginThemes } from '../config/loginTheme';
+import { getActiveTheme, loginThemes } from '../config/loginTheme';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const theme = loginThemes[activeLoginTheme];
+  const theme = loginThemes[getActiveTheme()];
   const year = useMemo(() => new Date().getFullYear(), []);
 
   const handleLogin = async (e: React.FormEvent) => {
