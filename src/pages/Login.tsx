@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useERPStore } from '../store/erp.store';
 import { api } from '../lib/api';
 
-const LOGIN_BG = '/login-bg.webp';
+const LOGIN_BG = '/login-bg.png';
 
 export default function LoginPage() {
   const navigate = useNavigate();
