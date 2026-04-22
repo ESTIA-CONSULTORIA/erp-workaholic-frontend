@@ -1,25 +1,53 @@
 // src/lib/api.ts
 import axios from 'axios';
 
+function readToken() {
+  if (typeof window === 'undefined') return null;
+
+  const directToken = window.localStorage.getItem('erp_token');
+  if (directToken) return directToken;
+
+  const persistedStore = window.localStorage.getItem('erp-store');
+  if (!persistedStore) return null;
+
+  try {
+    const parsed = JSON.parse(persistedStore);
+    const persistedToken = parsed?.state?.token ?? null;
+    if (persistedToken) {
+      window.localStorage.setItem('erp_token', persistedToken);
+      return persistedToken;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function clearSession() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem('erp_token');
+  window.localStorage.removeItem('erp-store');
+}
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1',
   headers: { 'Content-Type': 'application/json' },
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('erp_token');
+  const token = readToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  // Evitar caché del navegador
   config.headers['Cache-Control'] = 'no-cache';
   config.headers['Pragma'] = 'no-cache';
   return config;
 });
 
 api.interceptors.response.use(
-  res => res,
-  err => {
+  (res) => res,
+  (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('erp_token');
+      clearSession();
       window.location.href = '/login';
     }
     return Promise.reject(err);
@@ -37,22 +65,21 @@ export const fmtDate = (d: string | Date | null | undefined) => {
   return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-// ── CSV Export ────────────────────────────────────────────────
 export function exportCSV(filename: string, rows: Record<string, any>[], columns: { key: string; label: string }[]) {
   const header = columns.map(c => `"${c.label}"`).join(',');
-  const body   = rows.map(row =>
+  const body = rows.map(row =>
     columns.map(c => {
       const val = row[c.key];
       if (val === null || val === undefined) return '""';
       return `"${String(val).replace(/"/g, '""')}"`;
     }).join(',')
   );
-  const csv  = [header, ...body].join('\r\n');
+  const csv = [header, ...body].join('\r\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `${filename}_${new Date().toISOString().slice(0,10)}.csv`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
