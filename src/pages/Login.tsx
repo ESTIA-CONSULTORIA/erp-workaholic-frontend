@@ -44,15 +44,15 @@ export default function LoginPage() {
 
   const inputStyle: React.CSSProperties = {
     position: 'absolute',
-    left: '26.6%',
-    width: '52.3%',
+    left: '38.2%',
+    width: '22.9%',
     height: '4.8%',
     border: 'none',
     outline: 'none',
     background: 'transparent',
     color: '#f8fafc',
     fontSize: '1rem',
-    paddingLeft: '3.2%',
+    paddingLeft: '3%',
     paddingRight: '1.2%',
     boxSizing: 'border-box',
   };
@@ -65,21 +65,21 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 18,
+        padding: 12,
         overflow: 'auto',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 1460 }}>
+      <div style={{ width: '100%', maxWidth: 1500 }}>
         <div
           style={{
             position: 'relative',
-            width: 'min(96vw, 1460px)',
-            aspectRatio: '1906 / 1025',
+            width: 'min(96vw, 1500px)',
+            aspectRatio: '1365 / 768',
             backgroundImage: `url(${LOGIN_BG})`,
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             backgroundSize: 'contain',
-            borderRadius: 24,
+            borderRadius: 18,
             margin: '0 auto',
           }}
         >
@@ -92,7 +92,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
               required
-              style={{ ...inputStyle, top: '51.3%' }}
+              style={{ ...inputStyle, top: '35.9%' }}
             />
 
             <label htmlFor="login-password" style={hiddenLabel}>Contraseña</label>
@@ -103,7 +103,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              style={{ ...inputStyle, top: '63.8%' }}
+              style={{ ...inputStyle, top: '49%' }}
             />
 
             <button
@@ -111,10 +111,10 @@ export default function LoginPage() {
               disabled={loading}
               style={{
                 position: 'absolute',
-                left: '31.3%',
-                top: '79.2%',
-                width: '38.2%',
-                height: '6.8%',
+                left: '40.6%',
+                top: '66.9%',
+                width: '18%',
+                height: '5.8%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -126,10 +126,10 @@ export default function LoginPage() {
               type="button"
               style={{
                 position: 'absolute',
-                left: '38.6%',
-                top: '72.6%',
-                width: '22.8%',
-                height: '3.4%',
+                left: '43.2%',
+                top: '58.5%',
+                width: '13.5%',
+                height: '2.9%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -141,10 +141,10 @@ export default function LoginPage() {
               type="button"
               style={{
                 position: 'absolute',
-                left: '40.2%',
-                top: '89.4%',
-                width: '19.5%',
-                height: '3.5%',
+                left: '42.8%',
+                top: '78.5%',
+                width: '14.2%',
+                height: '2.9%',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -157,14 +157,14 @@ export default function LoginPage() {
             <div
               style={{
                 position: 'absolute',
-                left: '27.5%',
-                top: '70.2%',
-                width: '50%',
-                padding: '10px 12px',
-                borderRadius: 12,
-                background: 'rgba(127,29,29,0.62)',
+                left: '36.8%',
+                top: '61.5%',
+                width: '26%',
+                padding: '8px 10px',
+                borderRadius: 10,
+                background: 'rgba(127,29,29,0.68)',
                 color: '#fecaca',
-                fontSize: '0.88rem',
+                fontSize: '0.85rem',
                 textAlign: 'center',
               }}
             >
@@ -176,11 +176,11 @@ export default function LoginPage() {
             <div
               style={{
                 position: 'absolute',
-                left: '43%',
-                top: '82.2%',
-                color: '#140d06',
+                left: '46.3%',
+                top: '68.7%',
+                color: '#e5d2be',
                 fontWeight: 700,
-                fontSize: '0.92rem',
+                fontSize: '0.9rem',
               }}
             >
               Entrando…
@@ -188,7 +188,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 10, color: '#64748b', fontSize: 12.5 }}>
+        <div style={{ textAlign: 'center', marginTop: 8, color: '#64748b', fontSize: 12.5 }}>
           Grupo Workaholic · ERP v1.0 · {currentYear}
         </div>
       </div>
