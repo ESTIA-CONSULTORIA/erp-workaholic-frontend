@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useERPStore } from '../store/erp.store';
 import { api } from '../lib/api';
 
-const LOGIN_BG = new URL('../../login-bg.png', import.meta.url).href;
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const setUser = useERPStore((s) => s.setUser);
@@ -75,10 +73,10 @@ export default function LoginPage() {
             position: 'relative',
             width: 'min(96vw, 1500px)',
             aspectRatio: '1365 / 768',
-            backgroundImage: `url(${LOGIN_BG})`,
+            backgroundImage: 'url(/assets/login/background.jpg)',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            backgroundSize: 'contain',
+            backgroundSize: 'cover',
             borderRadius: 18,
             margin: '0 auto',
           }}
