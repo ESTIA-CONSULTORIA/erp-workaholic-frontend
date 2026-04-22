@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useERPStore } from '../store/erp.store';
 import { api } from '../lib/api';
 
-const BG = new URL('../../login-bg.png', import.meta.url).href;
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const setUser = useERPStore((s) => s.setUser);
@@ -36,9 +34,8 @@ export default function LoginPage() {
     <div
       style={{
         minHeight: '100vh',
-        backgroundImage: `linear-gradient(rgba(5,8,12,0.28), rgba(5,8,12,0.42)), url(${BG})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        background:
+          'radial-gradient(circle at top left, rgba(202,163,107,0.12), transparent 24%), linear-gradient(135deg, #030712 0%, #07111f 45%, #0a1424 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -48,10 +45,10 @@ export default function LoginPage() {
       <div
         style={{
           width: '100%',
-          maxWidth: 1180,
+          maxWidth: 1100,
           display: 'grid',
-          gridTemplateColumns: '1.1fr 420px',
-          gap: 28,
+          gridTemplateColumns: '1fr 420px',
+          gap: 30,
           alignItems: 'center',
         }}
       >
@@ -75,7 +72,15 @@ export default function LoginPage() {
             Grupo Workaholic
           </h1>
 
-          <p style={{ marginTop: 16, maxWidth: 620, fontSize: 17, lineHeight: 1.7, color: '#d7dee8' }}>
+          <p
+            style={{
+              marginTop: 16,
+              maxWidth: 620,
+              fontSize: 17,
+              lineHeight: 1.7,
+              color: '#d7dee8',
+            }}
+          >
             Plataforma central para operación, finanzas, RH, inventarios,
             membresías, reportes y control multiempresa.
           </p>
@@ -83,7 +88,7 @@ export default function LoginPage() {
 
         <section
           style={{
-            background: 'rgba(7, 10, 14, 0.72)',
+            background: 'rgba(7, 10, 14, 0.78)',
             border: '1px solid rgba(202,163,107,0.18)',
             padding: 30,
             borderRadius: 22,
@@ -146,7 +151,14 @@ export default function LoginPage() {
             </div>
           </form>
 
-          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: '#94a3b8' }}>
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: 16,
+              fontSize: 12,
+              color: '#94a3b8',
+            }}
+          >
             ERP v1.0 · {year}
           </div>
         </section>
