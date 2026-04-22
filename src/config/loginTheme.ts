@@ -8,9 +8,7 @@ export type SeasonKey =
 export interface BrandLogo {
   name: string;
   src: string;
-  alt: string;
   width?: number;
-  height?: number;
 }
 
 export interface LoginTheme {
@@ -18,41 +16,20 @@ export interface LoginTheme {
   title: string;
   subtitle: string;
   accent: string;
-  accentSoft: string;
   panelBg: string;
-  panelBorder: string;
   textPrimary: string;
   textSecondary: string;
-  buttonText: string;
   backgroundImage: string;
   overlay: string;
   estiaLogo: string;
   estiaLogoWidth: number;
-  showSeasonBadge: boolean;
-  seasonBadgeText?: string;
-  decorativeEmoji?: string;
   brandLogos: BrandLogo[];
 }
 
 const buildLogos = (season: SeasonKey): BrandLogo[] => [
-  {
-    name: 'Palestra',
-    src: `/assets/logos/${season}/palestra.png`,
-    alt: 'Palestra',
-    width: 110,
-  },
-  {
-    name: 'Machete',
-    src: `/assets/logos/${season}/machete.png`,
-    alt: 'Machete',
-    width: 110,
-  },
-  {
-    name: 'Workaholic',
-    src: `/assets/logos/${season}/workaholic.png`,
-    alt: 'Workaholic',
-    width: 130,
-  },
+  { name: 'Palestra', src: `/assets/logos/${season}/palestra.png`, width: 110 },
+  { name: 'Machete', src: `/assets/logos/${season}/machete.png`, width: 110 },
+  { name: 'Workaholic', src: `/assets/logos/${season}/workaholic.png`, width: 130 },
 ];
 
 export const loginThemes: Record<SeasonKey, LoginTheme> = {
@@ -61,17 +38,13 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     title: 'Grupo Workaholic',
     subtitle: 'Acceso multiempresa',
     accent: '#caa36b',
-    accentSoft: 'rgba(202,163,107,0.18)',
-    panelBg: 'rgba(8, 10, 14, 0.58)',
-    panelBorder: 'rgba(202,163,107,0.22)',
-    textPrimary: '#f8fafc',
-    textSecondary: '#cbd5e1',
-    buttonText: '#0b0b0b',
+    panelBg: 'rgba(0,0,0,0.5)',
+    textPrimary: '#ffffff',
+    textSecondary: '#cccccc',
     backgroundImage: '/assets/login/default/background.jpg',
-    overlay: 'rgba(5,8,12,0.62)',
+    overlay: 'rgba(5,8,12,0.6)',
     estiaLogo: '/assets/logos/default/estia.png',
-    estiaLogoWidth: 84,
-    showSeasonBadge: false,
+    estiaLogoWidth: 85,
     brandLogos: buildLogos('default'),
   },
 
@@ -80,19 +53,13 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     title: 'Grupo Workaholic',
     subtitle: 'Temporada navideña',
     accent: '#d4af37',
-    accentSoft: 'rgba(212,175,55,0.18)',
-    panelBg: 'rgba(16, 18, 24, 0.62)',
-    panelBorder: 'rgba(212,175,55,0.24)',
-    textPrimary: '#f8fafc',
-    textSecondary: '#dbe4ee',
-    buttonText: '#0b0b0b',
+    panelBg: 'rgba(0,0,0,0.5)',
+    textPrimary: '#ffffff',
+    textSecondary: '#dddddd',
     backgroundImage: '/assets/login/navidad/background.jpg',
     overlay: 'rgba(16,8,8,0.58)',
     estiaLogo: '/assets/logos/navidad/estia.png',
-    estiaLogoWidth: 78,
-    showSeasonBadge: true,
-    seasonBadgeText: 'Especial navideño',
-    decorativeEmoji: '🎄',
+    estiaLogoWidth: 75,
     brandLogos: buildLogos('navidad'),
   },
 
@@ -101,69 +68,50 @@ export const loginThemes: Record<SeasonKey, LoginTheme> = {
     title: 'Grupo Workaholic',
     subtitle: 'Temporada de pascua',
     accent: '#b794f4',
-    accentSoft: 'rgba(183,148,244,0.18)',
-    panelBg: 'rgba(12, 14, 20, 0.58)',
-    panelBorder: 'rgba(183,148,244,0.24)',
-    textPrimary: '#f8fafc',
-    textSecondary: '#dbe4ee',
-    buttonText: '#0b0b0b',
+    panelBg: 'rgba(0,0,0,0.5)',
+    textPrimary: '#ffffff',
+    textSecondary: '#dddddd',
     backgroundImage: '/assets/login/pascua/background.jpg',
     overlay: 'rgba(11,10,18,0.5)',
     estiaLogo: '/assets/logos/pascua/estia.png',
-    estiaLogoWidth: 78,
-    showSeasonBadge: true,
-    seasonBadgeText: 'Especial de pascua',
-    decorativeEmoji: '🐣',
+    estiaLogoWidth: 75,
     brandLogos: buildLogos('pascua'),
   },
 
   dia_muertos: {
     key: 'dia_muertos',
     title: 'Grupo Workaholic',
-    subtitle: 'Temporada conmemorativa',
+    subtitle: 'Día de Muertos',
     accent: '#f59e0b',
-    accentSoft: 'rgba(245,158,11,0.18)',
-    panelBg: 'rgba(14, 10, 16, 0.60)',
-    panelBorder: 'rgba(245,158,11,0.24)',
-    textPrimary: '#f8fafc',
-    textSecondary: '#dbe4ee',
-    buttonText: '#0b0b0b',
+    panelBg: 'rgba(0,0,0,0.5)',
+    textPrimary: '#ffffff',
+    textSecondary: '#dddddd',
     backgroundImage: '/assets/login/dia_muertos/background.jpg',
     overlay: 'rgba(12,7,14,0.66)',
     estiaLogo: '/assets/logos/dia_muertos/estia.png',
-    estiaLogoWidth: 78,
-    showSeasonBadge: true,
-    seasonBadgeText: 'Día de Muertos',
-    decorativeEmoji: '💀',
+    estiaLogoWidth: 75,
     brandLogos: buildLogos('dia_muertos'),
   },
 
   dia_trabajo: {
     key: 'dia_trabajo',
     title: 'Grupo Workaholic',
-    subtitle: 'Reconocimiento al esfuerzo',
+    subtitle: 'Día del Trabajo',
     accent: '#60a5fa',
-    accentSoft: 'rgba(96,165,250,0.18)',
-    panelBg: 'rgba(9, 12, 18, 0.58)',
-    panelBorder: 'rgba(96,165,250,0.24)',
-    textPrimary: '#f8fafc',
-    textSecondary: '#dbe4ee',
-    buttonText: '#0b0b0b',
+    panelBg: 'rgba(0,0,0,0.5)',
+    textPrimary: '#ffffff',
+    textSecondary: '#dddddd',
     backgroundImage: '/assets/login/dia_trabajo/background.jpg',
     overlay: 'rgba(7,11,18,0.58)',
     estiaLogo: '/assets/logos/dia_trabajo/estia.png',
-    estiaLogoWidth: 78,
-    showSeasonBadge: true,
-    seasonBadgeText: 'Día del Trabajo',
-    decorativeEmoji: '⚒️',
+    estiaLogoWidth: 75,
     brandLogos: buildLogos('dia_trabajo'),
   },
 };
 
-// 🔧 CAMBIAS SOLO ESTA LÍNEA PARA FORZAR TEMPORADA
+// 🔥 AUTOMÁTICO POR FECHA (NO LO VUELVES A TOCAR)
 export function getActiveTheme(): SeasonKey {
-  const now = new Date();
-  const month = now.getMonth() + 1;
+  const month = new Date().getMonth() + 1;
 
   if (month === 12) return 'navidad';
   if (month === 4) return 'pascua';
