@@ -23,7 +23,7 @@ const NAV_GROUPS = [
       { to:'/machete/compras',    icon:'🛒', label:'Compras',      companies:['MACHETE'] },
       { to:'/machete/produccion', icon:'⚙',  label:'Producción',   companies:['MACHETE'] },
       { to:'/catalogo',           icon:'≋',  label:'Catálogo',     companies:['MACHETE'] },
-      { to:'/ordenes-compra',    icon:'📋', label:'OC',            companies:['MACHETE'] },
+      { to:'/ordenes-compra',     icon:'📋', label:'OC',           companies:['MACHETE'] },
     ]
   },
   {
@@ -31,13 +31,13 @@ const NAV_GROUPS = [
     label: 'Finanzas',
     icon: '💼',
     items: [
-      { to:'/gastos',          icon:'◎', label:'Gastos',        roles:['admin','administrador','gerente','contador','cajero'] },
-      { to:'/bitacora',        icon:'📋', label:'Bitácora',     roles:['admin','administrador','director'] },
+      { to:'/gastos',          icon:'◎', label:'Gastos',       roles:['admin','administrador','gerente','contador','cajero'] },
+      { to:'/bitacora',        icon:'📋', label:'Bitácora',    roles:['admin','administrador','director'] },
       { to:'/intercompany',    icon:'↔', label:'Intercompany', roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/conciliacion',    icon:'⊜', label:'Arqueo',  roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/cxc',             icon:'◷', label:'CxC',           roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/cxp',             icon:'◶', label:'CxP',           roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/documentos',      icon:'⊞', label:'Documentos',    roles:['admin','administrador','gerente','contador','cajero'] },
+      { to:'/conciliacion',    icon:'⊜', label:'Arqueo',       roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/cxc',             icon:'◷', label:'CxC',          roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/cxp',             icon:'◶', label:'CxP',          roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/documentos',      icon:'⊞', label:'Documentos',   roles:['admin','administrador','gerente','contador','cajero'] },
     ]
   },
   {
@@ -54,7 +54,7 @@ const NAV_GROUPS = [
     label: 'Reportes',
     icon: '📊',
     items: [
-      { to:'/reportes/ventas',  icon:'📈', label:'Ventas',           companies:['MACHETE'] },
+      { to:'/reportes/ventas',  icon:'📈', label:'Ventas',            companies:['MACHETE'] },
       { to:'/reportes/cxc',     icon:'💰', label:'CxC Multicliente',  companies:['MACHETE'] },
       { to:'/reportes/cxp',     icon:'📋', label:'CxP',               companies:['MACHETE'] },
     ]
@@ -64,13 +64,13 @@ const NAV_GROUPS = [
     label: 'Palestra',
     icon: '🏓',
     items: [
-      { to:'/palestra',                icon:'🏓', label:'Dashboard',          companies:['PALESTRA'] },
-      { to:'/palestra/pos',            icon:'🏪', label:'POS',                companies:['PALESTRA'] },
-      { to:'/palestra/membresias',     icon:'👥', label:'Membresías',         companies:['PALESTRA'] },
-      { to:'/palestra/servicios',      icon:'⚙',  label:'Servicios',          companies:['PALESTRA'] },
-      { to:'/palestra/productos',      icon:'📦', label:'Productos',          companies:['PALESTRA'] },
-      { to:'/palestra/comisiones',     icon:'💰', label:'Comisiones',         companies:['PALESTRA'] },
-      { to:'/palestra/soft-restaurant',icon:'🍽', label:'Restaurante (Soft)', companies:['PALESTRA'] },
+      { to:'/palestra',                 icon:'🏓', label:'Dashboard',          companies:['PALESTRA'] },
+      { to:'/palestra/pos',             icon:'🏪', label:'POS',                companies:['PALESTRA'] },
+      { to:'/palestra/membresias',      icon:'👥', label:'Membresías',         companies:['PALESTRA'] },
+      { to:'/palestra/servicios',       icon:'⚙',  label:'Servicios',          companies:['PALESTRA'] },
+      { to:'/palestra/productos',       icon:'📦', label:'Productos',          companies:['PALESTRA'] },
+      { to:'/palestra/comisiones',      icon:'💰', label:'Comisiones',         companies:['PALESTRA'] },
+      { to:'/palestra/soft-restaurant', icon:'🍽', label:'Restaurante (Soft)', companies:['PALESTRA'] },
     ]
   },
   {
@@ -78,17 +78,17 @@ const NAV_GROUPS = [
     label: 'RH',
     icon: '👥',
     items: [
-      { to:'/mi-perfil', icon:'👤', label:'Mi Perfil',  roles:['cajero','rh','admin','administrador','gerente','contador','director'] },
-      { to:'/rh',        icon:'👥', label:'Empleados',  roles:['admin','administrador','gerente','rh'] },
-      { to:'/rh/nomina', icon:'💰', label:'Nómina',     roles:['admin','administrador','gerente','rh','contador'] },
+      { to:'/mi-perfil', icon:'👤', label:'Mi Perfil', roles:['cajero','rh','admin','administrador','gerente','contador','director'] },
+      { to:'/rh',        icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
+      { to:'/rh/nomina', icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
     ]
   },
   {
     id: 'admin',
     label: null,
     items: [
-      { to:'/admin',     icon:'⊛', label:'Admin',    roles:['admin','administrador'] },
-      { to:'/permisos',  icon:'🔒', label:'Permisos', roles:['admin','administrador'] },
+      { to:'/admin',            icon:'⊛', label:'Admin',    roles:['admin','administrador'] },
+      { to:'/admin/permisos',   icon:'🔒', label:'Permisos', roles:['admin','administrador'] },
     ]
   },
 ];
@@ -107,12 +107,12 @@ function getUltimos12() {
 export default function AppLayout({ children, noPadding }: { children: React.ReactNode; noPadding?: boolean }) {
   const navigate = useNavigate();
   const { user, activeCompany, activePeriod, setActiveCompany, setActivePeriod, logout } = useERPStore();
-  const [collapsed,  setCollapsed]  = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string,boolean>>({
+  const [collapsed, setCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     operaciones: true, finanzas: true, estados: false, reportes: false, rh: false,
   });
 
-  const color    = activeCompany?.color || '#3b82f6';
+  const color = activeCompany?.color || '#3b82f6';
   const periodos = getUltimos12();
 
   if (!user || !activeCompany) return null;
@@ -120,8 +120,11 @@ export default function AppLayout({ children, noPadding }: { children: React.Rea
   const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
 
   const filterItem = (item: any) => {
-    if (item.roles     && !item.roles.includes(activeCompany.roleCode))        return false;
-    if (item.companies && !item.companies.includes(activeCompany.companyCode)) return false;
+    const roleCode = String(activeCompany.roleCode || '').toLowerCase();
+    const companyCode = String(activeCompany.companyCode || '').toUpperCase();
+
+    if (item.roles && !item.roles.includes(roleCode)) return false;
+    if (item.companies && !item.companies.includes(companyCode)) return false;
     return true;
   };
 
@@ -142,12 +145,16 @@ export default function AppLayout({ children, noPadding }: { children: React.Rea
 
         {!collapsed && (
           <div style={{ padding:12, borderBottom:'1px solid #334155', display:'flex', flexDirection:'column', gap:8 }}>
-            <select value={activeCompany.companyId}
+            <select
+              value={activeCompany.companyId}
               onChange={e => {
-                const c = user.companies.find(c => c.companyId === e.target.value);
-                if (c) { setActiveCompany(c); navigate('/dashboard'); }
+                const nextCompanyId = e.target.value;
+                setActiveCompany(nextCompanyId);
+                navigate('/dashboard');
               }}
-              className="input-base" style={{ fontSize:12, borderColor: color + '66' }}>
+              className="input-base"
+              style={{ fontSize:12, borderColor: color + '66' }}
+            >
               {user.companies.map(c => (
                 <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
               ))}
@@ -173,7 +180,7 @@ export default function AppLayout({ children, noPadding }: { children: React.Rea
                       padding:'9px 12px', margin:'0 8px', borderRadius:8,
                       textDecoration:'none', cursor:'pointer', fontSize:13, fontWeight:500,
                       background: isActive ? color + '22' : 'transparent',
-                      color:      isActive ? color        : '#94a3b8',
+                      color: isActive ? color : '#94a3b8',
                       borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
                       transition:'all 0.15s',
                     })}>
@@ -209,7 +216,7 @@ export default function AppLayout({ children, noPadding }: { children: React.Rea
                     borderRadius:8,
                     textDecoration:'none', cursor:'pointer', fontSize:13, fontWeight:500,
                     background: isActive ? color + '22' : 'transparent',
-                    color:      isActive ? color        : '#94a3b8',
+                    color: isActive ? color : '#94a3b8',
                     borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
                     transition:'all 0.15s',
                   })}>
