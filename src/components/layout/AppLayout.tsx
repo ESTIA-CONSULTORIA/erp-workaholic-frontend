@@ -78,9 +78,12 @@ const NAV_GROUPS = [
     label: 'RH',
     icon: '👥',
     items: [
+      { to:'/aprobaciones', icon:'✓', label:'Aprobaciones', roles:['admin','administrador','gerente','rh','contador','director'] },
       { to:'/mi-perfil', icon:'👤', label:'Mi Perfil', roles:['cajero','rh','admin','administrador','gerente','contador','director'] },
       { to:'/rh',        icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
-      { to:'/rh/nomina', icon:'💰', label:'Nómina',    roles:['admin','administrador','gerente','rh','contador'] },
+      { to:'/rh/nomina',      icon:'💰', label:'Nómina',      roles:['admin','administrador','gerente','rh','contador'] },
+      { to:'/rh/incidencias', icon:'⚡', label:'Incidencias', roles:['admin','administrador','gerente','rh'] },
+      { to:'/rh/bajas',       icon:'👋', label:'Bajas',       roles:['admin','administrador','rh'] },
     ]
   },
   {
