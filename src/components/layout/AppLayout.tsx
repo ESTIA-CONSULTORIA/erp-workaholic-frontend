@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../hooks/usePermissions';
+import NotificationBell from '../NotificationBell';
+
 import { useERPStore } from '../../store/erp.store';
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -69,7 +71,8 @@ const NAV_GROUPS = [
       { to:'/lonche/pos',      icon:'🏪', label:'POS',        companies:['LONCHE'] },
       { to:'/lonche/surtido',  icon:'📦', label:'Surtido',    companies:['LONCHE'] },
       { to:'/lonche/alumnos',  icon:'👨‍🎓',label:'Alumnos / Prepago', companies:['LONCHE'] },
-      { to:'/lonche/catalogo', icon:'≋',  label:'Catálogo',   companies:['LONCHE'] },
+      { to:'/lonche/catalogo',  icon:'≋',  label:'Catálogo',   companies:['LONCHE'] },
+      { to:'/lonche/reportes',  icon:'📊', label:'Reportes',   companies:['LONCHE'] },
     ]
   },
   {
@@ -300,6 +303,9 @@ export default function AppLayout({ children, noPadding }: { children: React.Rea
             background:'#334155', color:'#94a3b8' }}>
             {periodos.find(p => p.key === activePeriod)?.label || activePeriod}
           </span>
+          <div style={{ marginLeft:'auto' }}>
+            <NotificationBell />
+          </div>
         </header>
         <main style={{ flex:1, overflowY: noPadding ? 'hidden' : 'auto', padding: noPadding ? 0 : 24, display: noPadding ? 'flex' : 'block', flexDirection: 'column' }}>
           {children}
