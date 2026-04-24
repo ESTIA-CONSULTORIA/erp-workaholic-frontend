@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useERPStore } from '../../store/erp.store';
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -45,7 +46,7 @@ const NAV_GROUPS = [
     label: 'Estados Financieros',
     icon: '∑',
     items: [
-      { to:'/reportes',    icon:'∑', label:'Est. Resultados',  roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/reportes', permission:'reportes.ver',    icon:'∑', label:'Est. Resultados',  roles:['admin','administrador','gerente','contador','director'] },
       { to:'/consolidado', icon:'◈', label:'Consolidado',      roles:['admin','administrador','gerente','contador','director'] },
     ]
   },
@@ -81,7 +82,7 @@ const NAV_GROUPS = [
       { to:'/aprobaciones', icon:'✓', label:'Aprobaciones', roles:['admin','administrador','gerente','rh','contador','director'] },
       { to:'/mi-perfil', icon:'👤', label:'Mi Perfil', roles:['cajero','rh','admin','administrador','gerente','contador','director'] },
       { to:'/rh',        icon:'👥', label:'Empleados', roles:['admin','administrador','gerente','rh'] },
-      { to:'/rh/nomina',      icon:'💰', label:'Nómina',      roles:['admin','administrador','gerente','rh','contador'] },
+      { to:'/rh/nomina',      icon:'💰', label:'Nómina',      roles:['admin','administrador','gerente','rh','contador'], permission:'rh.ver' },
       { to:'/rh/incidencias', icon:'⚡', label:'Incidencias', roles:['admin','administrador','gerente','rh'] },
       { to:'/rh/bajas',           icon:'👋', label:'Bajas',          roles:['admin','administrador','rh'] },
       { to:'/rh/incapacidades', icon:'🏥', label:'Incapacidades', roles:['admin','administrador','rh'] },
@@ -92,7 +93,7 @@ const NAV_GROUPS = [
     label: null,
     items: [
       { to:'/admin',            icon:'⊛', label:'Admin',    roles:['admin','administrador'] },
-      { to:'/admin/permisos',   icon:'🔒', label:'Permisos', roles:['admin','administrador'] },
+      { to:'/admin/permisos',   icon:'🔒', label:'Permisos', roles:['admin','administrador'], permission:'admin.editar' },
     ]
   },
 ];
@@ -123,12 +124,17 @@ export default function AppLayout({ children, noPadding }: { children: React.Rea
 
   const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
 
-  const filterItem = (item: any) => {
-    const roleCode = String(activeCompany.roleCode || '').toLowerCase();
-    const companyCode = String(activeCompany.companyCode || '').toUpperCase();
+  const { can } = usePermissions();
 
-    if (item.roles && !item.roles.includes(roleCode)) return false;
+  const filterItem = (item: any) => {
+    const roleCode    = String(activeCompany.roleCode || '').toLowerCase();
+    const companyCode = String(activeCompany.companyCode || '').toUpperCase();
+    if (item.roles    && !item.roles.includes(roleCode))    return false;
     if (item.companies && !item.companies.includes(companyCode)) return false;
+    if (item.permission) {
+      const [mod, action] = item.permission.split('.');
+      if (!can(mod, action)) return false;
+    }
     return true;
   };
 
