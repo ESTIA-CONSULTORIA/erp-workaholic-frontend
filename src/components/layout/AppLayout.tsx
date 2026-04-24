@@ -61,6 +61,19 @@ const NAV_GROUPS = [
     ]
   },
   {
+    id: 'workaholic',
+    label: 'Workaholic',
+    icon: '💼',
+    items: [
+      { to:'/workaholic',                icon:'💼', label:'Dashboard',          companies:['WORKAHOLIC'] },
+      { to:'/workaholic/pos',            icon:'🏪', label:'POS',                companies:['WORKAHOLIC'] },
+      { to:'/workaholic/reservaciones',  icon:'📅', label:'Reservaciones',      companies:['WORKAHOLIC'] },
+      { to:'/workaholic/membresias',     icon:'🎫', label:'Membresías',         companies:['WORKAHOLIC'] },
+      { to:'/workaholic/espacios',       icon:'🏢', label:'Espacios',           companies:['WORKAHOLIC'] },
+      { to:'/workaholic/soft-restaurant',icon:'🍽', label:'A&B (Soft)',         companies:['WORKAHOLIC'] },
+    ]
+  },
+  {
     id: 'palestra',
     label: 'Palestra',
     icon: '🏓',

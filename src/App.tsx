@@ -22,6 +22,12 @@ import MiPerfilPage from './pages/rh/MiPerfil';
 import AprobacionesPage from './pages/Aprobaciones';
 import IncidenciasPage from './pages/rh/Incidencias';
 import BajasPage from './pages/rh/Bajas';
+import WorkaholicDashboard from './pages/workaholic/Dashboard';
+import EspaciosPage from './pages/workaholic/Espacios';
+import ReservacionesPage from './pages/workaholic/Reservaciones';
+import WorkaholicMembresiasPage from './pages/workaholic/Membresias';
+import WorkaholicPOSPage from './pages/workaholic/POS';
+import WorkaholicSoftPage from './pages/workaholic/SoftRestaurant';
 import IncapacidadesPage from './pages/rh/Incapacidades';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
@@ -83,6 +89,12 @@ export default function App() {
               <Route path="/mi-perfil" element={<MiPerfilPage />} />
               <Route path="/rh/empleados/:id" element={<ExpedientePage />} />
               <Route path="/rh/nomina" element={<NominaPage />} />
+              <Route path="/workaholic" element={<WorkaholicDashboard />} />
+              <Route path="/workaholic/pos" element={<WorkaholicPOSPage />} />
+              <Route path="/workaholic/espacios" element={<EspaciosPage />} />
+              <Route path="/workaholic/reservaciones" element={<ReservacionesPage />} />
+              <Route path="/workaholic/membresias" element={<WorkaholicMembresiasPage />} />
+              <Route path="/workaholic/soft-restaurant" element={<WorkaholicSoftPage />} />
               <Route path="/aprobaciones" element={<AprobacionesPage />} />
               <Route path="/rh/incidencias" element={<IncidenciasPage />} />
               <Route path="/rh/bajas" element={<BajasPage />} />
