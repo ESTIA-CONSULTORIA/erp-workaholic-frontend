@@ -5,7 +5,7 @@
 import AppLayout from '../components/layout/AppLayout';
 import { useERPStore } from '../store/erp.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, fmt, fmtDate, fmtPct } from '../lib/api';
+import { api, fmt, fmtDate, fmtPct, exportCSV } from '../lib/api';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImportCSV from '../components/ImportCSV';
@@ -148,7 +148,7 @@ export function CortesPage() {
 // INSTRUCCIONES: Reemplaza todo desde "// ── GASTOS" hasta el "}"
 // que cierra GastosPage (justo antes de "// ── CONCILIACIÓN")
 // ── GASTOS REPLACEMENT ────────────────────────────────────────
-// Reemplaza desde "export function GastosPage()" hasta el "}" que cierra GastosPage
+// Reemplaza desde "
 export function GastosPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -577,7 +577,7 @@ export function ConciliacionPage() {
   };
 
   // Calcular totales de cortes del día para comparar
-  const cortesHoy = (cortes as any[]).filter((c:any) => c.fecha?.slice(0,10) === hoy);
+  const cortesHoy = Array.isArray(cortes) ? (cortes as any[]).filter((c:any) => c.fecha?.slice(0,10) === hoy) : [];
   const efectivoDeclarado = cortesHoy.reduce((t:number,c:any) => t + Number(c.efectivoContado||0), 0);
   const efectivoTeorico   = balances.find((b:any) => b.type === 'EFECTIVO')?.balance || 0;
   const diferencia        = efectivoDeclarado - Number(efectivoTeorico);
@@ -789,7 +789,7 @@ export function ConciliacionPage() {
 }
 
 // ── CxC REPLACEMENT ───────────────────────────────────────────
-// Reemplaza desde "export function CxCPage()" hasta el "}" que cierra CxCPage
+// Reemplaza desde "
 export function CxCPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -1409,7 +1409,7 @@ export function CxPPage() {
 // INSTRUCCIONES: Reemplaza todo desde "// ── REPORTES" hasta el cierre
 // de ReportesPage (antes de "// ── Estado de Resultados")
 // ── ESTADOS FINANCIEROS ───────────────────────────────────────
-// REEMPLAZA todo desde "export function ReportesPage()" hasta antes de "function ERTab("
+// REEMPLAZA todo desde "
 function ERRow({ label, value, antValue, color, bold, indent, showComp }: any) {
   const diff = (showComp && antValue !== undefined) ? value - antValue : null;
   const pct  = diff !== null && antValue !== 0 ? (diff / Math.abs(antValue)) * 100 : null;

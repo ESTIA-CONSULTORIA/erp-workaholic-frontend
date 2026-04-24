@@ -174,7 +174,20 @@ export default function PalestraPOSPage() {
             </div>
           ))}
           {filtered.length === 0 && (
-            <p style={{ gridColumn:'1/-1', textAlign:'center', color:'#334155', padding:40 }}>Sin servicios</p>
+            <div style={{ gridColumn:'1/-1', textAlign:'center', padding:40 }}>
+              <p style={{ fontSize:32, margin:'0 0 8px' }}>⚙</p>
+              <p style={{ fontSize:14, color:'#64748b', margin:'0 0 8px' }}>
+                {(services as any[]).length === 0
+                  ? 'No hay servicios configurados aún'
+                  : 'Sin resultados para la búsqueda'
+                }
+              </p>
+              {(services as any[]).length === 0 && (
+                <p style={{ fontSize:12, color:'#475569' }}>
+                  Ve a <strong style={{color:'#10b981'}}>Palestra → Servicios</strong> para agregar servicios al catálogo
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>

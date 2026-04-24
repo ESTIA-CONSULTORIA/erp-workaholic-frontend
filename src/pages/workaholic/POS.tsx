@@ -227,7 +227,14 @@ export default function WorkaholicPOS() {
             {/* Espacios */}
             <p style={{ fontSize:11, color:'#64748b', margin:'0 0 8px', textTransform:'uppercase' }}>Espacio *</p>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:8, marginBottom:16 }}>
-              {(spaces as any[]).map(s => (
+              {(spaces as any[]).length === 0 && (
+              <div style={{ gridColumn:'1/-1', textAlign:'center', padding:32 }}>
+                <p style={{ fontSize:24, margin:'0 0 8px' }}>🚪</p>
+                <p style={{ fontSize:13, color:'#64748b', margin:'0 0 4px' }}>No hay espacios configurados</p>
+                <p style={{ fontSize:11, color:'#475569' }}>Ve a <strong>Workaholic → Espacios</strong> para agregar espacios</p>
+              </div>
+            )}
+            {(spaces as any[]).map(s => (
                 <div key={s.id} onClick={() => setResForm(f=>({...f,spaceId:s.id}))}
                   style={{ background:resForm.spaceId===s.id?color+'22':'#0f172a',
                     border:`2px solid ${resForm.spaceId===s.id?color:'#1e293b'}`,

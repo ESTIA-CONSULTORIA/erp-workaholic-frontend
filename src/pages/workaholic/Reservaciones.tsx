@@ -112,6 +112,34 @@ export default function ReservacionesPage() {
                   ))}
                 </div>
               </div>
+              {/* Bolsa de miembros activos */}
+              <div style={{ gridColumn:'span 3', marginBottom:4 }}>
+                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>
+                  Búsqueda rápida de miembro activo
+                </label>
+                <select style={{ width:'100%', padding:'8px 10px', borderRadius:8,
+                  border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:12 }}
+                  onChange={e => {
+                    const m = (memberships as any[]).find((m:any) => m.id === e.target.value);
+                    if (m) {
+                      setForm(f => ({...f, clientName: m.holderName,
+                        clientEmail: m.holderEmail || '',
+                        clientPhone: m.holderPhone || '',
+                        clientCompany: m.companyName || '',
+                        membershipId: m.id }));
+                    }
+                  }}>
+                  <option value="">— O selecciona miembro activo —</option>
+                  {(memberships as any[]).map((m:any) => {
+                    const horas = Number(m.membershipType?.hoursIncluded||0) - Number(m.hoursUsed||0);
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {m.holderName}{m.companyName ? ` (${m.companyName})` : ''} — {horas}h restantes
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
               {[['Cliente *','clientName','text'],['Empresa','clientCompany','text'],['Email','clientEmail','text'],['Teléfono','clientPhone','text']].map(([l,k,t]) => (
                 <div key={k}>
                   <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>{l}</label>
