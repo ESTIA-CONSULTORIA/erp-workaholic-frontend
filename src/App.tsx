@@ -22,6 +22,7 @@ import MiPerfilPage from './pages/rh/MiPerfil';
 import AprobacionesPage from './pages/Aprobaciones';
 import IncidenciasPage from './pages/rh/Incidencias';
 import BajasPage from './pages/rh/Bajas';
+import IncapacidadesPage from './pages/rh/Incapacidades';
 import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
 import { GastosPage, ConciliacionPage, CxCPage, CxPPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage, BitacoraPage } from './pages/AllPages';
@@ -85,6 +86,7 @@ export default function App() {
               <Route path="/aprobaciones" element={<AprobacionesPage />} />
               <Route path="/rh/incidencias" element={<IncidenciasPage />} />
               <Route path="/rh/bajas" element={<BajasPage />} />
+              <Route path="/rh/incapacidades" element={<IncapacidadesPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </RequireAuth>
