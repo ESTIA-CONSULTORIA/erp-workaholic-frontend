@@ -61,6 +61,18 @@ const NAV_GROUPS = [
     ]
   },
   {
+    id: 'lonche',
+    label: 'Lonche',
+    icon: '🍱',
+    items: [
+      { to:'/lonche',          icon:'🍱', label:'Dashboard',  companies:['LONCHE'] },
+      { to:'/lonche/pos',      icon:'🏪', label:'POS',        companies:['LONCHE'] },
+      { to:'/lonche/surtido',  icon:'📦', label:'Surtido',    companies:['LONCHE'] },
+      { to:'/lonche/alumnos',  icon:'👨‍🎓',label:'Alumnos / Prepago', companies:['LONCHE'] },
+      { to:'/lonche/catalogo', icon:'≋',  label:'Catálogo',   companies:['LONCHE'] },
+    ]
+  },
+  {
     id: 'workaholic',
     label: 'Workaholic',
     icon: '💼',
