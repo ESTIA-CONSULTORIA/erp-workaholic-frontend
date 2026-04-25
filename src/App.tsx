@@ -35,6 +35,12 @@ import { GastosPage, ConciliacionPage, CxCPage, ReportesPage, DocumentosPage, Co
 import CorteCajaPage from './pages/CorteCaja';
 import PermisosPage from './pages/Admin/Permisos';
 import CxPPage from './pages/finanzas/CxP';
+import LoncheDashboard from './pages/lonche/Dashboard';
+import LonchePOS from './pages/lonche/POS';
+import SurtidoPage from './pages/lonche/Surtido';
+import AlumnosPage from './pages/lonche/Alumnos';
+import LoncheCatalogo from './pages/lonche/Catalogo';
+import LoncheReportes from './pages/lonche/Reportes';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useERPStore((s) => s.user);
@@ -52,6 +58,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/cortes" element={<CortesPage />} />
               <Route path="/corte-caja" element={<CorteCajaPage />} />
               <Route path="/gastos" element={<GastosPage />} />
               <Route path="/conciliacion" element={<ConciliacionPage />} />
@@ -90,6 +97,12 @@ export default function App() {
               <Route path="/workaholic/reservaciones" element={<ReservacionesPage />} />
               <Route path="/workaholic/membresias" element={<WorkaholicMembresiasPage />} />
               <Route path="/workaholic/soft-restaurant" element={<WorkaholicSoftPage />} />
+                            <Route path="/lonche" element={<LoncheDashboard />} />
+              <Route path="/lonche/pos" element={<LonchePOS />} />
+              <Route path="/lonche/surtido" element={<SurtidoPage />} />
+              <Route path="/lonche/alumnos" element={<AlumnosPage />} />
+              <Route path="/lonche/catalogo" element={<LoncheCatalogo />} />
+              <Route path="/lonche/reportes" element={<LoncheReportes />} />
               <Route path="/aprobaciones" element={<AprobacionesPage />} />
               <Route path="/rh/incidencias" element={<IncidenciasPage />} />
               <Route path="/rh/bajas" element={<BajasPage />} />

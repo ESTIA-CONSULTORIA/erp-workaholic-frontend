@@ -151,7 +151,14 @@ export default function PermisosPage() {
             <button onClick={() => navigate('/dashboard')} style={smallButton}>🏠 Home</button>
             <button onClick={() => navigate('/admin')} style={smallButton}>← Admin</button>
             <div>
-              <h1 style={{ fontSize:19, fontWeight:700, margin:0 }}>Permisos por rol y empresa</h1>
+              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={() => navigate(-1)}
+              style={{ padding:'5px 12px', borderRadius:7, border:'1px solid #334155',
+                background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+              ← Regresar
+            </button>
+            <h1 style={{ fontSize:19, fontWeight:700, margin:0 }}>Permisos por rol y empresa</h1>
+          </div>
               <p style={{ fontSize:11, color:'#64748b', margin:'2px 0 0' }}>
                 Empresa activa: {activeCompany?.companyName || activeCompany?.companyCode || '—'}
               </p>
