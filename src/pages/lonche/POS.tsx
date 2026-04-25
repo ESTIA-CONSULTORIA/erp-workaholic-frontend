@@ -63,12 +63,22 @@ export default function LonchePOS() {
   });
 
   const ventaM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/lonche/turnos/${turno.id}/ventas`, {
-      items: carrito.map(l => ({ productId: l.id, qty: l.qty })),
-      paymentMethod: metodo,
-      studentId:   student?.id   || null,
-      studentName: student?.name || null,
-    }),
+    mutationFn: () => {
+      // Validar referencia para tarjeta/transferencia
+      if (['TARJETA_DEBITO','TARJETA_CREDITO'].includes(metodo) && referencia.trim().length < 4) {
+        throw new Error('Ingresa los últimos 4 dígitos de autorización');
+      }
+      if (metodo === 'TRANSFERENCIA' && referencia.trim().length < 10) {
+        throw new Error('Ingresa la clave de rastreo (mín. 10 dígitos)');
+      }
+      return api.post(`/companies/${cid}/lonche/turnos/${turno.id}/ventas`, {
+        items: carrito.map(l => ({ productId: l.id, qty: l.qty })),
+        paymentMethod: metodo,
+        referencia: referencia || null,
+        studentId:   student?.id   || null,
+        studentName: student?.name || null,
+      });
+    },
     onSuccess: () => {
       setExito('¡Venta registrada!');
       setCarrito([]); setStudent(null); setScanCode(''); setMetodo('EFECTIVO');
@@ -260,9 +270,9 @@ export default function LonchePOS() {
             {/* Método pago */}
             <div style={{ padding:'8px 10px', borderTop:'1px solid #1e293b' }}>
               <div style={{ display:'flex', gap:4, marginBottom:6 }}>
-                {(['EFECTIVO','PREPAGO','MIXTO'] as const).map(m => (
-                  <button key={m} onClick={() => setMetodo(m)}
-                    disabled={m!=='EFECTIVO' && !student}
+                {(['EFECTIVO','TARJETA_DEBITO','TARJETA_CREDITO','TRANSFERENCIA','PREPAGO','MIXTO'] as const).map(m => (
+                  <button key={m} onClick={() => { setMetodo(m); setReferencia(''); }}
+                    disabled={(m==='PREPAGO'||m==='MIXTO') && !student}
                     style={{ flex:1, padding:'5px', borderRadius:6, border:`1px solid ${metodo===m?color:'#334155'}`,
                       background:metodo===m?color+'22':'transparent', color:metodo===m?color:(m!=='EFECTIVO'&&!student)?'#1e293b':'#64748b',
                       cursor:m!=='EFECTIVO'&&!student?'not-allowed':'pointer', fontSize:10, fontWeight:metodo===m?700:400 }}>
@@ -272,6 +282,17 @@ export default function LonchePOS() {
               </div>
             </div>
 
+            {/* Referencia para tarjeta/transferencia */}
+            {['TARJETA_DEBITO','TARJETA_CREDITO','TRANSFERENCIA'].includes(metodo) && (
+              <div style={{ padding:'0 10px 6px' }}>
+                <input value={referencia} onChange={e => setReferencia(e.target.value)}
+                  placeholder={metodo==='TRANSFERENCIA' ? 'Clave rastreo (10+ dígitos)' : 'Últimos 4 dígitos'}
+                  maxLength={metodo==='TRANSFERENCIA' ? 30 : 4}
+                  style={{ width:'100%', padding:'6px 8px', borderRadius:6, boxSizing:'border-box',
+                    border:`1px solid ${referencia.length>=(metodo==='TRANSFERENCIA'?10:4)?'#10b981':'#f87171'}`,
+                    background:'#0a0f1a', color:'#f1f5f9', fontSize:11 }}/>
+              </div>
+            )}
             {/* Total y cobrar */}
             <div style={{ padding:'10px 10px', borderTop:'1px solid #334155' }}>
               {error && <p style={{ fontSize:11,color:'#f87171',margin:'0 0 6px',textAlign:'center' }}>{error}</p>}
