@@ -173,7 +173,12 @@ export default function PermisosPage() {
 
   const COLORS = ['#f87171','#f59e0b','#10b981','#3b82f6','#8b5cf6','#06b6d4','#ec4899','#64748b','#a78bfa'];
 
-  if (rolesLoading) return <AppLayout><p style={{color:'#64748b',padding:40,textAlign:'center'}}>Cargando…</p></AppLayout>;
+  if (rolesLoading || (!selectedRole && (roles as any[]).length > 0)) {
+    return <AppLayout><div style={{textAlign:'center',padding:60,color:'#64748b'}}>
+      <p style={{fontSize:32,margin:'0 0 12px'}}>🔐</p>
+      <p>Cargando perfiles de acceso…</p>
+    </div></AppLayout>;
+  }
 
   return (
     <AppLayout>

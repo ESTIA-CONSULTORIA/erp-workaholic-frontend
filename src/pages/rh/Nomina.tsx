@@ -79,7 +79,7 @@ export default function NominaPage() {
     onError:   (e:any) => alert(e.response?.data?.message || 'Error al publicar'),
   });
 
-  const { data: periods = [] } = useQuery({
+  const { data: periods = [], isLoading: loadingPeriods } = useQuery({
     queryKey: ['payroll-periods', cid],
     queryFn:  () => api.get(`/companies/${cid}/payroll/periods`).then(r => r.data),
     enabled: !!cid,

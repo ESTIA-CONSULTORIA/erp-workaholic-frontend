@@ -558,20 +558,20 @@ export function ConciliacionPage() {
   const role  = activeCompany?.roleCode || '';
   const qc    = useQueryClient();
 
-  const esAdmin = ['admin','administrador','gerente'].includes(role);
-  const [tab, setTab] = useState<'arqueo'|'movimientos'>('arqueo');
+  const esAdmin = ['admin','administrador','gerente','contador'].includes(role);
+  const [tab,            setTab]            = useState<'arqueo'|'movimientos'>('arqueo');
+  const [editId,         setEditId]         = useState<string|null>(null);
+  const [editName,       setEditName]       = useState('');
+  const [saving,         setSaving]         = useState(false);
+  const [filtroMes,      setFiltroMes]      = useState(new Date().toISOString().slice(0,7));
+  const [showImportBanca,setShowImportBanca]= useState(false);
 
-  const [editId,   setEditId]   = useState<string|null>(null);
-  const [editName, setEditName] = useState('');
-  const [saving,   setSaving]   = useState(false);
-
-  const { data: rawBalances } = useQuery({
+  const { data: rawBalances, isLoading: loadingBal } = useQuery({
     queryKey: ['balances', cid],
     queryFn:  () => api.get(`/companies/${cid}/flow/balances`).then(r => r.data),
     enabled:  !!cid,
   });
 
-  // Para el admin: obtener cortes del día para comparar declarado vs teórico
   const hoy = new Date().toISOString().slice(0,10);
   const { data: cortes = [] } = useQuery({
     queryKey: ['cortes-arqueo', cid, hoy],
@@ -579,13 +579,22 @@ export function ConciliacionPage() {
     enabled:  !!cid && esAdmin,
   });
 
-  const balances = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
-  const totalMxn = rawBalances?.totalMxn || 0;
+  const { data: movimientos = [], isLoading: loadMov } = useQuery({
+    queryKey: ['flow-movimientos', cid, filtroMes],
+    queryFn:  () => api.get(`/companies/${cid}/flow/movements?period=${filtroMes}`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const balances       = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
+  const totalMxn       = rawBalances?.totalMxn || 0;
+  const cortesHoy      = (cortes as any[]).filter((c:any) => c.fecha?.slice(0,10) === hoy);
+  const efDeclarado    = cortesHoy.reduce((t:number,c:any) => t + Number(c.efectivoContado||0), 0);
+  const efTeorico      = balances.find((b:any) => b.type === 'EFECTIVO')?.balance || 0;
+  const diferencia     = efDeclarado - Number(efTeorico);
 
   const TIPO_LABELS: Record<string,string> = {
     EFECTIVO:'Efectivo', BANCO:'Banco', PLATAFORMA:'Plataforma', CAJA_CHICA:'Caja chica',
   };
-
   const grupos = (balances as any[]).reduce((acc: any, b: any) => {
     const tipo = b.type || 'OTRO';
     if (!acc[tipo]) acc[tipo] = [];
@@ -602,179 +611,200 @@ export function ConciliacionPage() {
     } finally { setSaving(false); }
   };
 
-  // Calcular totales de cortes del día para comparar
-  const cortesHoy = Array.isArray(cortes) ? (cortes as any[]).filter((c:any) => c.fecha?.slice(0,10) === hoy) : [];
-  const efectivoDeclarado = cortesHoy.reduce((t:number,c:any) => t + Number(c.efectivoContado||0), 0);
-  const efectivoTeorico   = balances.find((b:any) => b.type === 'EFECTIVO')?.balance || 0;
-  const diferencia        = efectivoDeclarado - Number(efectivoTeorico);
-
   return (
     <AppLayout>
       <div style={{ maxWidth:900 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-          <h1 style={{ fontSize:24, fontWeight:700, margin:0 }}>Arqueo de Caja</h1>
-          <span style={{ fontSize:12, padding:'4px 12px', borderRadius:99,
-            background: esAdmin ? '#3b82f622' : '#f59e0b22',
-            color: esAdmin ? '#3b82f6' : '#f59e0b' }}>
-            {esAdmin ? 'Vista administrador' : 'Vista contador'}
-          </span>
+          <h1 style={{ fontSize:22, fontWeight:700, margin:0 }}>Arqueo de Caja</h1>
+          <div style={{ display:'flex', gap:4, background:'#0f172a', borderRadius:8, padding:3 }}>
+            {(['arqueo','movimientos'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                style={{ padding:'5px 14px', borderRadius:6, border:'none', cursor:'pointer',
+                  background: tab===t ? color : 'transparent',
+                  color: tab===t ? '#fff' : '#64748b', fontSize:12, fontWeight:600 }}>
+                {t === 'arqueo' ? '🏧 Arqueo' : '📋 Movimientos'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: tab === 'arqueo' ? 'block' : 'none' }}>
-        {/* Vista Admin: declarado vs teórico */}
-        {esAdmin && (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
-            {[
-              { label:'Efectivo declarado (cortes hoy)', value: efectivoDeclarado, col: '#f59e0b' },
-              { label:'Efectivo teórico (sistema)',       value: efectivoTeorico,   col: color },
-              { label:'Diferencia',                       value: diferencia,        col: diferencia === 0 ? '#10b981' : diferencia > 0 ? '#3b82f6' : '#f87171' },
-            ].map(k => (
-              <div key={k.label} style={{ background:'#1e293b', borderRadius:8, padding:12, border:'1px solid #334155' }}>
-                <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px' }}>{k.label}</p>
-                <p style={{ fontSize:20, fontWeight:700, color:k.col, margin:0 }}>{fmt(k.value)}</p>
+        {/* ── TAB ARQUEO ── */}
+        {tab === 'arqueo' && (
+          <div>
+            {loadingBal && (
+              <div style={{ textAlign:'center', padding:60 }}>
+                <p style={{ color:'#64748b' }}>Cargando saldos…</p>
               </div>
-            ))}
+            )}
+            {!loadingBal && balances.length === 0 && (
+              <div style={{ textAlign:'center', padding:60, background:'#1e293b',
+                borderRadius:12, border:'1px dashed #334155' }}>
+                <p style={{ fontSize:36, margin:'0 0 12px' }}>🏦</p>
+                <p style={{ fontSize:15, fontWeight:600, color:'#94a3b8', margin:'0 0 8px' }}>
+                  No hay cuentas de caja configuradas
+                </p>
+                <p style={{ fontSize:12, color:'#475569', margin:0 }}>
+                  Las cuentas aparecen automáticamente cuando hay movimientos de flujo de efectivo.
+                </p>
+              </div>
+            )}
+            {!loadingBal && balances.length > 0 && (
+              <div>
+                {/* KPIs admin */}
+                {esAdmin && (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
+                    {[
+                      { label:'Efectivo declarado hoy', value: efDeclarado, col:'#f59e0b' },
+                      { label:'Efectivo teórico (sistema)', value: Number(efTeorico), col: color },
+                      { label:'Diferencia', value: diferencia, col: diferencia===0?'#10b981':diferencia>0?'#3b82f6':'#f87171' },
+                    ].map(k => (
+                      <div key={k.label} style={{ background:'#1e293b', borderRadius:8, padding:14, border:'1px solid #334155' }}>
+                        <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px', textTransform:'uppercase' }}>{k.label}</p>
+                        <p style={{ fontSize:20, fontWeight:700, color:k.col, margin:0 }}>{fmt(k.value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Totales */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
+                  <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
+                    <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total MXN</p>
+                    <p style={{ fontSize:24, fontWeight:700, color, margin:0 }}>{fmt(totalMxn)}</p>
+                  </div>
+                  <div className="card-sm" style={{ borderLeft:'3px solid #64748b' }}>
+                    <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Cuentas activas</p>
+                    <p style={{ fontSize:24, fontWeight:700, color:'#94a3b8', margin:0 }}>{balances.length}</p>
+                  </div>
+                </div>
+                {/* Desglose por tipo */}
+                {Object.entries(grupos).map(([tipo, cuentas]: any) => (
+                  <div key={tipo} style={{ marginBottom:16 }}>
+                    <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 8px' }}>
+                      {TIPO_LABELS[tipo] || tipo}
+                    </p>
+                    <div className="card" style={{ padding:0, overflow:'hidden' }}>
+                      <table className="table-base">
+                        <thead>
+                          <tr>
+                            <th>Cuenta</th>
+                            <th>Moneda</th>
+                            <th style={{textAlign:'right'}}>Saldo</th>
+                            {esAdmin && <th style={{textAlign:'right'}}>Diferencia</th>}
+                            {esAdmin && <th></th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(cuentas as any[]).map((b: any) => (
+                            <tr key={b.accountId}>
+                              <td style={{fontWeight:500}}>
+                                {esAdmin && editId === b.accountId ? (
+                                  <input className="input-base" style={{ fontSize:12, width:200 }}
+                                    value={editName} onChange={e => setEditName(e.target.value)}/>
+                                ) : b.accountName}
+                              </td>
+                              <td><span className="badge-blue">{b.currency}</span></td>
+                              <td style={{ textAlign:'right', fontWeight:700,
+                                color: Number(b.balance) >= 0 ? color : '#f87171' }}>
+                                {fmt(b.balance)}
+                              </td>
+                              {esAdmin && (
+                                <td style={{ textAlign:'right', fontWeight:700,
+                                  color: tipo!=='EFECTIVO'?'#475569':diferencia===0?'#10b981':diferencia>0?'#3b82f6':'#f87171' }}>
+                                  {tipo==='EFECTIVO' ? (diferencia>0?`+${fmt(diferencia)}`:fmt(diferencia)) : '—'}
+                                </td>
+                              )}
+                              {esAdmin && (
+                                <td>
+                                  {editId === b.accountId ? (
+                                    <div style={{ display:'flex', gap:6 }}>
+                                      <button onClick={() => guardarNombre(b.accountId)} disabled={saving}
+                                        style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
+                                        ✓ Guardar
+                                      </button>
+                                      <button onClick={() => setEditId(null)}
+                                        style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => { setEditId(b.accountId); setEditName(b.accountName); }}
+                                      style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
+                                      Renombrar
+                                    </button>
+                                  )}
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Saldo total */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
-          <div className="card-sm" style={{ borderLeft:`3px solid ${color}` }}>
-            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Saldo total MXN</p>
-            <p style={{ fontSize:24, fontWeight:700, color, margin:0 }}>{fmt(totalMxn)}</p>
-          </div>
-          <div className="card-sm" style={{ borderLeft:'3px solid #64748b' }}>
-            <p style={{ fontSize:11, color:'#64748b', margin:'0 0 4px' }}>Cuentas activas</p>
-            <p style={{ fontSize:24, fontWeight:700, color:'#94a3b8', margin:0 }}>{balances.length}</p>
-          </div>
-        </div>
-
-        {/* Desglose por tipo de cuenta */}
-        {Object.entries(grupos).map(([tipo, cuentas]: any) => (
-          <div key={tipo} style={{ marginBottom:16 }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase',
-              letterSpacing:1, margin:'0 0 8px' }}>
-              {TIPO_LABELS[tipo] || tipo}
-            </p>
+        {/* ── TAB MOVIMIENTOS ── */}
+        {tab === 'movimientos' && (
+          <div>
+            <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center' }}>
+              <input type="month" className="input-base" style={{ fontSize:13, maxWidth:160 }}
+                value={filtroMes} onChange={e => setFiltroMes(e.target.value)}/>
+              <span style={{ fontSize:12, color:'#475569' }}>
+                {(movimientos as any[]).length} movimientos
+              </span>
+              <button onClick={() => exportCSV('movimientos', movimientos as any[], [
+                {key:'date',label:'Fecha'},{key:'type',label:'Tipo'},
+                {key:'concept',label:'Concepto'},{key:'amount',label:'Monto'},
+              ])} style={{ marginLeft:'auto', padding:'5px 12px', borderRadius:7,
+                border:`1px solid ${color}`, background:'none', color, cursor:'pointer', fontSize:12 }}>
+                ⬇ CSV
+              </button>
+              <button onClick={() => setShowImportBanca(true)}
+                style={{ padding:'5px 12px', borderRadius:7, border:`1px solid #334155`,
+                  background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+                ⬆ Importar extracto
+              </button>
+            </div>
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               <table className="table-base">
                 <thead>
                   <tr>
-                    <th>Cuenta</th>
-                    <th>Moneda</th>
-                    <th style={{textAlign:'right'}}>Saldo sistema</th>
-                    {esAdmin && <th style={{textAlign:'right'}}>Diferencia</th>}
-                    {esAdmin && <th>Acciones</th>}
+                    <th>Fecha</th><th>Tipo</th><th>Cuenta</th>
+                    <th>Concepto</th><th style={{textAlign:'right'}}>Monto</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(cuentas as any[]).map((b: any) => {
-                    const dif = tipo === 'EFECTIVO' ? diferencia : 0;
-                    return (
-                      <tr key={b.accountId}>
-                        <td>
-                          {esAdmin && editId === b.accountId ? (
-                            <input className="input-base" style={{ fontSize:12, width:200 }}
-                              value={editName} onChange={e => setEditName(e.target.value)}/>
-                          ) : (
-                            <span style={{ fontWeight:500 }}>{b.accountName}</span>
-                          )}
-                        </td>
-                        <td><span className="badge-blue">{b.currency}</span></td>
-                        <td style={{ textAlign:'right', fontWeight:700,
-                          color: Number(b.balance) >= 0 ? color : '#f87171' }}>
-                          {fmt(b.balance)}
-                        </td>
-                        {esAdmin && (
-                          <td style={{ textAlign:'right', fontWeight:700,
-                            color: tipo !== 'EFECTIVO' ? '#475569' : dif === 0 ? '#10b981' : dif > 0 ? '#3b82f6' : '#f87171' }}>
-                            {tipo === 'EFECTIVO' ? (dif > 0 ? `+${fmt(dif)}` : fmt(dif)) : '—'}
-                          </td>
-                        )}
-                        {esAdmin && (
-                          <td>
-                            {editId === b.accountId ? (
-                              <div style={{ display:'flex', gap:6 }}>
-                                <button onClick={() => guardarNombre(b.accountId)} disabled={saving}
-                                  style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
-                                  ✓ Guardar
-                                </button>
-                                <button onClick={() => setEditId(null)}
-                                  style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
-                                  Cancelar
-                                </button>
-                              </div>
-                            ) : (
-                              <button onClick={() => { setEditId(b.accountId); setEditName(b.accountName); }}
-                                style={{ background:'none', border:'none', color:'#60a5fa', cursor:'pointer', fontSize:12 }}>
-                                Renombrar
-                              </button>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
+                  {loadMov && <tr><td colSpan={5} style={{textAlign:'center',padding:24,color:'#64748b'}}>Cargando…</td></tr>}
+                  {!loadMov && (movimientos as any[]).length === 0 && (
+                    <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin movimientos en este período</td></tr>
+                  )}
+                  {(movimientos as any[]).map((m:any) => (
+                    <tr key={m.id}>
+                      <td style={{fontSize:12}}>{fmtDate(m.date)}</td>
+                      <td>
+                        <span style={{ fontSize:11, padding:'2px 7px', borderRadius:99, fontWeight:600,
+                          background: m.type==='INGRESO'||m.type==='ENTRADA'?'#10b98122':'#f8717122',
+                          color: m.type==='INGRESO'||m.type==='ENTRADA'?'#10b981':'#f87171' }}>
+                          {m.type}
+                        </span>
+                      </td>
+                      <td style={{fontSize:11,color:'#64748b'}}>{m.cashAccount?.name||m.accountName||'—'}</td>
+                      <td style={{fontSize:12}}>{m.concept||m.notes||'—'}</td>
+                      <td style={{ textAlign:'right', fontWeight:700,
+                        color: m.type==='INGRESO'||m.type==='ENTRADA'?'#10b981':'#f87171' }}>
+                        {m.type==='INGRESO'||m.type==='ENTRADA'?'+':'-'}{fmt(m.amount)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
-        ))}
+        )}
       </div>
-      </div>
-
-      {tab === 'movimientos' && (
-        <div>
-          <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center' }}>
-            <input type="month" className="input-base" style={{ fontSize:13, maxWidth:160 }}
-              value={filtroMes} onChange={e => setFiltroMes(e.target.value)}/>
-            <span style={{ fontSize:12, color:'#475569', marginLeft:8 }}>
-              {(movimientos as any[]).length} movimientos
-            </span>
-            <button onClick={() => exportCSV('movimientos', movimientos as any[],
-              [{key:'date',label:'Fecha'},{key:'type',label:'Tipo'},{key:'originType',label:'Origen'},
-               {key:'amount',label:'Monto'},{key:'currency',label:'Moneda'},{key:'notes',label:'Notas'}])}
-              style={{ marginLeft:'auto', padding:'6px 14px', borderRadius:8, border:'1px solid #334155',
-                background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
-              ⬇ Exportar CSV
-            </button>
-          </div>
-          <div className="card" style={{ padding:0, overflow:'hidden' }}>
-            <table className="table-base">
-              <thead><tr>
-                <th>Fecha</th><th>Cuenta</th><th>Tipo</th><th>Origen</th>
-                <th style={{textAlign:'right'}}>Monto</th><th>Notas</th>
-              </tr></thead>
-              <tbody>
-                {loadMov && <tr><td colSpan={6} style={{textAlign:'center',padding:24,color:'#64748b'}}>Cargando…</td></tr>}
-                {!loadMov && (movimientos as any[]).length === 0 && (
-                  <tr><td colSpan={6} style={{textAlign:'center',padding:24,color:'#64748b'}}>Sin movimientos en este período</td></tr>
-                )}
-                {(movimientos as any[]).map((m:any) => (
-                  <tr key={m.id}>
-                    <td style={{fontSize:12,whiteSpace:'nowrap'}}>{fmtDate(m.date)}</td>
-                    <td style={{fontSize:11,color:'#94a3b8'}}>{m.cashAccount?.name||'—'}</td>
-                    <td>
-                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,
-                        background: m.type==='ENTRADA'?'#10b98122':'#f8717122',
-                        color: m.type==='ENTRADA'?'#10b981':'#f87171'}}>
-                        {m.type}
-                      </span>
-                    </td>
-                    <td style={{fontSize:11,color:'#64748b'}}>{m.originType?.replace(/_/g,' ')||'—'}</td>
-                    <td style={{textAlign:'right',fontWeight:700,
-                      color:m.type==='ENTRADA'?'#10b981':'#f87171'}}>
-                      {m.type==='SALIDA'?'-':''}{fmt(m.amountMxn||m.amount)}
-                    </td>
-                    <td style={{fontSize:11,color:'#64748b',maxWidth:160,overflow:'hidden',
-                      textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.notes||'—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {showImportBanca && (
         <ImportCSV title="Estado de cuenta bancario" color={color}
@@ -786,24 +816,16 @@ export function ConciliacionPage() {
             { key:'referencia',  label:'Referencia'                               },
           ]}
           onImport={async (rows) => {
-            // Convert bank statement rows to flow movements
-            const movs = rows.filter(r => r.cargo > 0 || r.abono > 0).map(r => ({
-              fecha:      r.fecha,
-              descripcion: r.descripcion,
-              monto:       r.abono > 0 ? r.abono : r.cargo,
-              tipo:        r.abono > 0 ? 'ENTRADA' : 'SALIDA',
-              referencia:  r.referencia,
-            }));
             const res = await api.post(`/companies/${cid}/import/gastos`, {
-              rows: movs.filter(m => m.tipo === 'SALIDA').map(m => ({
-                fecha:    m.fecha,
-                concepto: m.descripcion,
-                total:    m.monto,
+              rows: (rows as any[]).filter((r:any) => Number(r.cargo) > 0).map((r:any) => ({
+                fecha:    r.fecha,
+                concepto: r.descripcion,
+                total:    Number(r.cargo),
                 metodo:   'TRANSFERENCIA',
                 estatus:  'PAGADO',
               }))
             });
-            qc.invalidateQueries({ queryKey: ['movements', cid] });
+            qc.invalidateQueries({ queryKey: ['flow-movimientos', cid] });
             qc.invalidateQueries({ queryKey: ['balances', cid] });
             return res.data;
           }}
@@ -814,8 +836,7 @@ export function ConciliacionPage() {
   );
 }
 
-// ── CxC REPLACEMENT ───────────────────────────────────────────
-// Reemplaza desde "
+
 export function CxCPage() {
   const { activeCompany, activePeriod } = useERPStore();
   const cid   = activeCompany?.companyId;
@@ -842,7 +863,7 @@ export function CxCPage() {
     enabled:  !!cid,
   });
 
-  const { data: cxcs = [] } = useQuery({
+  const { data: cxcs = [], isLoading } = useQuery({
     queryKey: ['cxc', cid, activePeriod, filterCliente],
     queryFn:  () => api.get(`/companies/${cid}/cxc?period=${activePeriod}${filterCliente?`&clientId=${filterCliente}`:''}`).then(r => r.data),
     enabled:  !!cid,
@@ -956,8 +977,9 @@ export function CxCPage() {
               <th>Acción</th>
             </tr></thead>
             <tbody>
-              {(cxcsOrdenadas as any[]).length===0 && (
-                <tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
+              {isLoading && <tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
+              {!isLoading && (cxcsOrdenadas as any[]).length===0 && (
+                <tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar registradas</td></tr>
               )}
               {cxcsOrdenadas.map((c:any) => {
                 const balance = Number(c.balance ?? c.pendingAmount ?? (Number(c.originalAmount) - (c.payments||[]).reduce((t:number,p:any)=>t+Number(p.amount),0)));
