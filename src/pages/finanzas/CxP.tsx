@@ -30,6 +30,16 @@ export default function CxPPage() {
   const [showImport, setShowImport] = useState(false);
   const [status, setStatus] = useState('');
 
+  const pagoM = useMutation({
+    mutationFn: (data: any) => api.post(`/companies/${cid}/cxp/${pagoModal?.id}/payments`, data),
+    onSuccess: () => {
+      setPagoModal(null);
+      setPagoForm({ amount:'', date:new Date().toISOString().slice(0,10), cashAccountId:'', paymentMethod:'EFECTIVO', reference:'' });
+      qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] });
+    },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error al abonar'),
+  });
+
   const cancelM = useMutation({
     mutationFn: ({ id, motivo }: { id:string; motivo:string }) =>
       api.put(`/companies/${cid}/cxp/${id}/cancel`, { motivo }),
@@ -214,17 +224,26 @@ export default function CxPPage() {
                         </span>
                       </td>
                       <td>
-                        {p.status !== 'CANCELADA' && p.status !== 'PAGADO' && (
-                          <button
-                            onClick={() => {
-                              const motivo = window.prompt('Motivo de cancelación:');
-                              if (motivo !== null) cancelM.mutate({ id: p.id, motivo });
-                            }}
-                            style={{ background:'none', border:'none', color:'#f87171',
-                              cursor:'pointer', fontSize:12, whiteSpace:'nowrap' }}>
-                            ✕ Cancelar
-                          </button>
-                        )}
+                        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                          {p.status !== 'CANCELADA' && p.status !== 'PAGADO' && (
+                            <button onClick={() => setPagoModal(p)}
+                              style={{ background:'none', border:'none', color:color,
+                                cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                              + Abonar
+                            </button>
+                          )}
+                          {p.status !== 'CANCELADA' && p.status !== 'PAGADO' && (
+                            <button
+                              onClick={() => {
+                                const motivo = window.prompt('Motivo de cancelación:');
+                                if (motivo !== null) cancelM.mutate({ id: p.id, motivo });
+                              }}
+                              style={{ background:'none', border:'none', color:'#f87171',
+                                cursor:'pointer', fontSize:12 }}>
+                              ✕
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

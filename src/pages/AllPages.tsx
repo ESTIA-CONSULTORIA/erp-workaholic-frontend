@@ -927,6 +927,11 @@ export function CxCPage() {
               background:'none', color, cursor:'pointer', fontSize:12 }}>
             ⬆ Importar CSV
           </button>
+          <button onClick={() => setShowNewCxC(true)}
+            style={{ padding:'6px 16px', borderRadius:8, border:'none',
+              background:color, color:'#fff', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+            + Nueva CxC
+          </button>
           <button onClick={() => exportCSV('cxc', cxcsOrdenadas,
             [{key:'date',label:'Fecha'},{key:'originalAmount',label:'Original'},
              {key:'paidAmount',label:'Pagado'},{key:'balance',label:'Saldo'},

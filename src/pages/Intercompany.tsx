@@ -183,6 +183,34 @@ export default function IntercompanyPage() {
                       color:esEnvio?'#f87171':'#10b981'}}>
                       {esEnvio?'-':'+'}${fmt(t.amount)}
                     </td>
+                    <td>
+                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,fontWeight:600,
+                        background: t.status==='APROBADO'?'#10b98122':t.status==='RECHAZADO'?'#f8717122':'#f59e0b22',
+                        color: t.status==='APROBADO'?'#10b981':t.status==='RECHAZADO'?'#f87171':'#f59e0b'}}>
+                        {t.status||'PENDIENTE'}
+                      </span>
+                    </td>
+                    <td>
+                      {(!t.status || t.status==='PENDIENTE') && !esEnvio && (
+                        <div style={{display:'flex',gap:4}}>
+                          <button onClick={()=>approveM.mutate({id:t.id,approved:true})}
+                            disabled={approveM.isPending}
+                            style={{padding:'4px 8px',borderRadius:6,border:'none',
+                              background:'#10b981',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700}}>
+                            ✓
+                          </button>
+                          <button onClick={()=>approveM.mutate({id:t.id,approved:false})}
+                            disabled={approveM.isPending}
+                            style={{padding:'4px 8px',borderRadius:6,border:'none',
+                              background:'#f87171',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:700}}>
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                      {(!t.status || t.status==='PENDIENTE') && esEnvio && (
+                        <span style={{fontSize:10,color:'#64748b'}}>Esperando</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
