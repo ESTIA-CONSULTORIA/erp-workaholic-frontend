@@ -77,7 +77,7 @@ export default function WorkaholicPOS() {
     setCarrito(c => {
       const ex = c.find(l => l.id === srv.id);
       if (ex) return c.map(l => l.id===srv.id ? {...l, qty:l.qty+1} : l);
-      return [...c, { id:srv.id, name:srv.name, price:srv.price, qty:1, icon:srv.icon }];
+      return [...c, { id:srv.id, name:srv.name, price:srv.price, qty:1, icon:srv.icon, ivaRate:srv.ivaRate??16 }];
     });
   };
 
@@ -89,7 +89,7 @@ export default function WorkaholicPOS() {
     mutationFn: () => api.post(`/companies/${cid}/workaholic/sales`, {
       clientName: clientName || null,
       paymentMethod: metodo,
-      lines: carrito,
+      lines: carrito.map((l:any) => ({ ...l, productId: l.id, quantity: l.qty, unitPrice: l.price, ivaRate: l.ivaRate ?? 16 })),
     }),
     onSuccess: () => {
       setExito(true);

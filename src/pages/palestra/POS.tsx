@@ -69,7 +69,7 @@ export default function PalestraPOSPage() {
       return [...c, { id:srv.id, name:srv.name, price:Number(srv.price), qty:1,
                       coachable:srv.coachable||false, coachRate:Number(srv.coachRate||0),
                       productId: srv.itemType==='PRODUCTO'?srv.id:null,
-                      type: srv.itemType }];
+                      type: srv.itemType, ivaRate: srv.ivaRate ?? 16 }];
     });
   };
 

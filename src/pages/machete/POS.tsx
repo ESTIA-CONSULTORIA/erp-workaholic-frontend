@@ -319,11 +319,15 @@ function POSPageInner() {
     const porFamilia:Record<string,{bruto:number,iva:number,neto:number}>={};
     const IVA_RATE=0.16;
     let totalBruto=0;
+    let totalSubtotal=0;
+    let totalIVA=0;
     let numVentas=0;
 
     for(const s of hoy){
       const monto=Number(s.total);
       totalBruto+=monto;
+      totalSubtotal+=Number(s.subtotal||monto);
+      totalIVA+=Number(s.tax||0);
       numVentas++;
 
       // Formas de pago
@@ -368,7 +372,7 @@ function POSPageInner() {
       paymentSplits:esCredito?null:(esMixto?pagos.filter(p=>Number(p.amount)>0).map(p=>({method:p.method,amount:p.amount,reference:p.reference||null})):pagos.map(p=>({method:p.method,amount:Number(p.amount)||total,reference:p.reference||null}))[0]?[{method:metodoPrincipal,amount:total,reference:pagos[0]?.reference||null}]:null),
       clientId:esCredito?clienteId:null,ocId:ocId||null,isCredit:esCredito,
       discount:descAuth?descMonto:0,discountType:descAuth?tipoDesc:null,authorizedBy:descAuth?.authorizedBy||null,
-      lines:carrito.map(i=>({productId:i.id,quantity:i.cantidad,unitPrice:i.precio})),
+      lines:carrito.map(i=>({productId:i.id,quantity:i.cantidad,unitPrice:i.precio,ivaRate:i.ivaRate??16})),
     }),
     onSuccess:()=>{
       setCarrito([]);setDescAuth(null);setDescValor(0);setDescPin('');

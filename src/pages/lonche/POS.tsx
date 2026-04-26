@@ -82,7 +82,7 @@ export default function LonchePOS() {
         throw new Error('Ingresa la clave de rastreo (mín. 10 dígitos)');
       }
       return api.post(`/companies/${cid}/lonche/turnos/${turno.id}/ventas`, {
-        items: carrito.map(l => ({ productId: l.id, qty: l.qty })),
+        items: carrito.map(l => ({ productId: l.id, qty: l.qty, ivaRate: l.ivaRate ?? 0 })),
         paymentMethod: metodo,
         referencia: referencia || null,
         studentId:   student?.id   || null,
