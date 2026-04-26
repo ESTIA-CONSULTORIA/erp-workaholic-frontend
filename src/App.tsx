@@ -22,6 +22,7 @@ import MiPerfilPage from './pages/rh/MiPerfil';
 import AprobacionesPage from './pages/Aprobaciones';
 import IncidenciasPage from './pages/rh/Incidencias';
 import BajasPage from './pages/rh/Bajas';
+import VacacionesPagadasPage from './pages/rh/VacacionesPagadas';
 import WorkaholicDashboard from './pages/workaholic/Dashboard';
 import EspaciosPage from './pages/workaholic/Espacios';
 import ReservacionesPage from './pages/workaholic/Reservaciones';
@@ -105,6 +106,7 @@ export default function App() {
               <Route path="/lonche/reportes" element={<LoncheReportes />} />
               <Route path="/aprobaciones" element={<AprobacionesPage />} />
               <Route path="/rh/incidencias" element={<IncidenciasPage />} />
+              <Route path="/rh/vacaciones-pagadas" element={<VacacionesPagadasPage />} />
               <Route path="/rh/bajas" element={<BajasPage />} />
               <Route path="/rh/incapacidades" element={<IncapacidadesPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

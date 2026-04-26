@@ -12,11 +12,15 @@ const TIPOS_SOL = [
 ];
 
 const STATUS_CONFIG: Record<string,{label:string;color:string;icon:string}> = {
-  PENDIENTE:     { label:'Pendiente jefe',   color:'#f59e0b', icon:'⏳' },
-  APROBADO_JEFE: { label:'Pendiente RH',     color:'#3b82f6', icon:'✓'  },
-  APROBADO:      { label:'Aprobado',         color:'#10b981', icon:'✅' },
-  RECHAZADO:     { label:'Rechazado',        color:'#f87171', icon:'✕'  },
-  CANCELADO:     { label:'Cancelado',        color:'#64748b', icon:'—'  },
+  PENDIENTE:          { label:'Pendiente jefe',        color:'#f59e0b', icon:'⏳' },
+  APROBADO_JEFE:      { label:'Pendiente RH',          color:'#3b82f6', icon:'✓'  },
+  APROBADO:           { label:'Aprobado',              color:'#10b981', icon:'✅' },
+  RECHAZADO:          { label:'Rechazado',             color:'#f87171', icon:'✕'  },
+  CANCELADA:          { label:'Cancelada',             color:'#64748b', icon:'—'  },
+  CANCELADO:          { label:'Cancelada',             color:'#64748b', icon:'—'  },
+  PAGADA_SIN_GOZAR:   { label:'Pagada — por gozar',   color:'#f59e0b', icon:'💰' },
+  GOZADA:             { label:'Gozada',                color:'#8b5cf6', icon:'🏖' },
+  PAGADA_Y_GOZADA:    { label:'Pagada y gozada',       color:'#10b981', icon:'✅' },
 };
 
 type Tab = 'solicitudes'|'incidencias'|'incapacidades'|'recibos'|'documentos';
@@ -30,7 +34,7 @@ export default function MiPerfilPage() {
   const [tab,       setTab]      = useState<Tab>('solicitudes');
   const [showForm,  setShowForm] = useState(false);
   const [saving,    setSaving]   = useState(false);
-  const [form, setForm] = useState({ type:'VACACIONES', startDate:'', endDate:'', notes:'' });
+  const [form, setForm] = useState({ type:'VACACIONES', startDate:'', endDate:'', notes:'', paymentType:'GOZAR' });
 
   const { data: perfil, isLoading } = useQuery({
     queryKey: ['mi-perfil', cid],
@@ -180,6 +184,37 @@ export default function MiPerfilPage() {
                 )}
               </div>
             )}
+            {/* Tipo de pago */}
+            <div style={{ marginBottom:10 }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:6 }}>
+                ¿Cómo quieres tus vacaciones?
+              </label>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                {[
+                  { id:'GOZAR',          label:'Gozar',           sub:'Tomar los días', icon:'🏖' },
+                  { id:'PAGAR_SIN_GOZAR',label:'Pagar sin gozar', sub:'Recibir el dinero ahora', icon:'💰' },
+                  { id:'AMBOS',          label:'Pagar y gozar',   sub:'Todo junto', icon:'✅' },
+                ].map(t => (
+                  <button key={t.id} type="button"
+                    onClick={() => setForm(f=>({...f,paymentType:t.id}))}
+                    style={{ padding:'8px', borderRadius:8, cursor:'pointer', textAlign:'center',
+                      border:`2px solid ${form.paymentType===t.id?color:'#334155'}`,
+                      background:form.paymentType===t.id?color+'22':'#0f172a' }}>
+                    <p style={{ fontSize:16, margin:'0 0 3px' }}>{t.icon}</p>
+                    <p style={{ fontSize:11, fontWeight:700, color:form.paymentType===t.id?color:'#94a3b8', margin:'0 0 2px' }}>{t.label}</p>
+                    <p style={{ fontSize:9, color:'#475569', margin:0 }}>{t.sub}</p>
+                  </button>
+                ))}
+              </div>
+              {form.paymentType === 'PAGAR_SIN_GOZAR' && (
+                <div style={{ marginTop:8, padding:'7px 10px', background:'rgba(245,158,11,0.1)',
+                  border:'1px solid #f59e0b44', borderRadius:7 }}>
+                  <p style={{ fontSize:11, color:'#f59e0b', margin:0 }}>
+                    💰 Recibirás el pago en la siguiente nómina. Tienes 6 meses para tomar los días.
+                  </p>
+                </div>
+              )}
+            </div>
             <input className="input-base" style={{ fontSize:13, marginBottom:12 }}
               placeholder="Motivo (opcional)" value={form.notes}
               onChange={e => setForm(f=>({...f,notes:e.target.value}))}/>
@@ -256,6 +291,24 @@ export default function MiPerfilPage() {
                         cursor:'pointer', fontSize:11 }}>
                       ✕ Cancelar solicitud
                     </button>
+                  )}
+                  {s.status === 'PAGADA_SIN_GOZAR' && (
+                    <button onClick={() => {
+                      if (window.confirm('¿Registrar que ya tomaste estos días de vacaciones?'))
+                        api.put(`/companies/${cid}/rh/vacations/${s.id}/gozar-pagadas`, {})
+                          .then(() => qc.invalidateQueries({ queryKey: ['mi-perfil', cid] }))
+                          .catch((e:any) => alert(e.response?.data?.message || 'Error'));
+                    }}
+                      style={{ marginTop:6, padding:'4px 10px', borderRadius:6,
+                        border:`1px solid ${color}`, background:'none', color,
+                        cursor:'pointer', fontSize:11 }}>
+                      🏖 Registrar días gozados
+                    </button>
+                  )}
+                  {s.status === 'PAGADA_SIN_GOZAR' && s.plazoGozar && (
+                    <p style={{ fontSize:10, color:'#f59e0b', margin:'4px 0 0' }}>
+                      ⏰ Debes gozarlos antes del {new Date(s.plazoGozar).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}
+                    </p>
                   )}
                   {/* Barra de progreso */}
                   <div style={{ display:'flex', gap:4, marginTop:8 }}>
