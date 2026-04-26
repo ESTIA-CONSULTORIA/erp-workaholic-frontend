@@ -226,16 +226,38 @@ export default function NominaPage() {
                   </div>
                   <div className="card" style={{ padding:0, overflow:'hidden' }}>
                     <table className="table-base">
-                      <thead><tr><th>#</th><th>Empleado</th><th>Puesto</th><th style={{textAlign:'right'}}>Sueldo</th><th style={{textAlign:'right'}}>Deducciones</th><th style={{textAlign:'right'}}>Neto</th></tr></thead>
+                      <thead><tr>
+                          <th>#</th><th>Empleado</th><th>Puesto</th>
+                          <th style={{textAlign:'right'}}>Base</th>
+                          <th style={{textAlign:'right',color:'#3b82f6'}}>Timbrado</th>
+                          <th style={{textAlign:'right',color:'#f59e0b'}}>Efectivo</th>
+                          <th style={{textAlign:'right'}}>Deducciones</th>
+                          <th style={{textAlign:'right'}}>Neto</th>
+                          <th style={{textAlign:'right',color:'#3b82f6',fontSize:10}}>Neto SAT</th>
+                          <th></th>
+                        </tr></thead>
                       <tbody>
                         {lines.map((l:any) => (
                           <tr key={l.id}>
                             <td><code style={{fontSize:11,background:'#334155',padding:'2px 4px',borderRadius:4}}>{l.employee.employeeNumber}</code></td>
                             <td style={{fontWeight:500}}>{l.employee.firstName} {l.employee.lastName}</td>
                             <td style={{color:'#64748b',fontSize:12}}>{l.employee.position}</td>
-                            <td style={{textAlign:'right'}}>{fmt(l.baseSalary)}</td>
-                            <td style={{textAlign:'right',color:'#f87171'}}>{fmt(l.totalDeductions)}</td>
+                            <td style={{textAlign:'right',fontSize:12,color:'#94a3b8'}}>{fmt(l.baseSalary)}</td>
+                            <td style={{textAlign:'right',fontSize:12,color:'#3b82f6'}}>{fmt(l.baseTimbrado||l.baseSalary)}</td>
+                            <td style={{textAlign:'right',fontSize:12,color:l.baseEfectivo>0?'#f59e0b':'#334155'}}>
+                              {l.baseEfectivo>0?fmt(l.baseEfectivo):'—'}
+                            </td>
+                            <td style={{textAlign:'right',color:'#f87171',fontSize:12}}>{fmt(l.totalDeductions)}</td>
                             <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(l.netPay)}</td>
+                            <td style={{textAlign:'right',fontSize:11,color:'#3b82f6'}}>{fmt(l.netTimbrado||l.netPay)}</td>
+                            <td>
+                              {(l.baseEfectivo||0)>0 && (
+                                <span style={{fontSize:9,padding:'2px 5px',borderRadius:99,
+                                  background:'#f59e0b22',color:'#f59e0b',fontWeight:600}}>
+                                  +{fmt(l.netEfectivo||0)} ef.
+                                </span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
