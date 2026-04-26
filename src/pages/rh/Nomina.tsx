@@ -60,6 +60,25 @@ export default function NominaPage() {
   const [showNew, setShowNew] = useState(false);
   const [payingAccount, setPayingAccount] = useState('');
 
+  const calculateM = useMutation({
+    mutationFn: () => api.post(`/companies/${cid}/payroll/periods/${selected?.id}/calculate`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll-lines', selected?.id] });
+    },
+  });
+
+  const closeM = useMutation({
+    mutationFn: () => api.post(`/companies/${cid}/payroll/periods/${selected?.id}/close`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-periods', cid] }),
+    onError: (e:any) => alert(e.response?.data?.message || 'Error al cerrar'),
+  });
+
+  const publishM = useMutation({
+    mutationFn: () => api.post(`/companies/${cid}/payroll/periods/${selected?.id}/publish-receipts`),
+    onSuccess: (d:any) => alert(`✅ ${d.published || 0} recibos publicados`),
+    onError:   (e:any) => alert(e.response?.data?.message || 'Error al publicar'),
+  });
+
   const { data: periods = [] } = useQuery({
     queryKey: ['payroll-periods', cid],
     queryFn:  () => api.get(`/companies/${cid}/payroll/periods`).then(r => r.data),

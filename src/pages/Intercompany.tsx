@@ -43,6 +43,15 @@ export default function IntercompanyPage() {
     },
   });
 
+  const approveM = useMutation({
+    mutationFn: ({ id, approved }: any) =>
+      api.put(`/companies/${cid}/intercompany/${id}/approve`, { approved }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['intercompany', cid] }),
+    onError: (e: any) => alert(e.response?.data?.message || 'Error'),
+  });
+
+
+
   const otras = (companies as any[]).filter((c:any) => c.id !== cid);
   const totalEnviado  = (transacciones as any[]).filter((t:any) => t.fromCompanyId===cid).reduce((s:number,t:any)=>s+Number(t.amount),0);
   const totalRecibido = (transacciones as any[]).filter((t:any) => t.toCompanyId===cid).reduce((s:number,t:any)=>s+Number(t.amount),0);
@@ -140,13 +149,13 @@ export default function IntercompanyPage() {
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <table className="table-base">
             <thead><tr>
-              <th>Fecha</th><th>Tipo</th><th>Empresa</th><th>Concepto</th>
-              <th style={{textAlign:'right'}}>Monto</th>
+              <th>Folio</th><th>Fecha</th><th>Tipo</th><th>Empresa</th><th>Concepto</th>
+              <th style={{textAlign:'right'}}>Monto</th><th>Estado</th><th></th>
             </tr></thead>
             <tbody>
-              {isLoading && <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
+              {isLoading && <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Cargando…</td></tr>}
               {!isLoading && (transacciones as any[]).length===0 && (
-                <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin transacciones en este período</td></tr>
+                <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin transacciones en este período</td></tr>
               )}
               {(transacciones as any[]).map((t:any) => {
                 const esEnvio = t.fromCompanyId === cid;
@@ -154,6 +163,7 @@ export default function IntercompanyPage() {
                 const empColor = empresa?.color || color;
                 return (
                   <tr key={t.id}>
+                    <td><code style={{fontSize:10,background:'#334155',padding:'2px 6px',borderRadius:4}}>{t.folio||'—'}</code></td>
                     <td style={{fontSize:12,whiteSpace:'nowrap'}}>{fmtDate(t.date)}</td>
                     <td>
                       <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,
