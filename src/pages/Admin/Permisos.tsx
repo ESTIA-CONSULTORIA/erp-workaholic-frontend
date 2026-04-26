@@ -69,11 +69,6 @@ export default function PermisosPage() {
   const navigate    = useNavigate();
 
   // Set initial role when roles load
-  useEffect(() => {
-    if (!selectedRole && (roles as any[]).length > 0) {
-      setSelectedRole((roles as any[])[0].code);
-    }
-  }, [roles, selectedRole]);
 
   const [selectedRole, setSelectedRole] = useState('');
   const [saving,       setSaving]       = useState<string|null>(null);
@@ -155,6 +150,13 @@ export default function PermisosPage() {
     },
     onError: (e: any) => alert(e.response?.data?.message || 'Error'),
   });
+
+
+  useEffect(() => {
+    if (!selectedRole && (roles as any[]).length > 0) {
+      setSelectedRole((roles as any[])[0].code);
+    }
+  }, [roles, selectedRole]);
 
   const toggle = (mod: string, action: string) => {
     const key = `${mod}:${action}`;
