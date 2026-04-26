@@ -915,12 +915,11 @@ export function CxCPage() {
           <table className="table-base">
             <thead><tr>
               <th>Cliente</th>
-              <th>No. OC</th>
-              <th>Fecha venta</th>
-              <th>Antigüedad</th>
-              <th>Último pago</th>
+              <th>Fecha</th>
+              <th>Vencimiento</th>
               <th style={{textAlign:'right'}}>Original</th>
-              <th style={{textAlign:'right'}}>Pagado</th>
+              <th style={{textAlign:'right'}}>Saldo</th>
+              <th>Estado</th>
               <th style={{textAlign:'right'}}>Saldo</th>
               <th>Estado</th>
               <th>Acción</th>
@@ -930,48 +929,31 @@ export function CxCPage() {
                 <tr><td colSpan={10} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cuentas por cobrar</td></tr>
               )}
               {cxcsOrdenadas.map((c:any) => {
-                const ultimoPago = c.payments?.[0];
+                const balance = Number(c.balance ?? c.pendingAmount ?? (Number(c.originalAmount) - (c.payments||[]).reduce((t:number,p:any)=>t+Number(p.amount),0)));
+                const diasVenc = c.dueDate ? Math.floor((new Date().getTime()-new Date(c.dueDate).getTime())/86400000) : null;
+                const statusColor = c.status==='PAGADA'||c.status==='COBRADA'?'#10b981':diasVenc!==null&&diasVenc>0?'#f87171':c.status==='PARCIAL'?'#f59e0b':'#3b82f6';
                 return (
-                  <tr key={c.id}>
-                    <td style={{fontWeight:500}}>{c.client?.name}</td>
-                    <td style={{fontSize:11,color:'#64748b'}}>
-                      {c.concept?.match(/OC-?\d+|[A-Z]+-\d+/)?.[0] || '—'}
+                  <tr key={c.id} style={{cursor:'pointer'}} onClick={()=>setPagoModal(c)}>
+                    <td style={{fontWeight:500}}>
+                      <p style={{margin:0}}>{c.client?.name || c.clientName || '—'}</p>
+                      <p style={{fontSize:10,color:'#64748b',margin:0}}>{c.concept?.slice(0,40)}</p>
                     </td>
                     <td style={{fontSize:12,color:'#64748b'}}>{fmtDate(c.date)}</td>
-                    <td style={{fontSize:11}}>
-                      {(() => {
-                        const dias = Math.floor((new Date().getTime()-new Date(c.date).getTime())/86400000);
-                        const col = dias<=30?'#10b981':dias<=60?'#f59e0b':dias<=90?'#f97316':'#f87171';
-                        return c.status==='PAGADO' ? <span style={{color:'#10b981'}}>✓</span> :
-                          <span style={{color:col,fontWeight:600}}>{dias}d</span>;
-                      })()}
+                    <td style={{fontSize:12}}>
+                      {c.dueDate ? (
+                        <span style={{color:diasVenc!==null&&diasVenc>0?'#f87171':'#f1f5f9'}}>
+                          {fmtDate(c.dueDate)}
+                          {diasVenc!==null&&diasVenc>0 && <span style={{fontSize:10,marginLeft:4}}>({diasVenc}d)</span>}
+                        </span>
+                      ) : '—'}
                     </td>
-                    <td style={{fontSize:12,color: ultimoPago ? '#10b981' : '#475569'}}>
-                      {ultimoPago ? fmtDate(ultimoPago.date) : '—'}
-                    </td>
-                    <td style={{textAlign:'right',fontSize:12}}>{fmt(c.originalAmount)}</td>
-                    <td style={{textAlign:'right',fontSize:12,color:'#10b981'}}>{fmt(c.paidAmount)}</td>
-                    <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(c.balance)}</td>
+                    <td style={{textAlign:'right',color:'#64748b'}}>{fmt(c.originalAmount)}</td>
+                    <td style={{textAlign:'right',fontWeight:700,color:balance<=0?'#10b981':statusColor}}>{fmt(balance)}</td>
                     <td>
-                      <span className={c.status==='PAGADO'?'badge-green':c.status==='VENCIDO'?'badge-red':'badge-amber'}>
-                        {c.status}
+                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,
+                        background:statusColor+'22',color:statusColor,fontWeight:600}}>
+                        {c.status==='PAGADA'||c.status==='COBRADA'?'PAGADA':diasVenc!==null&&diasVenc>0?'VENCIDA':c.status||'PENDIENTE'}
                       </span>
-                    </td>
-                    <td>
-                      <div style={{display:'flex',gap:6}}>
-                        {c.status !== 'PAGADO' && (
-                          <button onClick={() => setPagoModal(c)}
-                            style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                            Abonar
-                          </button>
-                        )}
-                        {(c.payments?.length > 0) && (
-                          <button onClick={() => setHistorialModal(c)}
-                            style={{background:'none',border:'none',color:'#10b981',cursor:'pointer',fontSize:12}}>
-                            Historial
-                          </button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 );
