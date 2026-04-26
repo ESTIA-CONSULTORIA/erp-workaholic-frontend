@@ -34,6 +34,7 @@ import ExpedientePage from './pages/rh/Expediente';
 import NominaPage from './pages/rh/Nomina';
 import { GastosPage, ConciliacionPage, CxCPage, ReportesPage, DocumentosPage, ConsolidadoPage, AdminPage, BitacoraPage } from './pages/AllPages';
 import CorteCajaPage from './pages/CorteCaja';
+import CortesPage from './pages/Cortes';
 import PermisosPage from './pages/Admin/Permisos';
 import CxPPage from './pages/finanzas/CxP';
 import LoncheDashboard from './pages/lonche/Dashboard';

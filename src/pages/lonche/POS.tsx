@@ -21,7 +21,7 @@ export default function LonchePOS() {
   const [carrito,     setCarrito]     = useState<any[]>([]);
   const [student,     setStudent]     = useState<any>(null);
   const [scanCode,    setScanCode]    = useState('');
-  const [metodo,      setMetodo]      = useState<'EFECTIVO'|'PREPAGO'|'MIXTO'>('EFECTIVO');
+  const [metodo,      setMetodo]      = useState<string>('EFECTIVO');
   const [categoria,   setCategoria]   = useState('Todos');
   const [busqueda,    setBusqueda]    = useState('');
   const [error,       setError]       = useState('');

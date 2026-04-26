@@ -1,3 +1,10 @@
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
+import AppLayout from '../../components/layout/AppLayout';
+import { useERPStore } from '../../store/erp.store';
+import ImportCSV from '../../components/ImportCSV';
+
 function ProductosTab({ cid, color, qc }: any) {
   const [showNew,   setShowNew]   = useState(false);
   const [editProd,  setEditProd]  = useState<any>(null);

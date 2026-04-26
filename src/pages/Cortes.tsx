@@ -1,1 +1,1 @@
-export { CortesPage as default }       from '../AllPages';
+export { CortesPage as default } from './AllPages';

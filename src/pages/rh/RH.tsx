@@ -118,6 +118,15 @@ export default function RHPage() {
   const esJefe  = ['admin','administrador','gerente'].includes(role);
   const rolLabel = esRH ? 'rh' : esJefe ? 'jefe' : 'empleado';
 
+  const editM = useMutation({
+    mutationFn: (data: any) => api.put(`/companies/${cid}/rh/employees/${data.id}`, data),
+    onSuccess: () => {
+      setEditEmpleado(null);
+      qc.invalidateQueries({ queryKey: ['employees', cid] });
+    },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error al guardar'),
+  });
+
   const { data: employees = [], isLoading, refetch } = useQuery({
     queryKey: ['employees', cid, filterStatus],
     queryFn:  () => api.get(`/companies/${cid}/rh/employees?status=${filterStatus}`).then(r => r.data),

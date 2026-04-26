@@ -89,7 +89,7 @@ export default function MiPerfilPage() {
     try {
       await api.post(`/companies/${cid}/rh/me/vacations`, form);
       setShowForm(false);
-      setForm({ type:'VACACIONES', startDate:'', endDate:'', notes:'' });
+      setForm({ type:'VACACIONES', startDate:'', endDate:'', notes:'', paymentType:'GOZAR' });
       qc.invalidateQueries({ queryKey: ['mi-perfil', cid] });
     } catch(e:any) { alert(e.response?.data?.message || 'Error'); }
     finally { setSaving(false); }

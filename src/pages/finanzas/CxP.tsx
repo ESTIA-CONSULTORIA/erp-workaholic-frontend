@@ -30,11 +30,10 @@ export default function CxPPage() {
   const [showImport, setShowImport] = useState(false);
   const [status, setStatus] = useState('');
 
-  const qcInner = useQueryClient();
   const cancelM = useMutation({
     mutationFn: ({ id, motivo }: { id:string; motivo:string }) =>
       api.put(`/companies/${cid}/cxp/${id}/cancel`, { motivo }),
-    onSuccess: () => qcInner.invalidateQueries({ queryKey: ['cxp-gestion', cid] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cxp-gestion', cid] }),
     onError: (e:any) => alert(e.response?.data?.message || 'Error'),
   });
 

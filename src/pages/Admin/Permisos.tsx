@@ -6,7 +6,7 @@
 // ║  · Módulos filtrados según la empresa activa                 ║
 // ╚═══════════════════════════════════════════════════════════════╝
 import AppLayout from '../../components/layout/AppLayout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { useNavigate } from 'react-router-dom';
@@ -68,6 +68,13 @@ export default function PermisosPage() {
   const qc          = useQueryClient();
   const navigate    = useNavigate();
 
+  // Set initial role when roles load
+  useEffect(() => {
+    if (!selectedRole && (roles as any[]).length > 0) {
+      setSelectedRole((roles as any[])[0].code);
+    }
+  }, [roles, selectedRole]);
+
   const [selectedRole, setSelectedRole] = useState('');
   const [saving,       setSaving]       = useState<string|null>(null);
   const [showNewRole,  setShowNewRole]  = useState(false);
@@ -80,7 +87,6 @@ export default function PermisosPage() {
     queryKey: ['company-roles', cid],
     queryFn:  () => api.get(`/companies/${cid}/permissions/roles?companyCode=${companyCode}`).then(r => r.data),
     enabled:  !!cid,
-    onSuccess: (data: any[]) => { if (!selectedRole && data.length > 0) setSelectedRole(data[0].code); },
   });
 
   // Cargar módulos disponibles para ESTA empresa

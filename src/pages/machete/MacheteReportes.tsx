@@ -1,3 +1,9 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
+import AppLayout from '../../components/layout/AppLayout';
+import { useERPStore } from '../../store/erp.store';
+
 function VentasTab({ cid, color, activePeriod }: any) {
   const [tipoFiltro,  setTipoFiltro]  = useState<'mes'|'dia'|'rango'>('mes');
   const [periodo,     setPeriodo]     = useState(activePeriod || hoy.slice(0,7));
