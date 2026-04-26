@@ -107,6 +107,7 @@ export default function RHPage() {
   const [showNew,      setShowNew]      = useState(false);
   const [showImport,   setShowImport]   = useState(false);
   const [filterStatus, setFilterStatus] = useState('ACTIVO');
+  const [editEmpleado, setEditEmpleado] = useState<any>(null);
   const [showSolicitud,setShowSolicitud]= useState(false);
   const [solForm,      setSolForm]      = useState({
     employeeId:'', type:'VACACIONES', startDate:'', endDate:'', notes:'', conGoce: true,
@@ -246,10 +247,16 @@ export default function RHPage() {
                       <td style={{textAlign:'right',fontWeight:600,color}}>${Number(e.grossSalary).toLocaleString('es-MX')}</td>
                       <td><span className={e.status==='ACTIVO'?'badge-green':e.status==='BAJA'?'badge-red':'badge-amber'}>{e.status}</span></td>
                       <td>
-                        <button onClick={() => navigate(`/rh/empleados/${e.id}`)}
-                          style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
-                          Ver expediente
-                        </button>
+                        <div style={{display:'flex',gap:8}}>
+                          <button onClick={() => navigate(`/rh/empleados/${e.id}`)}
+                            style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontSize:12}}>
+                            Ver
+                          </button>
+                          <button onClick={() => setEditEmpleado({...e})}
+                            style={{background:'none',border:'none',color:'#f59e0b',cursor:'pointer',fontSize:12}}>
+                            Editar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -443,6 +450,66 @@ export default function RHPage() {
           />
         )}
       </div>
+      {/* Modal — Editar empleado */}
+      {editEmpleado && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',
+          display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,
+            width:560,maxHeight:'90vh',overflowY:'auto',border:`1px solid ${color}44`}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
+              <h3 style={{fontSize:15,fontWeight:700,margin:0,color}}>
+                Editar — {editEmpleado.firstName} {editEmpleado.lastName}
+              </h3>
+              <button onClick={() => setEditEmpleado(null)}
+                style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+              {([
+                ['Nombre(s)','firstName'],['Apellido(s)','lastName'],
+                ['Puesto','position'],['Departamento','department'],
+                ['Salario bruto','grossSalary'],['Tipo jornada','workSchedule'],
+              ] as [string,string][]).map(([label,key]) => (
+                <div key={key}>
+                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>{label}</label>
+                  <input className="input-base" style={{fontSize:13}}
+                    value={editEmpleado[key]||''}
+                    onChange={e => setEditEmpleado((emp:any) => ({...emp,[key]:e.target.value}))}/>
+                </div>
+              ))}
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Estado</label>
+                <select className="input-base" style={{fontSize:13}}
+                  value={editEmpleado.status||'ACTIVO'}
+                  onChange={e => setEditEmpleado((emp:any) => ({...emp,status:e.target.value}))}>
+                  {['ACTIVO','BAJA','SUSPENDIDO'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Tipo de nómina</label>
+                <select className="input-base" style={{fontSize:13}}
+                  value={editEmpleado.splitMode||'TOTAL_TIMBRADO'}
+                  onChange={e => setEditEmpleado((emp:any) => ({...emp,splitMode:e.target.value}))}>
+                  <option value="TOTAL_TIMBRADO">100% Timbrado</option>
+                  <option value="MIXTO">Mixto (timbrado + efectivo)</option>
+                  <option value="TOTAL_EFECTIVO">100% Efectivo</option>
+                </select>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={() => setEditEmpleado(null)}
+                style={{flex:1,padding:'9px',borderRadius:8,border:'1px solid #334155',
+                  background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>
+                Cancelar
+              </button>
+              <button onClick={() => editM.mutate(editEmpleado)} disabled={editM.isPending}
+                style={{flex:1,padding:'9px',borderRadius:8,border:'none',
+                  background:color,color:'#fff',cursor:'pointer',fontSize:13,fontWeight:700}}>
+                {editM.isPending ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

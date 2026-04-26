@@ -62,6 +62,12 @@ export default function MiPerfilPage() {
     enabled:  !!cid && !!perfil?.id && tab === 'documentos',
   });
 
+  const cancelSolicitudM = useMutation({
+    mutationFn: (id: string) => api.put(`/companies/${cid}/rh/me/vacations/${id}/cancel`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mi-perfil', cid] }),
+    onError: (e:any) => alert(e.response?.data?.message || 'No se pudo cancelar'),
+  });
+
   const ackM = useMutation({
     mutationFn: (id:string) => api.put(`/companies/${cid}/payroll-receipts/${id}/acknowledge`, { employeeId: perfil?.id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-receipts', cid] }),
@@ -239,6 +245,18 @@ export default function MiPerfilPage() {
                   </p>
                   {s.notes && <p style={{ fontSize:11, color:'#475569', margin:'0 0 4px' }}>"{s.notes}"</p>}
                   {s.rejectedReason && <p style={{ fontSize:11, color:'#f87171', margin:0 }}>✕ {s.rejectedReason}</p>}
+                  {/* Cancelar si está pendiente */}
+                  {s.status === 'PENDIENTE' && (
+                    <button onClick={() => {
+                      if (window.confirm('¿Cancelar esta solicitud?'))
+                        cancelSolicitudM.mutate(s.id);
+                    }}
+                      style={{ marginTop:6, padding:'4px 10px', borderRadius:6,
+                        border:'1px solid #f87171', background:'none', color:'#f87171',
+                        cursor:'pointer', fontSize:11 }}>
+                      ✕ Cancelar solicitud
+                    </button>
+                  )}
                   {/* Barra de progreso */}
                   <div style={{ display:'flex', gap:4, marginTop:8 }}>
                     {[['Enviada','✓',true],['Jefe','2',['APROBADO_JEFE','APROBADO'].includes(s.status)],['RH','3',s.status==='APROBADO']].map(([lbl,ico,done],i) => (

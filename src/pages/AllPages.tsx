@@ -159,6 +159,7 @@ export function GastosPage() {
   const esContador = ['admin','administrador','gerente','contador'].includes(role);
 
   const [vista,   setVista]   = useState<'lista'|'nuevo'>('lista');
+  const [editGasto, setEditGasto] = useState<any>(null);
   const [busqueda,    setBusqueda]    = useState('');
   const [showImport, setShowImport]  = useState(false);
   const [pagina,     setPagina]      = useState(1);
@@ -184,6 +185,18 @@ export function GastosPage() {
   const [form, setForm] = useState(initForm);
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
   const total = (Number(form.subtotal) || 0) + (Number(form.tax) || 0);
+
+  const editGastoM = useMutation({
+    mutationFn: (data: any) => api.put(`/companies/${cid}/expenses/${data.id}`, data),
+    onSuccess: () => { setEditGasto(null); qc.invalidateQueries({ queryKey: ['expenses', cid] }); },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error al guardar'),
+  });
+
+  const deleteGastoM = useMutation({
+    mutationFn: (id: string) => api.delete(`/companies/${cid}/expenses/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses', cid] }),
+    onError: (e:any) => alert(e.response?.data?.message || 'Error al eliminar'),
+  });
 
   const { data: gastos = [], isLoading } = useQuery({
     queryKey: ['expenses', cid, activePeriod],
@@ -442,6 +455,7 @@ export function GastosPage() {
                 <th style={{textAlign:'right'}}>Subtotal</th>
                 <th style={{textAlign:'right'}}>IVA</th>
                 <th style={{textAlign:'right'}}>Total</th>
+              <th></th>
                 <th>Método</th>
                 <th>Estatus</th>
               </tr></thead>
@@ -490,6 +504,18 @@ export function GastosPage() {
                         <span className={g.paymentStatus==='PAGADO'?'badge-green':'badge-amber'}>
                           {g.paymentStatus==='PAGADO'?'Pagado':'Pendiente'}
                         </span>
+                      </td>
+                      <td>
+                        <div style={{display:'flex',gap:6}}>
+                          <button onClick={() => setEditGasto({...g})}
+                            style={{background:'none',border:'none',color:'#f59e0b',cursor:'pointer',fontSize:12}}>
+                            ✎ Editar
+                          </button>
+                          <button onClick={() => { if(window.confirm('¿Eliminar este gasto?')) deleteGastoM.mutate(g.id); }}
+                            style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:12}}>
+                            🗑
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1000,6 +1026,16 @@ export function CxCPage() {
             </div>
             <div style={{display:'flex',gap:8}}>
               <button onClick={()=>setPagoModal(null)} className="btn-secondary" style={{flex:1,fontSize:13}}>Cancelar</button>
+                      {c.status !== 'CANCELADA' && c.status !== 'PAGADA' && c.status !== 'COBRADA' && (
+                        <button onClick={e => {
+                          e.stopPropagation();
+                          const motivo = window.prompt('Motivo de cancelación:');
+                          if (motivo !== null) cancelCxCM.mutate({ id: c.id, motivo });
+                        }}
+                          style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:11,marginLeft:4}}>
+                          ✕ Cancelar
+                        </button>
+                      )}
               <button onClick={registrarPago} className="btn-primary"
                 style={{flex:1,fontSize:13,background:color}} disabled={!pagoForm.amount}>
                 Registrar pago

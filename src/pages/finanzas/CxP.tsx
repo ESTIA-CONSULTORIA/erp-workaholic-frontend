@@ -30,6 +30,14 @@ export default function CxPPage() {
   const [showImport, setShowImport] = useState(false);
   const [status, setStatus] = useState('');
 
+  const qcInner = useQueryClient();
+  const cancelM = useMutation({
+    mutationFn: ({ id, motivo }: { id:string; motivo:string }) =>
+      api.put(`/companies/${cid}/cxp/${id}/cancel`, { motivo }),
+    onSuccess: () => qcInner.invalidateQueries({ queryKey: ['cxp-gestion', cid] }),
+    onError: (e:any) => alert(e.response?.data?.message || 'Error'),
+  });
+
   const { data: cxp = [], isLoading } = useQuery({
     queryKey: ['cxp', cid, activePeriod, status],
     queryFn: () =>
@@ -171,14 +179,14 @@ export default function CxPPage() {
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
                       Cargando…
                     </td>
                   </tr>
                 )}
                 {!isLoading && filtradas.length === 0 && (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
                       Sin cuentas por pagar
                     </td>
                   </tr>
@@ -202,9 +210,22 @@ export default function CxPPage() {
                         {fmt(Number(p.balance || 0))}
                       </td>
                       <td>
-                        <span className={p.status === 'PAGADO' ? 'badge-green' : p.status === 'PARCIAL' ? 'badge-amber' : 'badge-red'}>
+                        <span className={p.status === 'PAGADO' ? 'badge-green' : p.status === 'PARCIAL' ? 'badge-amber' : p.status === 'CANCELADA' ? 'badge-gray' : 'badge-red'}>
                           {p.status || 'PENDIENTE'}
                         </span>
+                      </td>
+                      <td>
+                        {p.status !== 'CANCELADA' && p.status !== 'PAGADO' && (
+                          <button
+                            onClick={() => {
+                              const motivo = window.prompt('Motivo de cancelación:');
+                              if (motivo !== null) cancelM.mutate({ id: p.id, motivo });
+                            }}
+                            style={{ background:'none', border:'none', color:'#f87171',
+                              cursor:'pointer', fontSize:12, whiteSpace:'nowrap' }}>
+                            ✕ Cancelar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

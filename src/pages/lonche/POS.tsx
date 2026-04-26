@@ -49,6 +49,16 @@ export default function LonchePOS() {
     onError: (e:any) => setError(e.response?.data?.message || 'Error'),
   });
 
+  const reabrirM = useMutation({
+    mutationFn: (motivo: string) => api.put(`/companies/${cid}/lonche/turnos/${turno?.id}/reabrir`, { motivo }),
+    onSuccess: (d:any) => {
+      setTurno(d.data || d);
+      setExito('Turno reabierto');
+      setTimeout(()=>setExito(''),2000);
+    },
+    onError: (e:any) => setError(e.response?.data?.message || 'Error'),
+  });
+
   const cerrarM = useMutation({
     mutationFn: () => api.put(`/companies/${cid}/lonche/turnos/${turno.id}/cerrar`, {
       efectivoDeclarado: Number(efectivoDecl), notas: '',

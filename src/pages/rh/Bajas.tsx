@@ -67,6 +67,17 @@ export default function BajasPage() {
     },
   });
 
+  const cancelBajaM = useMutation({
+    mutationFn: (id: string) => api.put(`/companies/${cid}/terminations/${id}`, {
+      status: 'CANCELADA', notes: 'Proceso cancelado',
+    }),
+    onSuccess: () => {
+      setDetalle(null);
+      qc.invalidateQueries({ queryKey: ['terminations', cid] });
+    },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error'),
+  });
+
   const checklistM = useMutation({
     mutationFn: ({ id, data }: any) => api.put(`/companies/${cid}/terminations/${id}`, data),
     onSuccess: (res:any, vars:any) => {
@@ -275,11 +286,22 @@ export default function BajasPage() {
 
             {/* Acción principal */}
             {detalle.status === 'BORRADOR' ? (
-              <button onClick={() => submitM.mutate(detalle.id)} disabled={submitM.isPending}
-                style={{ width:'100%', padding:'10px', borderRadius:8, border:'none',
-                  background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-                {submitM.isPending ? 'Enviando…' : '📤 Enviar para aprobación RH'}
-              </button>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={() => {
+                  if (window.confirm('¿Cancelar este proceso de baja? El empleado seguirá activo.')) {
+                    cancelBajaM.mutate(detalle.id);
+                  }
+                }} disabled={cancelBajaM.isPending}
+                  style={{ flex:1, padding:'10px', borderRadius:8, border:'1px solid #f87171',
+                    background:'none', color:'#f87171', cursor:'pointer', fontSize:13 }}>
+                  {cancelBajaM.isPending ? 'Cancelando…' : '✕ Cancelar baja'}
+                </button>
+                <button onClick={() => submitM.mutate(detalle.id)} disabled={submitM.isPending}
+                  style={{ flex:2, padding:'10px', borderRadius:8, border:'none',
+                    background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:700 }}>
+                  {submitM.isPending ? 'Enviando…' : '📤 Enviar para aprobación RH'}
+                </button>
+              </div>
             ) : (
               <div style={{ textAlign:'center', padding:'8px', background:'#0f172a', borderRadius:8 }}>
                 <span style={{ fontSize:12, color:STATUS_COLOR[detalle.status]||'#64748b', fontWeight:600 }}>
