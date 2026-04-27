@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction, CSSProperties } from 'react';
 import { useMemo, useState } from 'react';
 import AppLayout from '../../components/layout/AppLayout';
 import { useERPStore } from '../../store/erp.store';
@@ -50,31 +51,14 @@ export default function ArqueoContadorPage() {
   const totalUsdFisico = useMemo(() => totalDenominaciones(usd, DENOMINACIONES_USD), [usd]);
   const totalUsdMxn = totalUsdFisico * n(tc);
 
-  const totalDeclarado =
-    totalMxnFisico +
-    totalUsdMxn +
-    n(declarado.banorte) +
-    n(declarado.banregio) +
-    n(declarado.mercadoPago) +
-    n(declarado.cheques) +
-    n(declarado.vales) +
-    n(declarado.transferenciasPendientes);
-
-  const totalSistema =
-    n(sistema.efectivoMxn) +
-    n(sistema.efectivoUsd) * n(tc) +
-    n(sistema.banorte) +
-    n(sistema.banregio) +
-    n(sistema.mercadoPago) +
-    n(sistema.cheques) +
-    n(sistema.vales) +
-    n(sistema.transferenciasPendientes);
+  const totalDeclarado = totalMxnFisico + totalUsdMxn + n(declarado.banorte) + n(declarado.banregio) + n(declarado.mercadoPago) + n(declarado.cheques) + n(declarado.vales) + n(declarado.transferenciasPendientes);
+  const totalSistema = n(sistema.efectivoMxn) + n(sistema.efectivoUsd) * n(tc) + n(sistema.banorte) + n(sistema.banregio) + n(sistema.mercadoPago) + n(sistema.cheques) + n(sistema.vales) + n(sistema.transferenciasPendientes);
 
   const diferencia = totalDeclarado - totalSistema;
   const diferenciaVisible = enviadoAt !== null && now - enviadoAt >= 5 * 60 * 1000;
   const segundosRestantes = enviadoAt ? Math.max(0, Math.ceil((5 * 60 * 1000 - (now - enviadoAt)) / 1000)) : 0;
 
-  const setDenom = (setter: React.Dispatch<React.SetStateAction<Denoms>>, denom: number, value: string) => {
+  const setDenom = (setter: Dispatch<SetStateAction<Denoms>>, denom: number, value: string) => {
     setter((prev) => ({ ...prev, [String(denom)]: n(value) }));
   };
 
@@ -211,7 +195,7 @@ function Metric({ title, value, color = '#f1f5f9' }: { title: string; value: str
   );
 }
 
-const sectionTitle: React.CSSProperties = { fontSize: 15, fontWeight: 800, margin: '0 0 4px' };
-const sectionHelp: React.CSSProperties = { fontSize: 12, color: '#64748b', margin: '0 0 12px' };
-const subTitle: React.CSSProperties = { fontSize: 12, fontWeight: 800, margin: '14px 0 8px', color: '#cbd5e1', textTransform: 'uppercase' };
-const labelStyle: React.CSSProperties = { fontSize: 11, color: '#64748b', display: 'block', marginBottom: 4 };
+const sectionTitle: CSSProperties = { fontSize: 15, fontWeight: 800, margin: '0 0 4px' };
+const sectionHelp: CSSProperties = { fontSize: 12, color: '#64748b', margin: '0 0 12px' };
+const subTitle: CSSProperties = { fontSize: 12, fontWeight: 800, margin: '14px 0 8px', color: '#cbd5e1', textTransform: 'uppercase' };
+const labelStyle: CSSProperties = { fontSize: 11, color: '#64748b', display: 'block', marginBottom: 4 };
