@@ -37,7 +37,7 @@ const NAV_GROUPS = [
       { to:'/gastos',          icon:'◎', label:'Gastos',       roles:['admin','administrador','gerente','contador','cajero'] },
       { to:'/bitacora',        icon:'📋', label:'Bitácora',    roles:['admin','administrador','director'] },
       { to:'/intercompany',    icon:'↔', label:'Intercompany', roles:['admin','administrador','gerente','contador','director'] },
-      { to:'/conciliacion',    icon:'⊜', label:'Arqueo',       roles:['admin','administrador','gerente','contador','director'] },
+      { to:'/arqueo',          icon:'⊜', label:'Arqueo',       roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxc',             icon:'◷', label:'CxC',          roles:['admin','administrador','gerente','contador','director'] },
       { to:'/cxp',             icon:'◶', label:'CxP',          roles:['admin','administrador','gerente','contador','director'] },
       { to:'/documentos',      icon:'⊞', label:'Documentos',   roles:['admin','administrador','gerente','contador','cajero'] },
