@@ -2,9 +2,14 @@ import type { Dispatch, SetStateAction, CSSProperties } from 'react';
 import { useMemo, useState } from 'react';
 import AppLayout from '../../components/layout/AppLayout';
 import { useERPStore } from '../../store/erp.store';
-import { fmt } from '../../lib/api';
+import { api, fmt } from '../../lib/api';
 
 type Denoms = Record<string, number>;
+
+type ReadOnlyFieldProps = {
+  label: string;
+  value: number | string;
+};
 
 const DENOMINACIONES_MXN = [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5];
 const DENOMINACIONES_USD = [100, 50, 20, 10, 5, 1];
@@ -21,6 +26,7 @@ function totalDenominaciones(values: Denoms, denoms: number[]) {
 export default function ArqueoContadorPage() {
   const { activeCompany, user } = useERPStore();
   const color = activeCompany?.color || '#3b82f6';
+  const companyId = activeCompany?.companyId;
 
   const [mxn, setMxn] = useState<Denoms>({});
   const [usd, setUsd] = useState<Denoms>({});
@@ -34,25 +40,49 @@ export default function ArqueoContadorPage() {
     transferenciasPendientes: '',
     notas: '',
   });
-  const [sistema, setSistema] = useState({
-    efectivoMxn: '0',
-    efectivoUsd: '0',
-    banorte: '0',
-    banregio: '0',
-    mercadoPago: '0',
-    cheques: '0',
-    vales: '0',
-    transferenciasPendientes: '0',
-  });
+
+  // Realidad del sistema: NO editable por el contador.
+  // En esta fase queda en cero y después se alimentará del núcleo financiero / flujo.
+  const sistema = {
+    efectivoMxn: 0,
+    efectivoUsd: 0,
+    banorte: 0,
+    banregio: 0,
+    mercadoPago: 0,
+    cheques: 0,
+    vales: 0,
+    transferenciasPendientes: 0,
+  };
+
   const [enviadoAt, setEnviadoAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [folio, setFolio] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const totalMxnFisico = useMemo(() => totalDenominaciones(mxn, DENOMINACIONES_MXN), [mxn]);
   const totalUsdFisico = useMemo(() => totalDenominaciones(usd, DENOMINACIONES_USD), [usd]);
   const totalUsdMxn = totalUsdFisico * n(tc);
 
-  const totalDeclarado = totalMxnFisico + totalUsdMxn + n(declarado.banorte) + n(declarado.banregio) + n(declarado.mercadoPago) + n(declarado.cheques) + n(declarado.vales) + n(declarado.transferenciasPendientes);
-  const totalSistema = n(sistema.efectivoMxn) + n(sistema.efectivoUsd) * n(tc) + n(sistema.banorte) + n(sistema.banregio) + n(sistema.mercadoPago) + n(sistema.cheques) + n(sistema.vales) + n(sistema.transferenciasPendientes);
+  const totalDeclarado =
+    totalMxnFisico +
+    totalUsdMxn +
+    n(declarado.banorte) +
+    n(declarado.banregio) +
+    n(declarado.mercadoPago) +
+    n(declarado.cheques) +
+    n(declarado.vales) +
+    n(declarado.transferenciasPendientes);
+
+  const totalSistema =
+    n(sistema.efectivoMxn) +
+    n(sistema.efectivoUsd) * n(tc) +
+    n(sistema.banorte) +
+    n(sistema.banregio) +
+    n(sistema.mercadoPago) +
+    n(sistema.cheques) +
+    n(sistema.vales) +
+    n(sistema.transferenciasPendientes);
 
   const diferencia = totalDeclarado - totalSistema;
   const diferenciaVisible = enviadoAt !== null && now - enviadoAt >= 5 * 60 * 1000;
@@ -65,60 +95,66 @@ export default function ArqueoContadorPage() {
   };
 
   const enviar = async () => {
-  if (!activeCompany?.companyId) {
-    alert('No hay empresa activa');
-    return;
-  }
+    if (!companyId) {
+      setError('No hay empresa activa.');
+      return;
+    }
 
-  try {
+    setSaving(true);
+    setError(null);
+
     const payload = {
       declared: {
-        efectivoMxn: totalMxnFisico,
-        efectivoUsd: totalUsdFisico,
-        tipoCambio: Number(tc),
-        banorte: Number(declarado.banorte || 0),
-        banregio: Number(declarado.banregio || 0),
-        mercadoPago: Number(declarado.mercadoPago || 0),
-        cheques: Number(declarado.cheques || 0),
-        vales: Number(declarado.vales || 0),
-        transferenciasPendientes: Number(declarado.transferenciasPendientes || 0),
+        efectivoMxnDenominaciones: mxn,
+        efectivoUsdDenominaciones: usd,
+        tipoCambio: n(tc),
+        efectivoMxnTotal: totalMxnFisico,
+        efectivoUsdTotal: totalUsdFisico,
+        efectivoUsdMxn: totalUsdMxn,
+        banorte: n(declarado.banorte),
+        banregio: n(declarado.banregio),
+        mercadoPago: n(declarado.mercadoPago),
+        cheques: n(declarado.cheques),
+        vales: n(declarado.vales),
+        transferenciasPendientes: n(declarado.transferenciasPendientes),
+        totalDeclarado,
       },
       system: {
-        efectivoMxn: Number(sistema.efectivoMxn),
-        efectivoUsd: Number(sistema.efectivoUsd),
-        banorte: Number(sistema.banorte),
-        banregio: Number(sistema.banregio),
-        mercadoPago: Number(sistema.mercadoPago),
-        cheques: Number(sistema.cheques),
-        vales: Number(sistema.vales),
-        transferenciasPendientes: Number(sistema.transferenciasPendientes),
+        efectivoMxn: n(sistema.efectivoMxn),
+        efectivoUsd: n(sistema.efectivoUsd),
+        efectivoUsdMxn: n(sistema.efectivoUsd) * n(tc),
+        banorte: n(sistema.banorte),
+        banregio: n(sistema.banregio),
+        mercadoPago: n(sistema.mercadoPago),
+        cheques: n(sistema.cheques),
+        vales: n(sistema.vales),
+        transferenciasPendientes: n(sistema.transferenciasPendientes),
+        totalSistema,
       },
       summary: {
         totalDeclarado,
         totalSistema,
         diferencia,
+        estatus: estatusTexto,
+        diferenciaVisibleAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
       },
       notes: declarado.notas || null,
     };
 
-    const res = await api.post(
-      `/companies/${activeCompany.companyId}/arqueo`,
-      payload
-    );
-
-    console.log('FOLIO:', res.data?.folio);
-
-    setEnviadoAt(Date.now());
-    setNow(Date.now());
-
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
-
-  } catch (err) {
-    console.error(err);
-    alert('Error al guardar arqueo');
-  }
-};
+    try {
+      const res = await api.post(`/companies/${companyId}/arqueo`, payload);
+      setFolio(res.data?.folio || 'ARQ-SIN-FOLIO');
+      setEnviadoAt(Date.now());
+      setNow(Date.now());
+      const interval = window.setInterval(() => setNow(Date.now()), 1000);
+      window.setTimeout(() => window.clearInterval(interval), 5 * 60 * 1000 + 1500);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || err.message || 'Error al guardar el arqueo.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -136,9 +172,15 @@ export default function ArqueoContadorPage() {
           </div>
         </div>
 
+        {error && (
+          <div style={{ marginBottom: 14, padding: 12, borderRadius: 10, border: '1px solid #f8717166', background: 'rgba(248,113,113,.12)', color: '#f87171', fontSize: 13 }}>
+            {error}
+          </div>
+        )}
+
         {enviadoAt && (
           <div style={{ marginBottom: 14, padding: 12, borderRadius: 10, border: '1px solid #10b98166', background: 'rgba(16,185,129,.12)', color: '#34d399', fontSize: 13 }}>
-            Arqueo enviado. {diferenciaVisible ? 'La diferencia y el estatus ya están disponibles.' : `Diferencia y estatus bloqueados: ${segundosRestantes}s restantes.`}
+            Arqueo guardado correctamente{folio ? ` · Folio ${folio}` : ''}. {diferenciaVisible ? 'La diferencia y el estatus ya están disponibles.' : `Diferencia y estatus bloqueados: ${segundosRestantes}s restantes.`}
           </div>
         )}
 
@@ -174,17 +216,17 @@ export default function ArqueoContadorPage() {
 
           <section className="card" style={{ padding: 16 }}>
             <h3 style={sectionTitle}>2. Realidad del sistema</h3>
-            <p style={sectionHelp}>Temporalmente editable para probar la lógica. Después se alimentará del núcleo financiero.</p>
+            <p style={sectionHelp}>Solo lectura. Estos datos deberán alimentarse del núcleo financiero.</p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
-              <Field label="Sistema: efectivo MXN" value={sistema.efectivoMxn} onChange={(v) => setSistema((s) => ({ ...s, efectivoMxn: v }))} />
-              <Field label="Sistema: efectivo USD" value={sistema.efectivoUsd} onChange={(v) => setSistema((s) => ({ ...s, efectivoUsd: v }))} />
-              <Field label="Sistema: Banorte" value={sistema.banorte} onChange={(v) => setSistema((s) => ({ ...s, banorte: v }))} />
-              <Field label="Sistema: Banregio" value={sistema.banregio} onChange={(v) => setSistema((s) => ({ ...s, banregio: v }))} />
-              <Field label="Sistema: Mercado Pago" value={sistema.mercadoPago} onChange={(v) => setSistema((s) => ({ ...s, mercadoPago: v }))} />
-              <Field label="Sistema: cheques" value={sistema.cheques} onChange={(v) => setSistema((s) => ({ ...s, cheques: v }))} />
-              <Field label="Sistema: vales" value={sistema.vales} onChange={(v) => setSistema((s) => ({ ...s, vales: v }))} />
-              <Field label="Sistema: transferencias pendientes" value={sistema.transferenciasPendientes} onChange={(v) => setSistema((s) => ({ ...s, transferenciasPendientes: v }))} />
+              <ReadOnlyField label="Sistema: efectivo MXN" value={fmt(sistema.efectivoMxn)} />
+              <ReadOnlyField label="Sistema: efectivo USD" value={`${sistema.efectivoUsd} USD`} />
+              <ReadOnlyField label="Sistema: Banorte" value={fmt(sistema.banorte)} />
+              <ReadOnlyField label="Sistema: Banregio" value={fmt(sistema.banregio)} />
+              <ReadOnlyField label="Sistema: Mercado Pago" value={fmt(sistema.mercadoPago)} />
+              <ReadOnlyField label="Sistema: cheques" value={fmt(sistema.cheques)} />
+              <ReadOnlyField label="Sistema: vales" value={fmt(sistema.vales)} />
+              <ReadOnlyField label="Sistema: transferencias pendientes" value={fmt(sistema.transferenciasPendientes)} />
             </div>
 
             <div style={{ marginTop: 16 }}>
@@ -206,8 +248,8 @@ export default function ArqueoContadorPage() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-          <button className="btn-primary" onClick={enviar} style={{ background: color, fontSize: 13, padding: '10px 18px' }}>
-            Enviar arqueo
+          <button className="btn-primary" disabled={saving} onClick={enviar} style={{ background: color, fontSize: 13, padding: '10px 18px', opacity: saving ? 0.65 : 1 }}>
+            {saving ? 'Guardando...' : 'Enviar arqueo'}
           </button>
         </div>
       </div>
@@ -233,6 +275,15 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
     <label>
       <span style={labelStyle}>{label}</span>
       <input className="input-base" type="number" min="0" value={value} onChange={(e) => onChange(e.target.value)} style={{ fontSize: 13 }} placeholder="0.00" />
+    </label>
+  );
+}
+
+function ReadOnlyField({ label, value }: ReadOnlyFieldProps) {
+  return (
+    <label>
+      <span style={labelStyle}>{label}</span>
+      <input className="input-base" value={value} disabled readOnly style={{ fontSize: 13, opacity: 0.75, cursor: 'not-allowed' }} />
     </label>
   );
 }
