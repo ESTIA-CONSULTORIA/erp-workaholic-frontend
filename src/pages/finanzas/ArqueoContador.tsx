@@ -76,7 +76,7 @@ export default function ArqueoContadorPage() {
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>Arqueo del Contador</h1>
             <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
-              Declaración del contador contra realidad del sistema. La diferencia se oculta por 5 minutos después del envío.
+              Declaración del contador contra realidad del sistema.
             </p>
           </div>
           <div style={{ textAlign: 'right', fontSize: 12, color: '#64748b' }}>
@@ -87,7 +87,7 @@ export default function ArqueoContadorPage() {
 
         {enviadoAt && (
           <div style={{ marginBottom: 14, padding: 12, borderRadius: 10, border: '1px solid #10b98166', background: 'rgba(16,185,129,.12)', color: '#34d399', fontSize: 13 }}>
-            Arqueo enviado. Alerta simulada para Dirección. {diferenciaVisible ? 'La diferencia ya está liberada.' : `Diferencia bloqueada: ${segundosRestantes}s restantes.`}
+            Arqueo enviado. {diferenciaVisible ? 'La diferencia ya está disponible.' : `Diferencia bloqueada: ${segundosRestantes}s restantes.`}
           </div>
         )}
 
@@ -156,7 +156,7 @@ export default function ArqueoContadorPage() {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-primary" onClick={enviar} style={{ background: color, fontSize: 13, padding: '10px 18px' }}>
-            Enviar arqueo y alertar a dirección
+            Enviar arqueo
           </button>
         </div>
       </div>
