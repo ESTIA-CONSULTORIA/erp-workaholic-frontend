@@ -37,6 +37,7 @@ import CorteCajaPage from './pages/CorteCaja';
 import CortesPage from './pages/Cortes';
 import PermisosPage from './pages/Admin/Permisos';
 import CxPPage from './pages/finanzas/CxP';
+import ArqueoContadorPage from './pages/finanzas/ArqueoContador';
 import LoncheDashboard from './pages/lonche/Dashboard';
 import LonchePOS from './pages/lonche/POS';
 import SurtidoPage from './pages/lonche/Surtido';
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/cortes" element={<CortesPage />} />
               <Route path="/corte-caja" element={<CorteCajaPage />} />
+              <Route path="/arqueo" element={<ArqueoContadorPage />} />
               <Route path="/gastos" element={<GastosPage />} />
               <Route path="/conciliacion" element={<ConciliacionPage />} />
               <Route path="/cxc" element={<CxCPage />} />
@@ -99,7 +101,7 @@ export default function App() {
               <Route path="/workaholic/reservaciones" element={<ReservacionesPage />} />
               <Route path="/workaholic/membresias" element={<WorkaholicMembresiasPage />} />
               <Route path="/workaholic/soft-restaurant" element={<WorkaholicSoftPage />} />
-                            <Route path="/lonche" element={<LoncheDashboard />} />
+              <Route path="/lonche" element={<LoncheDashboard />} />
               <Route path="/lonche/pos" element={<LonchePOS />} />
               <Route path="/lonche/surtido" element={<SurtidoPage />} />
               <Route path="/lonche/alumnos" element={<AlumnosPage />} />
