@@ -64,12 +64,61 @@ export default function ArqueoContadorPage() {
     setter((prev) => ({ ...prev, [String(denom)]: n(value) }));
   };
 
-  const enviar = () => {
+  const enviar = async () => {
+  if (!activeCompany?.companyId) {
+    alert('No hay empresa activa');
+    return;
+  }
+
+  try {
+    const payload = {
+      declared: {
+        efectivoMxn: totalMxnFisico,
+        efectivoUsd: totalUsdFisico,
+        tipoCambio: Number(tc),
+        banorte: Number(declarado.banorte || 0),
+        banregio: Number(declarado.banregio || 0),
+        mercadoPago: Number(declarado.mercadoPago || 0),
+        cheques: Number(declarado.cheques || 0),
+        vales: Number(declarado.vales || 0),
+        transferenciasPendientes: Number(declarado.transferenciasPendientes || 0),
+      },
+      system: {
+        efectivoMxn: Number(sistema.efectivoMxn),
+        efectivoUsd: Number(sistema.efectivoUsd),
+        banorte: Number(sistema.banorte),
+        banregio: Number(sistema.banregio),
+        mercadoPago: Number(sistema.mercadoPago),
+        cheques: Number(sistema.cheques),
+        vales: Number(sistema.vales),
+        transferenciasPendientes: Number(sistema.transferenciasPendientes),
+      },
+      summary: {
+        totalDeclarado,
+        totalSistema,
+        diferencia,
+      },
+      notes: declarado.notas || null,
+    };
+
+    const res = await api.post(
+      `/companies/${activeCompany.companyId}/arqueo`,
+      payload
+    );
+
+    console.log('FOLIO:', res.data?.folio);
+
     setEnviadoAt(Date.now());
     setNow(Date.now());
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    window.setTimeout(() => window.clearInterval(interval), 5 * 60 * 1000 + 1500);
-  };
+
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+
+  } catch (err) {
+    console.error(err);
+    alert('Error al guardar arqueo');
+  }
+};
 
   return (
     <AppLayout>
