@@ -57,6 +57,8 @@ export default function ArqueoContadorPage() {
   const diferencia = totalDeclarado - totalSistema;
   const diferenciaVisible = enviadoAt !== null && now - enviadoAt >= 5 * 60 * 1000;
   const segundosRestantes = enviadoAt ? Math.max(0, Math.ceil((5 * 60 * 1000 - (now - enviadoAt)) / 1000)) : 0;
+  const estatusTexto = diferencia === 0 ? 'CUADRADO' : diferencia > 0 ? 'SOBRANTE' : 'FALTANTE';
+  const estatusColor = diferencia === 0 ? '#10b981' : diferencia > 0 ? '#f59e0b' : '#f87171';
 
   const setDenom = (setter: Dispatch<SetStateAction<Denoms>>, denom: number, value: string) => {
     setter((prev) => ({ ...prev, [String(denom)]: n(value) }));
@@ -87,7 +89,7 @@ export default function ArqueoContadorPage() {
 
         {enviadoAt && (
           <div style={{ marginBottom: 14, padding: 12, borderRadius: 10, border: '1px solid #10b98166', background: 'rgba(16,185,129,.12)', color: '#34d399', fontSize: 13 }}>
-            Arqueo enviado. {diferenciaVisible ? 'La diferencia ya está disponible.' : `Diferencia bloqueada: ${segundosRestantes}s restantes.`}
+            Arqueo enviado. {diferenciaVisible ? 'La diferencia y el estatus ya están disponibles.' : `Diferencia y estatus bloqueados: ${segundosRestantes}s restantes.`}
           </div>
         )}
 
@@ -141,12 +143,12 @@ export default function ArqueoContadorPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 10 }}>
                 <Metric title="Declarado" value={fmt(totalDeclarado)} color={color} />
                 <Metric title="Sistema" value={fmt(totalSistema)} />
-                <Metric title="Diferencia" value={diferenciaVisible ? fmt(diferencia) : 'Bloqueada'} color={diferenciaVisible ? (diferencia >= 0 ? '#10b981' : '#f87171') : '#64748b'} />
+                <Metric title="Diferencia" value={diferenciaVisible ? fmt(diferencia) : 'Bloqueada'} color={diferenciaVisible ? estatusColor : '#64748b'} />
               </div>
               <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: '#0f172a', border: '1px solid #334155' }}>
                 <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
-                  Estatus: <strong style={{ color: diferencia === 0 ? '#10b981' : diferencia > 0 ? '#f59e0b' : '#f87171' }}>
-                    {diferencia === 0 ? 'CUADRADO' : diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'}
+                  Estatus: <strong style={{ color: diferenciaVisible ? estatusColor : '#64748b' }}>
+                    {diferenciaVisible ? estatusTexto : 'BLOQUEADO'}
                   </strong>
                 </p>
               </div>
