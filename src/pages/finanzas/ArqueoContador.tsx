@@ -38,7 +38,12 @@ export default function ArqueoContadorPage() {
   const totalDeclarado = totalMxnFisico + totalUsdMxn + n(declarado.banorte) + n(declarado.banregio) + n(declarado.mercadoPago) + n(declarado.cheques) + n(declarado.vales) + n(declarado.transferenciasPendientes);
   const totalSistema = n(sistema.efectivoMxn) + n(sistema.efectivoUsd) * n(tc) + n(sistema.banorte) + n(sistema.banregio) + n(sistema.mercadoPago) + n(sistema.cheques) + n(sistema.vales) + n(sistema.transferenciasPendientes);
   const diferencia = totalDeclarado - totalSistema;
-  const diferenciaVisible = enviadoAt !== null && now - enviadoAt >= 5 * 60 * 1000;
+  const isDirector =
+  user?.role === 'ADMIN' || user?.role === 'DIRECTOR';
+
+const diferenciaVisible = isDirector
+  ? true
+  : enviadoAt !== null && now - enviadoAt >= 5 * 60 * 1000;
   const segundosRestantes = enviadoAt ? Math.max(0, Math.ceil((5 * 60 * 1000 - (now - enviadoAt)) / 1000)) : 0;
   const estatusTexto = diferencia === 0 ? 'CUADRADO' : diferencia > 0 ? 'SOBRANTE' : 'FALTANTE';
   const estatusColor = diferencia === 0 ? '#10b981' : diferencia > 0 ? '#f59e0b' : '#f87171';
