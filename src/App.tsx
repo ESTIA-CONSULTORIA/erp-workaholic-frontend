@@ -37,6 +37,7 @@ import { GastosPage, ConciliacionPage, CxCPage, ReportesPage, DocumentosPage, Co
 import CorteCajaPage from './pages/CorteCaja';
 import CortesPage from './pages/Cortes';
 import PermisosPage from './pages/Admin/Permisos';
+import UsuariosPage from './pages/Admin/Usuarios';
 import CxPPage from './pages/finanzas/CxP';
 import ArqueoContadorPage from './pages/finanzas/ArqueoContador';
 import LoncheDashboard from './pages/lonche/Dashboard';
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/documentos" element={<DocumentosPage />} />
               <Route path="/consolidado" element={<ConsolidadoPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/usuarios" element={<UsuariosPage />} />
               <Route path="/admin/permisos" element={<PermisosPage />} />
               <Route path="/pos" element={<POSPage />} />
               <Route path="/machete" element={<MacheteDashboardPage />} />
