@@ -1,591 +1,747 @@
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  EXPEDIENTE DEL EMPLEADO — Vista completa                   ║
+// ║  Tabs: Datos · Contratos · Vacaciones · Incidencias ·       ║
+// ║        Incapacidades · Nómina · Documentos · Legal          ║
+// ╚══════════════════════════════════════════════════════════════╝
 import AppLayout from '../../components/layout/AppLayout';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt, fmtDate } from '../../lib/api';
-import { useState } from 'react';
 
-const TIPOS_EVENTO = [
-  { id:'VACACIONES',   label:'Vacaciones' },
-  { id:'PERMISO',      label:'Permiso' },
-  { id:'SUSPENSION',   label:'Suspensión' },
-  { id:'BAJA',         label:'Baja' },
-  { id:'INCAPACIDAD',  label:'Incapacidad' },
-  { id:'AMONESTACION', label:'Amonestación' },
-  { id:'OTRO',         label:'Otro' },
-];
+type Tab = 'datos'|'contratos'|'vacaciones'|'incidencias'|'incapacidades'|'nomina'|'documentos'|'legal';
 
-const STATUS_EVENT_COLOR: Record<string,string> = {
-  PENDIENTE:'#f59e0b', APROBADO:'#10b981', RECHAZADO:'#f87171'
+const STATUS_COLOR: Record<string,string> = {
+  ACTIVO:'#10b981',VIGENTE:'#10b981',APROBADO:'#10b981',FIRMADO:'#10b981',
+  BAJA:'#f87171',CANCELADO:'#f87171',RECHAZADO:'#f87171',
+  PENDIENTE:'#f59e0b',BORRADOR:'#f59e0b',
+  SUSPENDIDO:'#8b5cf6',GENERADO:'#3b82f6',
+};
+const sc = (s:string) => STATUS_COLOR[s] || '#64748b';
+
+const TIPO_DOC_LABELS: Record<string,string> = {
+  CARTA_TRABAJO:'Carta trabajo', FINIQUITO:'Finiquito', LIQUIDACION:'Liquidación',
+  ACTA_ADMINISTRATIVA:'Acta admin.', CONVENIO:'Convenio', RENUNCIA:'Renuncia',
+  AVISO_RETENCION:'Aviso retención', CONTRATO:'Contrato',
 };
 
+const CONTRATO_TIPOS = ['INDEFINIDO','DETERMINADO','HONORARIOS','PRUEBA','EVENTUAL'];
+const HORARIO_TIPOS  = ['COMPLETO','MEDIO_TIEMPO','POR_HORAS'];
+
+function Badge({ label, status }: { label:string; status:string }) {
+  const c = sc(status);
+  return (
+    <span style={{ fontSize:10, padding:'2px 8px', borderRadius:99, fontWeight:600,
+      background:c+'22', color:c }}>
+      {label}
+    </span>
+  );
+}
+
 export default function ExpedientePage() {
-  const { id }    = useParams();
-  const navigate  = useNavigate();
+  const { id }  = useParams<{ id: string }>();
   const { activeCompany } = useERPStore();
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
-  const role  = activeCompany?.roleCode || '';
   const qc    = useQueryClient();
+  const nav   = useNavigate();
 
-  const esAdmin = ['admin','administrador','gerente','rh'].includes(role);
+  const [tab,        setTab]        = useState<Tab>('datos');
+  const [editMode,   setEditMode]   = useState(false);
+  const [editForm,   setEditForm]   = useState<any>({});
+  const [showContrato, setShowContrato] = useState(false);
+  const [contratoForm, setContratoForm] = useState({type:'INDEFINIDO',startDate:'',endDate:'',workSchedule:'COMPLETO',notes:''});
+  const [showLegalDoc, setShowLegalDoc] = useState(false);
+  const [legalForm,  setLegalForm]  = useState({type:'CARTA_TRABAJO',notes:''});
 
-  const [tab,       setTab]       = useState('datos');
-  const [editando,  setEditando]  = useState(false);
-  const [editForm,  setEditForm]  = useState<any>({});
-  const [eventoModal, setEventoModal] = useState(false);
-  const [vacModal,    setVacModal]    = useState(false);
-  const [saving,    setSaving]    = useState(false);
-  const [error,     setError]     = useState('');
-  const [linkModal, setLinkModal] = useState(false);
-  const [linkUserId, setLinkUserId] = useState('');
-  const [linkSaving, setLinkSaving] = useState(false);
-
-  const [eventoForm, setEventoForm] = useState({
-    type: 'PERMISO',
-    fechaSolicitud: new Date().toISOString().slice(0,10),
-    fechaInicio: '', fechaFin: '',
-    conGoce: true,
-    description: '', resolution: '',
-  });
-  const [vacForm, setVacForm] = useState({
-    type: 'VACACIONES', startDate: '', endDate: '', days: 0, notes: '',
-  });
-
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['company-users', cid],
-    queryFn:  () => api.get(`/companies/${cid}/users`).then(r => r.data),
-    enabled:  !!cid && !!esAdmin,
-  });
-
-  const { data: emp, isLoading, refetch } = useQuery({
-    queryKey: ['employee', id],
-    queryFn:  () => api.get(`/companies/${cid}/rh/employees/${id}`).then(r => r.data),
+  // ── Main query: expediente completo ──────────────────────────
+  const { data: emp, isLoading } = useQuery({
+    queryKey: ['expediente', cid, id],
+    queryFn:  () => api.get(`/companies/${cid}/rh/employees/${id}/expediente`).then(r => r.data),
     enabled:  !!cid && !!id,
   });
 
-  const editarM = useMutation({
+  // ── Mutations ─────────────────────────────────────────────────
+  const updateM = useMutation({
     mutationFn: () => api.put(`/companies/${cid}/rh/employees/${id}`, editForm),
-    onSuccess: () => { setEditando(false); refetch(); qc.invalidateQueries({ queryKey: ['employees', cid] }); },
+    onSuccess: () => { setEditMode(false); qc.invalidateQueries({ queryKey: ['expediente', cid, id] }); },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error'),
   });
 
-  const eventoM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/rh/employees/${id}/events`, { ...eventoForm, date: eventoForm.fechaSolicitud }),
-    onSuccess: () => { setEventoModal(false); setEventoForm({ type:'PERMISO', fechaSolicitud:new Date().toISOString().slice(0,10), fechaInicio:'', fechaFin:'', conGoce:true, description:'', resolution:'' }); refetch(); },
+  const contratoM = useMutation({
+    mutationFn: () => api.post(`/companies/${cid}/rh/employees/${id}/contracts`, contratoForm),
+    onSuccess: () => { setShowContrato(false); setContratoForm({type:'INDEFINIDO',startDate:'',endDate:'',workSchedule:'COMPLETO',notes:''}); qc.invalidateQueries({ queryKey: ['expediente', cid, id] }); },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error'),
   });
 
-  const vacM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/rh/employees/${id}/vacations`, vacForm),
-    onSuccess: () => { setVacModal(false); setVacForm({ type:'VACACIONES', startDate:'', endDate:'', days:0, notes:'' }); refetch(); },
+  const cancelContratoM = useMutation({
+    mutationFn: (cid2:string) => api.put(`/companies/${cid}/rh/contracts/${cid2}/cancel`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expediente', cid, id] }),
   });
 
-  const aprobarVacM = useMutation({
-    mutationFn: (vacId: string) => api.put(`/companies/${cid}/rh/vacations/${vacId}`, { status:'APROBADO' }),
-    onSuccess: () => refetch(),
+  const legalDocM = useMutation({
+    mutationFn: () => api.post(`/companies/${cid}/legal/generate`, { ...legalForm, employeeId: id }),
+    onSuccess: () => { setShowLegalDoc(false); setLegalForm({type:'CARTA_TRABAJO',notes:''}); qc.invalidateQueries({ queryKey: ['expediente', cid, id] }); },
+    onError: (e:any) => alert(e.response?.data?.message || 'Error'),
   });
 
-  const rechazarVacM = useMutation({
-    mutationFn: (vacId: string) => api.put(`/companies/${cid}/rh/vacations/${vacId}`, { status:'RECHAZADO' }),
-    onSuccess: () => refetch(),
+  const signDocM = useMutation({
+    mutationFn: ({ docId, byEmployee }: any) => api.put(`/companies/${cid}/legal/${docId}/sign`, { byEmployee }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expediente', cid, id] }),
   });
 
-  const darDeBajaM = useMutation({
-    mutationFn: () => api.put(`/companies/${cid}/rh/employees/${id}`, {
-      status: 'BAJA', endDate: new Date().toISOString().slice(0,10)
-    }),
-    onSuccess: () => { refetch(); qc.invalidateQueries({ queryKey: ['employees', cid] }); },
-  });
+  if (isLoading) return (
+    <AppLayout>
+      <div style={{ textAlign:'center', padding:60, color:'#64748b' }}>
+        <p style={{ fontSize:32, margin:'0 0 12px' }}>⏳</p>
+        <p>Cargando expediente…</p>
+      </div>
+    </AppLayout>
+  );
 
-  if (isLoading) return <AppLayout><div style={{display:'flex',alignItems:'center',justifyContent:'center',height:256,color:'#64748b'}}>Cargando…</div></AppLayout>;
-  if (!emp)     return <AppLayout><div style={{display:'flex',alignItems:'center',justifyContent:'center',height:256,color:'#64748b'}}>No encontrado</div></AppLayout>;
+  if (!emp) return (
+    <AppLayout>
+      <div style={{ textAlign:'center', padding:60, color:'#64748b' }}>
+        <p>Empleado no encontrado</p>
+        <button onClick={() => nav(-1)} style={{ marginTop:16, padding:'8px 18px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer' }}>← Regresar</button>
+      </div>
+    </AppLayout>
+  );
 
-  const fullName = `${emp.firstName} ${emp.lastName} ${emp.secondLastName||''}`.trim();
-  const TABS = ['datos','vacaciones','eventos','documentos','nómina'];
+  const TABS: { id:Tab; label:string; icon:string; count?:number }[] = [
+    { id:'datos',        label:'Datos',          icon:'👤' },
+    { id:'contratos',    label:'Contratos',       icon:'📋', count:(emp.contracts||[]).filter((c:any)=>c.status==='VIGENTE').length },
+    { id:'vacaciones',   label:'Vacaciones',      icon:'🏖',  count:(emp.vacations||[]).filter((v:any)=>v.status==='PENDIENTE').length },
+    { id:'incidencias',  label:'Incidencias',     icon:'⚠',   count:(emp.hrIncidents||[]).filter((i:any)=>!i.resolved).length },
+    { id:'incapacidades',label:'Incapacidades',   icon:'🏥',  count:(emp.disabilities||[]).filter((d:any)=>d.status==='ACTIVA').length },
+    { id:'nomina',       label:'Nómina',          icon:'💰' },
+    { id:'documentos',   label:'Documentos',      icon:'📄',  count:(emp.documents||[]).filter((d:any)=>d.status==='VIGENTE').length },
+    { id:'legal',        label:'Legal',           icon:'⚖',   count:(emp.legalDocuments||[]).length },
+  ];
 
-  const setEF = (k: string, v: any) => setEditForm((f:any) => ({...f,[k]:v}));
-  const setEv = (k: string, v: any) => setEventoForm(f => ({...f,[k]:v}));
-  const setVF = (k: string, v: any) => setVacForm(f => ({...f,[k]:v}));
+  const fullName = `${emp.firstName} ${emp.lastName}${emp.secondLastName ? ' '+emp.secondLastName : ''}`;
+  const contratoVigente = (emp.contracts||[]).find((c:any) => c.status === 'VIGENTE');
 
   return (
     <AppLayout>
-      <div style={{ maxWidth:960 }}>
-        <button onClick={() => navigate('/rh')}
-          style={{ background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:13,marginBottom:12,padding:0 }}>
-          ← Volver
-        </button>
+      <div style={{ maxWidth:1000 }}>
 
-        {/* Header */}
+        {/* ── Header ── */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-          <div>
-            <h1 style={{ fontSize:22, fontWeight:700, margin:'0 0 6px' }}>{fullName}</h1>
-            <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-              <code style={{ fontSize:11, background:'#334155', padding:'2px 8px', borderRadius:4 }}>{emp.employeeNumber}</code>
-              <span style={{ fontSize:13, color:'#94a3b8' }}>{emp.position}</span>
-              {emp.department && <span style={{ fontSize:12, color:'#64748b' }}>{emp.department}</span>}
-              <span className={emp.status==='ACTIVO'?'badge-green':emp.status==='BAJA'?'badge-red':'badge-amber'}>
-                {emp.status}
-              </span>
+          <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+            <button onClick={() => nav(-1)}
+              style={{ padding:'6px 12px', borderRadius:7, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:12 }}>
+              ← Empleados
+            </button>
+            <div style={{ width:44, height:44, borderRadius:'50%', background:color+'22',
+              border:`2px solid ${color}44`, display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:18, fontWeight:800, color }}>
+              {emp.firstName[0]}{emp.lastName[0]}
+            </div>
+            <div>
+              <h1 style={{ fontSize:20, fontWeight:800, margin:'0 0 3px' }}>{fullName}</h1>
+              <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                <span style={{ fontSize:12, color:'#64748b' }}>#{emp.employeeNumber} · {emp.position}</span>
+                <Badge label={emp.status} status={emp.status} />
+                {contratoVigente && (
+                  <span style={{ fontSize:10, color:'#64748b' }}>
+                    Contrato {contratoVigente.type} desde {fmtDate(contratoVigente.startDate)}
+                    {contratoVigente.endDate && ` hasta ${fmtDate(contratoVigente.endDate)}`}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <div style={{ textAlign:'right', marginRight:8 }}>
-              <p style={{ fontSize:11, color:'#64748b', margin:'0 0 2px' }}>Salario mensual</p>
-              <p style={{ fontSize:20, fontWeight:700, color, margin:0 }}>{fmt(emp.grossSalary)}</p>
-              <p style={{ fontSize:11, color:'#64748b', margin:0 }}>Ingreso: {fmtDate(emp.startDate)}</p>
-            </div>
-            {esAdmin && emp.status === 'ACTIVO' && (
-              <>
-                <button onClick={() => { setEditForm({...emp}); setEditando(true); setTab('datos'); }}
-                  style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`, background:'none', color, cursor:'pointer', fontSize:12 }}>
-                  ✏ Editar
-                </button>
-                <button onClick={() => { setLinkUserId(emp.userId || ''); setLinkModal(true); }}
-                  style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #8b5cf6', background: emp.userId ? '#8b5cf622' : 'none', color:'#8b5cf6', cursor:'pointer', fontSize:12 }}>
-                  {emp.userId ? '🔗 Usuario vinculado' : '🔗 Vincular usuario'}
-                </button>
-
-                {emp.status !== 'BAJA' && (
-                  <button onClick={() => { if(confirm('¿Confirmas la baja del empleado?')) darDeBajaM.mutate(); }}
-                    style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #f87171', background:'none', color:'#f87171', cursor:'pointer', fontSize:12 }}>
-                    Dar de baja
-                  </button>
-                )}
-              </>
+          <div style={{ display:'flex', gap:8 }}>
+            {!editMode && (
+              <button onClick={() => { setEditForm({...emp}); setEditMode(true); }}
+                style={{ padding:'7px 14px', borderRadius:8, border:`1px solid ${color}`, background:'none', color, cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                ✎ Editar
+              </button>
             )}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display:'flex', gap:4, borderBottom:'1px solid #334155', marginBottom:20, overflowX:'auto' }}>
+        {/* ── Tabs ── */}
+        <div style={{ display:'flex', gap:2, background:'#0f172a', borderRadius:9, padding:3, marginBottom:16, flexWrap:'wrap' }}>
           {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              style={{ padding:'10px 16px', fontSize:13, fontWeight:500, background:'none', border:'none',
-                borderBottom: tab===t?`2px solid ${color}`:'2px solid transparent',
-                color: tab===t?color:'#64748b', cursor:'pointer', whiteSpace:'nowrap', textTransform:'capitalize' }}>
-              {t}
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding:'6px 12px', borderRadius:6, border:'none', cursor:'pointer', fontSize:11, fontWeight:600,
+                background: tab===t.id ? color : 'transparent',
+                color: tab===t.id ? '#fff' : '#64748b',
+                display:'flex', alignItems:'center', gap:5 }}>
+              {t.icon} {t.label}
+              {!!t.count && (
+                <span style={{ background: tab===t.id ? '#ffffff44' : color+'44', color: tab===t.id ? '#fff' : color,
+                  fontSize:9, fontWeight:800, padding:'1px 5px', borderRadius:99 }}>
+                  {t.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        {/* ── DATOS ── */}
-        {tab==='datos' && !editando && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-            {[
-              { title:'Datos personales', items:[
-                ['RFC',emp.rfc||'—'],['CURP',emp.curp||'—'],['NSS',emp.nss||'—'],
-                ['Fecha nac.',emp.birthDate?fmtDate(emp.birthDate):'—'],
-                ['Teléfono',emp.phone||'—'],['Email',emp.email||'—'],
-                ['Dirección',emp.address||'—'],
-              ]},
-              { title:'Datos laborales', items:[
-                ['Puesto',emp.position],['Área',emp.department||'—'],
-                ['Contrato',emp.contractType],['Salario diario',fmt(emp.dailySalary)],
-                ['CLABE',emp.bankAccount||'—'],['Banco',emp.bankName||'—'],
-                ['REPSE',emp.repseNumber||'—'],
-              ]},
-            ].map(card => (
-              <div key={card.title} className="card">
-                <p style={{ fontSize:11, fontWeight:700, color, textTransform:'uppercase', letterSpacing:1, margin:'0 0 12px' }}>{card.title}</p>
-                {card.items.map(([label,value]) => (
-                  <div key={label} style={{ display:'flex', justifyContent:'space-between', marginBottom:6, paddingBottom:6, borderBottom:'1px solid #1e293b' }}>
-                    <span style={{ fontSize:12, color:'#64748b' }}>{label}</span>
-                    <span style={{ fontSize:13, fontWeight:500 }}>{value}</span>
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: DATOS                                              */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'datos' && (
+          <div>
+            {editMode ? (
+              <div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+                  {[
+                    ['Nombre(s)','firstName'],['Apellido Paterno','lastName'],['Apellido Materno','secondLastName'],
+                    ['RFC','rfc'],['CURP','curp'],['NSS','nss'],
+                    ['Puesto','position'],['Departamento','department'],['Teléfono','phone'],
+                    ['Email','email'],['Banco','bankName'],['Cuenta bancaria','bankAccount'],
+                    ['REPSE','repseNumber'],
+                  ].map(([label,key]) => (
+                    <div key={key}>
+                      <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:3 }}>{label}</label>
+                      <input className="input-base" style={{ fontSize:12 }} value={editForm[key]||''}
+                        onChange={e => setEditForm((f:any)=>({...f,[key]:e.target.value}))}/>
+                    </div>
+                  ))}
+                  <div>
+                    <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:3 }}>Salario bruto</label>
+                    <input type="number" className="input-base" style={{ fontSize:12 }} value={editForm.grossSalary||0}
+                      onChange={e => setEditForm((f:any)=>({...f,grossSalary:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:3 }}>Tipo de nómina</label>
+                    <select className="input-base" style={{ fontSize:12 }} value={editForm.splitMode||'TOTAL_TIMBRADO'}
+                      onChange={e => setEditForm((f:any)=>({...f,splitMode:e.target.value}))}>
+                      <option value="TOTAL_TIMBRADO">100% Timbrado</option>
+                      <option value="MIXTO">Mixto</option>
+                      <option value="TOTAL_EFECTIVO">100% Efectivo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:3 }}>Estado</label>
+                    <select className="input-base" style={{ fontSize:12 }} value={editForm.status||'ACTIVO'}
+                      onChange={e => setEditForm((f:any)=>({...f,status:e.target.value}))}>
+                      {['ACTIVO','BAJA','SUSPENDIDO'].map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => setEditMode(false)}
+                    style={{ padding:'9px 20px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
+                    Cancelar
+                  </button>
+                  <button onClick={() => updateM.mutate()} disabled={updateM.isPending}
+                    style={{ padding:'9px 24px', borderRadius:8, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:13, fontWeight:700 }}>
+                    {updateM.isPending ? 'Guardando…' : '💾 Guardar cambios'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                {/* Datos personales */}
+                <Section title="Datos personales" icon="👤">
+                  {[
+                    ['Nombre completo', fullName],
+                    ['RFC', emp.rfc],
+                    ['CURP', emp.curp],
+                    ['NSS (IMSS)', emp.nss],
+                    ['Fecha nacimiento', fmtDate(emp.birthDate)],
+                    ['Género', emp.gender],
+                    ['Teléfono', emp.phone],
+                    ['Email', emp.email],
+                    ['Domicilio', emp.address],
+                  ].filter(([,v])=>v).map(([k,v])=>(
+                    <Row key={k as string} label={k as string} value={v as string}/>
+                  ))}
+                </Section>
+                {/* Datos laborales */}
+                <Section title="Datos laborales" icon="💼">
+                  {[
+                    ['No. empleado', emp.employeeNumber],
+                    ['Puesto', emp.position],
+                    ['Departamento', emp.department],
+                    ['Fecha ingreso', fmtDate(emp.startDate)],
+                    ['Tipo contrato', emp.contractType],
+                    ['Tipo jornada', emp.salaryType],
+                    ['Salario bruto', fmt(emp.grossSalary)],
+                    ['Salario diario', fmt(emp.dailySalary)],
+                    ['Tipo nómina', emp.splitMode?.replace('_',' ')],
+                  ].filter(([,v])=>v).map(([k,v])=>(
+                    <Row key={k as string} label={k as string} value={v as string}/>
+                  ))}
+                </Section>
+                {/* Banco */}
+                <Section title="Datos bancarios" icon="🏦">
+                  {[
+                    ['Banco', emp.bankName],
+                    ['Cuenta / CLABE', emp.bankAccount],
+                  ].filter(([,v])=>v).map(([k,v])=>(
+                    <Row key={k as string} label={k as string} value={v as string}/>
+                  ))}
+                  {!emp.bankName && !emp.bankAccount && (
+                    <p style={{ fontSize:12, color:'#334155' }}>Sin datos bancarios registrados</p>
+                  )}
+                </Section>
+                {/* REPSE */}
+                <Section title="REPSE / Outsourcing" icon="📋">
+                  {[
+                    ['No. REPSE', emp.repseNumber],
+                    ['Vencimiento REPSE', fmtDate(emp.repseExpiry)],
+                  ].filter(([,v])=>v).map(([k,v])=>(
+                    <Row key={k as string} label={k as string} value={v as string}/>
+                  ))}
+                  {!emp.repseNumber && (
+                    <p style={{ fontSize:12, color:'#334155' }}>Sin registro REPSE</p>
+                  )}
+                </Section>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: CONTRATOS                                          */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'contratos' && (
+          <div>
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
+              <button onClick={() => setShowContrato(true)}
+                style={{ padding:'7px 16px', borderRadius:8, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                + Nuevo contrato
+              </button>
+            </div>
+            {(emp.contracts||[]).length === 0 ? (
+              <Empty icon="📋" text="Sin contratos registrados" sub="Crea el primer contrato para este empleado"/>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {(emp.contracts||[]).map((c:any) => (
+                  <div key={c.id} style={{ background:'#1e293b', borderRadius:10, padding:'14px 18px',
+                    border:`1px solid ${sc(c.status)}33`,
+                    borderLeft:`4px solid ${sc(c.status)}` }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div>
+                        <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:4 }}>
+                          <span style={{ fontSize:14, fontWeight:700, color:'#f1f5f9' }}>
+                            Contrato {c.type}
+                          </span>
+                          <Badge label={c.status} status={c.status}/>
+                        </div>
+                        <div style={{ display:'flex', gap:16, fontSize:12, color:'#64748b' }}>
+                          <span>Inicio: {fmtDate(c.startDate)}</span>
+                          <span>Fin: {c.endDate ? fmtDate(c.endDate) : 'Indefinido'}</span>
+                          <span>Salario: {fmt(c.salaryAtSigning)}</span>
+                          <span>Puesto: {c.position}</span>
+                          {c.workSchedule && <span>Jornada: {c.workSchedule.replace('_',' ')}</span>}
+                        </div>
+                        {c.notes && <p style={{ fontSize:11, color:'#475569', margin:'6px 0 0' }}>{c.notes}</p>}
+                      </div>
+                      {c.status === 'VIGENTE' && (
+                        <button onClick={() => { if(window.confirm('¿Cancelar este contrato?')) cancelContratoM.mutate(c.id); }}
+                          style={{ padding:'5px 12px', borderRadius:6, border:'1px solid #f87171', background:'none', color:'#f87171', cursor:'pointer', fontSize:11 }}>
+                          ✕ Cancelar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── EDITAR DATOS ── */}
-        {tab==='datos' && editando && (
-          <div className="card">
-            <h3 style={{ fontSize:14, fontWeight:600, margin:'0 0 16px' }}>Editar datos del empleado</h3>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:16 }}>
-              {[
-                ['Nombre *','firstName','text'],['Apellido paterno *','lastName','text'],
-                ['Apellido materno','secondLastName','text'],['RFC','rfc','text'],
-                ['CURP','curp','text'],['NSS','nss','text'],
-                ['Teléfono','phone','text'],['Email','email','email'],
-                ['Puesto *','position','text'],['Área','department','text'],
-              ].map(([label,key,type]) => (
-                <div key={key as string}>
-                  <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>{label}</label>
-                  <input className="input-base" type={type as string} style={{ fontSize:13 }}
-                    value={editForm[key as string]||''}
-                    onChange={e => setEF(key as string, e.target.value)}/>
-                </div>
-              ))}
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Salario bruto *</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={editForm.grossSalary||''} onChange={e=>setEF('grossSalary',+e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Salario diario</label>
-                <input type="number" min="0" className="input-base" style={{ fontSize:13 }}
-                  value={editForm.dailySalary||''} onChange={e=>setEF('dailySalary',+e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>CLABE</label>
-                <input className="input-base" style={{ fontSize:13 }} value={editForm.bankAccount||''}
-                  onChange={e=>setEF('bankAccount',e.target.value)}/>
-              </div>
-              <div>
-                <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Banco</label>
-                <input className="input-base" style={{ fontSize:13 }} value={editForm.bankName||''}
-                  onChange={e=>setEF('bankName',e.target.value)}/>
-              </div>
-            </div>
-            {error && <p style={{ color:'#f87171', fontSize:13, marginBottom:8 }}>{error}</p>}
-            <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-              <button className="btn-secondary" onClick={() => setEditando(false)}>Cancelar</button>
-              <button className="btn-primary" style={{ background:color }}
-                onClick={() => editarM.mutate()} disabled={editarM.isPending}>
-                {editarM.isPending ? 'Guardando…' : 'Guardar cambios'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── VACACIONES / PERMISOS ── */}
-        {tab==='vacaciones' && (
-          <>
-            {esAdmin && (
-              <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
-                <button onClick={() => setVacModal(true)}
-                  style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
-                    background:'none', color, cursor:'pointer', fontSize:12 }}>
-                  + Nueva solicitud
-                </button>
-              </div>
             )}
-            <div className="card" style={{ padding:0, overflow:'hidden' }}>
-              <table className="table-base">
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: VACACIONES                                         */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'vacaciones' && (
+          <div>
+            {(emp.vacations||[]).length === 0 ? (
+              <Empty icon="🏖" text="Sin solicitudes de vacaciones" sub="Las solicitudes del empleado aparecerán aquí"/>
+            ) : (
+              <table className="table-base" style={{ background:'#1e293b', borderRadius:10 }}>
                 <thead><tr>
-                  <th>Tipo</th><th>Inicio</th><th>Fin</th>
-                  <th style={{textAlign:'right'}}>Días</th>
-                  <th>Estado</th>
-                  {esAdmin && <th>Acciones</th>}
+                  <th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th>
+                  <th>Modalidad</th><th>Estado</th><th>Monto</th>
                 </tr></thead>
                 <tbody>
-                  {(emp.vacations||[]).length===0 && (
-                    <tr><td colSpan={esAdmin?6:5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin solicitudes</td></tr>
-                  )}
                   {(emp.vacations||[]).map((v:any) => (
                     <tr key={v.id}>
-                      <td style={{ fontWeight:500 }}>{v.type}</td>
+                      <td style={{ fontSize:12 }}>{v.type}</td>
                       <td style={{ fontSize:12 }}>{fmtDate(v.startDate)}</td>
                       <td style={{ fontSize:12 }}>{fmtDate(v.endDate)}</td>
-                      <td style={{ textAlign:'right', fontWeight:600 }}>{v.days}</td>
-                      <td>
-                        <span style={{ fontSize:11, padding:'2px 8px', borderRadius:99,
-                          background:(STATUS_EVENT_COLOR[v.status]||'#64748b')+'22',
-                          color: STATUS_EVENT_COLOR[v.status]||'#64748b' }}>
-                          {v.status}
-                        </span>
+                      <td style={{ textAlign:'center', fontWeight:700 }}>{v.days}</td>
+                      <td style={{ fontSize:11 }}>{v.paymentType?.replace('_',' ')}</td>
+                      <td><Badge label={v.status} status={v.status}/></td>
+                      <td style={{ textAlign:'right', fontSize:12 }}>
+                        {v.montoPrima ? fmt(Number(v.montoTimbrado||0)+Number(v.montoPrima||0)) : '—'}
                       </td>
-                      {esAdmin && (
-                        <td>
-                          {v.status === 'PENDIENTE' && (
-                            <div style={{ display:'flex', gap:6 }}>
-                              <button onClick={() => aprobarVacM.mutate(v.id)}
-                                style={{ background:'none', border:'none', color:'#10b981', cursor:'pointer', fontSize:12 }}>
-                                ✓ Aprobar
-                              </button>
-                              <button onClick={() => rechazarVacM.mutate(v.id)}
-                                style={{ background:'none', border:'none', color:'#f87171', cursor:'pointer', fontSize:12 }}>
-                                ✕ Rechazar
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </>
-        )}
-
-        {/* ── EVENTOS ── */}
-        {tab==='eventos' && (
-          <>
-            {esAdmin && (
-              <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
-                <button onClick={() => setEventoModal(true)}
-                  style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${color}`,
-                    background:'none', color, cursor:'pointer', fontSize:12 }}>
-                  + Registrar evento
-                </button>
-              </div>
             )}
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {(emp.hrEvents||[]).length===0 && (
-                <p style={{ color:'#64748b', textAlign:'center', padding:32 }}>Sin eventos registrados</p>
-              )}
-              {(emp.hrEvents||[]).map((ev:any) => (
-                <div key={ev.id} className="card" style={{ borderLeft:`3px solid ${color}` }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                    <span style={{ fontSize:13, fontWeight:600 }}>{ev.type.replace(/_/g,' ')}</span>
-                    <span style={{ fontSize:12, color:'#64748b' }}>{fmtDate(ev.date)}</span>
-                  </div>
-                  <p style={{ fontSize:13, color:'#94a3b8', margin:0 }}>{ev.description}</p>
-                  {ev.resolution && (
-                    <p style={{ fontSize:12, color:'#60a5fa', margin:'4px 0 0' }}>
-                      Resolución: {ev.resolution}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* ── DOCUMENTOS ── */}
-        {tab==='documentos' && (
-          <div className="card" style={{ padding:0, overflow:'hidden' }}>
-            <table className="table-base">
-              <thead><tr>
-                <th>Tipo</th><th>Título</th><th>Firmado</th><th>Vencimiento</th><th>Estado</th>
-              </tr></thead>
-              <tbody>
-                {(emp.documents||[]).length===0 && (
-                  <tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin documentos</td></tr>
-                )}
-                {(emp.documents||[]).map((d:any) => (
-                  <tr key={d.id}>
-                    <td><span style={{ fontSize:11, background:'#334155', padding:'2px 6px', borderRadius:4 }}>{d.type}</span></td>
-                    <td style={{fontWeight:500}}>{d.title}</td>
-                    <td>{d.signedAt?fmtDate(d.signedAt):'—'}</td>
-                    <td>{d.endDate?fmtDate(d.endDate):'—'}</td>
-                    <td>
-                      <span className={d.status==='VIGENTE'?'badge-green':d.status==='VENCIDO'?'badge-red':'badge-gray'}>
-                        {d.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
 
-        {/* ── NÓMINA ── */}
-        {tab==='nómina' && (
-          <div className="card" style={{ padding:0, overflow:'hidden' }}>
-            <table className="table-base">
-              <thead><tr>
-                <th>Período</th>
-                <th style={{textAlign:'right'}}>Percepciones</th>
-                <th style={{textAlign:'right'}}>Deducciones</th>
-                <th style={{textAlign:'right'}}>Neto</th>
-              </tr></thead>
-              <tbody>
-                {(emp.payrollLines||[]).length===0 && (
-                  <tr><td colSpan={4} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin registros de nómina</td></tr>
-                )}
-                {(emp.payrollLines||[]).map((l:any) => (
-                  <tr key={l.id}>
-                    <td>{l.period?.periodLabel}</td>
-                    <td style={{textAlign:'right',color:'#10b981'}}>{fmt(l.totalPerceptions)}</td>
-                    <td style={{textAlign:'right',color:'#f87171'}}>{fmt(l.totalDeductions)}</td>
-                    <td style={{textAlign:'right',fontWeight:700,color}}>{fmt(l.netPay)}</td>
-                  </tr>
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: INCIDENCIAS                                        */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'incidencias' && (
+          <div>
+            {(emp.hrIncidents||[]).length === 0 ? (
+              <Empty icon="⚠" text="Sin incidencias registradas" sub="Las faltas, tardanzas y permisos aparecerán aquí"/>
+            ) : (
+              <table className="table-base" style={{ background:'#1e293b', borderRadius:10 }}>
+                <thead><tr>
+                  <th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Impacto</th><th>Estado</th>
+                </tr></thead>
+                <tbody>
+                  {(emp.hrIncidents||[]).map((i:any) => (
+                    <tr key={i.id}>
+                      <td style={{ fontSize:12, whiteSpace:'nowrap' }}>{fmtDate(i.date)}</td>
+                      <td><Badge label={i.type} status={i.type==='FALTA'?'BAJA':i.type==='TARDANZA'?'PENDIENTE':'ACTIVO'}/></td>
+                      <td style={{ fontSize:12, color:'#94a3b8' }}>{i.description||i.notes||'—'}</td>
+                      <td style={{ fontSize:12, color:i.deduction>0?'#f87171':'#64748b' }}>
+                        {i.deduction > 0 ? `-${fmt(i.deduction)}` : '—'}
+                      </td>
+                      <td><Badge label={i.resolved?'Resuelto':'Pendiente'} status={i.resolved?'ACTIVO':'PENDIENTE'}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: INCAPACIDADES                                      */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'incapacidades' && (
+          <div>
+            {(emp.disabilities||[]).length === 0 ? (
+              <Empty icon="🏥" text="Sin incapacidades registradas"/>
+            ) : (
+              <table className="table-base" style={{ background:'#1e293b', borderRadius:10 }}>
+                <thead><tr>
+                  <th>Inicio</th><th>Fin</th><th>Días</th><th>Tipo</th><th>Folio IMSS</th><th>Estado</th>
+                </tr></thead>
+                <tbody>
+                  {(emp.disabilities||[]).map((d:any) => (
+                    <tr key={d.id}>
+                      <td style={{ fontSize:12 }}>{fmtDate(d.startDate)}</td>
+                      <td style={{ fontSize:12 }}>{fmtDate(d.endDate)}</td>
+                      <td style={{ textAlign:'center', fontWeight:700 }}>{d.days}</td>
+                      <td style={{ fontSize:12 }}>{d.type||d.disabilityType||'—'}</td>
+                      <td style={{ fontSize:11, color:'#64748b' }}>{d.folioImss||d.imssNumber||'—'}</td>
+                      <td><Badge label={d.status||'ACTIVA'} status={d.status||'ACTIVO'}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: NÓMINA                                             */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'nomina' && (
+          <div>
+            {(emp.payrollLines||[]).length === 0 ? (
+              <Empty icon="💰" text="Sin recibos de nómina" sub="Los últimos 6 períodos aparecerán aquí"/>
+            ) : (
+              <table className="table-base" style={{ background:'#1e293b', borderRadius:10 }}>
+                <thead><tr>
+                  <th>Período</th><th>Tipo</th><th>Base</th>
+                  <th style={{ textAlign:'right' }}>Percepciones</th>
+                  <th style={{ textAlign:'right' }}>Deducciones</th>
+                  <th style={{ textAlign:'right' }}>Neto</th>
+                  <th style={{ textAlign:'right', color:'#3b82f6' }}>Neto SAT</th>
+                </tr></thead>
+                <tbody>
+                  {(emp.payrollLines||[]).map((l:any) => (
+                    <tr key={l.id}>
+                      <td style={{ fontSize:12 }}>
+                        {l.period?.name || l.period?.startDate?.slice(0,7) || '—'}
+                      </td>
+                      <td style={{ fontSize:11, color:'#64748b' }}>{l.period?.type||'—'}</td>
+                      <td style={{ fontSize:12 }}>{fmt(l.baseSalary)}</td>
+                      <td style={{ textAlign:'right', fontSize:12 }}>{fmt(l.totalPerceptions)}</td>
+                      <td style={{ textAlign:'right', fontSize:12, color:'#f87171' }}>{fmt(l.totalDeductions)}</td>
+                      <td style={{ textAlign:'right', fontWeight:700, color }}>{fmt(l.netPay)}</td>
+                      <td style={{ textAlign:'right', fontSize:11, color:'#3b82f6' }}>{fmt(l.netTimbrado||l.netPay)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: DOCUMENTOS                                         */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'documentos' && (
+          <div>
+            {(emp.documents||[]).length === 0 ? (
+              <Empty icon="📄" text="Sin documentos en el expediente" sub="Contratos físicos, identificaciones, comprobantes, etc."/>
+            ) : (
+              <table className="table-base" style={{ background:'#1e293b', borderRadius:10 }}>
+                <thead><tr>
+                  <th>Tipo</th><th>Título</th><th>Vigencia</th><th>Firmado</th><th>Estado</th>
+                </tr></thead>
+                <tbody>
+                  {(emp.documents||[]).map((d:any) => (
+                    <tr key={d.id}>
+                      <td style={{ fontSize:11, color:'#64748b' }}>{d.type}</td>
+                      <td style={{ fontSize:12, fontWeight:500 }}>{d.title}</td>
+                      <td style={{ fontSize:12 }}>
+                        {d.endDate ? (
+                          <span style={{ color: new Date(d.endDate) < new Date() ? '#f87171' : '#f1f5f9' }}>
+                            {fmtDate(d.endDate)}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td style={{ fontSize:12 }}>{d.signedAt ? fmtDate(d.signedAt) : '—'}</td>
+                      <td><Badge label={d.status} status={d.status}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* TAB: LEGAL                                              */}
+        {/* ════════════════════════════════════════════════════════ */}
+        {tab === 'legal' && (
+          <div>
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
+              <button onClick={() => setShowLegalDoc(true)}
+                style={{ padding:'7px 16px', borderRadius:8, border:'none', background:color, color:'#fff', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                + Generar documento
+              </button>
+            </div>
+            {(emp.legalDocuments||[]).length === 0 ? (
+              <Empty icon="⚖" text="Sin documentos legales"
+                sub="Cartas trabajo, finiquitos, actas administrativas, convenios…"/>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {(emp.legalDocuments||[]).map((d:any) => (
+                  <div key={d.id} style={{ background:'#1e293b', borderRadius:10, padding:'14px 18px',
+                    border:`1px solid ${sc(d.status)}33`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:4 }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:'#f1f5f9' }}>
+                          {TIPO_DOC_LABELS[d.type] || d.type}
+                        </span>
+                        {d.documentNumber && (
+                          <code style={{ fontSize:11, background:'#334155', padding:'2px 6px', borderRadius:4, color:'#94a3b8' }}>
+                            {d.documentNumber}
+                          </code>
+                        )}
+                        <Badge label={d.status} status={d.status}/>
+                      </div>
+                      <div style={{ display:'flex', gap:14, fontSize:11, color:'#64748b' }}>
+                        <span>Generado: {fmtDate(d.generatedAt||d.createdAt)}</span>
+                        {d.signedByEmployeeAt && <span>✍ Empleado: {fmtDate(d.signedByEmployeeAt)}</span>}
+                        {d.signedByCompanyAt  && <span>✍ Empresa: {fmtDate(d.signedByCompanyAt)}</span>}
+                      </div>
+                      {d.notes && <p style={{ fontSize:11, color:'#475569', margin:'4px 0 0' }}>{d.notes}</p>}
+                    </div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {d.status === 'GENERADO' && (
+                        <>
+                          <button onClick={() => signDocM.mutate({ docId:d.id, byEmployee:false })}
+                            style={{ padding:'5px 10px', borderRadius:6, border:`1px solid ${color}`, background:'none', color, cursor:'pointer', fontSize:11 }}>
+                            Firmar empresa
+                          </button>
+                          <button onClick={() => signDocM.mutate({ docId:d.id, byEmployee:true })}
+                            style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #10b981', background:'none', color:'#10b981', cursor:'pointer', fontSize:11 }}>
+                            Firmar empleado
+                          </button>
+                        </>
+                      )}
+                      {d.pdfUrl && (
+                        <a href={d.pdfUrl} target="_blank" rel="noopener noreferrer"
+                          style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #334155', background:'none', color:'#94a3b8', cursor:'pointer', fontSize:11, textDecoration:'none' }}>
+                          📄 Ver PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Modal nuevo evento */}
-      {eventoModal && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:440,border:'1px solid #334155'}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
-              <h3 style={{fontSize:15,fontWeight:700,margin:0,color}}>Registrar evento</h3>
-              <button onClick={()=>setEventoModal(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
+      {/* ── Modal: Nuevo contrato ── */}
+      {showContrato && (
+        <Modal title="Nuevo contrato" color={color} onClose={() => setShowContrato(false)}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Tipo de contrato *</label>
+              <select className="input-base" style={{ fontSize:13 }}
+                value={contratoForm.type} onChange={e => setContratoForm(f=>({...f,type:e.target.value}))}>
+                {CONTRATO_TIPOS.map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+              </select>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
-              <div style={{gridColumn:'span 2'}}>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Tipo de evento</label>
-                <select className="input-base" style={{fontSize:13}} value={eventoForm.type}
-                  onChange={e=>setEv('type',e.target.value)}>
-                  {TIPOS_EVENTO.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha de solicitud</label>
-                <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.fechaSolicitud}
-                  onChange={e=>setEv('fechaSolicitud',e.target.value)}/>
-              </div>
-              {['PERMISO','SUSPENSION','INCAPACIDAD','VACACIONES'].includes(eventoForm.type) && (<>
-                <div>
-                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha inicio del período</label>
-                  <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.fechaInicio}
-                    onChange={e=>setEv('fechaInicio',e.target.value)}/>
-                </div>
-                <div>
-                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha fin del período</label>
-                  <input type="date" className="input-base" style={{fontSize:13}} value={eventoForm.fechaFin}
-                    onChange={e=>setEv('fechaFin',e.target.value)}/>
-                </div>
-              </>)}
-              {eventoForm.type === 'PERMISO' && (
-                <div style={{gridColumn:'span 2'}}>
-                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:6}}>Tipo de permiso</label>
-                  <div style={{display:'flex',gap:8}}>
-                    {[{v:true,l:'Con goce de sueldo'},{v:false,l:'Sin goce de sueldo'}].map(op=>(
-                      <button key={String(op.v)} onClick={()=>setEv('conGoce',op.v)}
-                        style={{flex:1,padding:'8px',borderRadius:8,cursor:'pointer',fontSize:12,
-                          border:`1px solid ${eventoForm.conGoce===op.v?color:'#334155'}`,
-                          background:eventoForm.conGoce===op.v?color+'22':'transparent',
-                          color:eventoForm.conGoce===op.v?color:'#64748b'}}>
-                        {op.l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div style={{gridColumn:'span 2'}}>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Descripción / Motivo *</label>
-                <textarea className="input-base" style={{fontSize:13,height:80,resize:'none'}}
-                  value={eventoForm.description} onChange={e=>setEv('description',e.target.value)}
-                  placeholder="Describe el motivo de la solicitud..."/>
-              </div>
-              {esAdmin && (
-                <div style={{gridColumn:'span 2'}}>
-                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>
-                    Resolución <span style={{color:'#475569'}}>(solo RH/Admin)</span>
-                  </label>
-                  <input className="input-base" style={{fontSize:13}} value={eventoForm.resolution}
-                    onChange={e=>setEv('resolution',e.target.value)} placeholder="Acuerdo o resolución"/>
-                </div>
-              )}
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Jornada</label>
+              <select className="input-base" style={{ fontSize:13 }}
+                value={contratoForm.workSchedule} onChange={e => setContratoForm(f=>({...f,workSchedule:e.target.value}))}>
+                {HORARIO_TIPOS.map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+              </select>
             </div>
-            <div style={{display:'flex',gap:8}}>
-              <button className="btn-secondary" style={{flex:1,fontSize:13}} onClick={()=>setEventoModal(false)}>Cancelar</button>
-              <button className="btn-primary" style={{flex:1,fontSize:13,background:color}}
-                onClick={()=>eventoM.mutate()} disabled={eventoM.isPending||!eventoForm.description}>
-                {eventoM.isPending?'Guardando…':'Registrar solicitud'}
-              </button>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Fecha inicio *</label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={contratoForm.startDate} onChange={e => setContratoForm(f=>({...f,startDate:e.target.value}))}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>
+                Fecha fin {contratoForm.type==='INDEFINIDO'?'(dejar vacío si indefinido)':'*'}
+              </label>
+              <input type="date" className="input-base" style={{ fontSize:13 }}
+                value={contratoForm.endDate} onChange={e => setContratoForm(f=>({...f,endDate:e.target.value}))}/>
+            </div>
+            <div style={{ gridColumn:'span 2' }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Notas</label>
+              <input className="input-base" style={{ fontSize:12 }} placeholder="Condiciones especiales, motivo, etc."
+                value={contratoForm.notes} onChange={e => setContratoForm(f=>({...f,notes:e.target.value}))}/>
             </div>
           </div>
-        </div>
+          <p style={{ fontSize:11, color:'#475569', margin:'0 0 14px', padding:'8px 10px', background:'#0f172a', borderRadius:7 }}>
+            ⚠ Al crear un nuevo contrato, el contrato vigente anterior se marcará como <strong>FINALIZADO</strong>.
+            El salario al momento de firma se toma del expediente actual: <strong>{fmt(emp.grossSalary)}</strong>.
+          </p>
+          <ModalFooter
+            onCancel={() => setShowContrato(false)}
+            onConfirm={() => contratoM.mutate()}
+            loading={contratoM.isPending}
+            disabled={!contratoForm.startDate || !contratoForm.type}
+            color={color}
+            label="Crear contrato"
+          />
+        </Modal>
       )}
 
-      {/* Modal nueva solicitud vacaciones/permiso */}
-      {vacModal && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:420,border:'1px solid #334155'}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
-              <h3 style={{fontSize:15,fontWeight:700,margin:0,color}}>Nueva solicitud</h3>
-              <button onClick={()=>setVacModal(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:20}}>✕</button>
+      {/* ── Modal: Generar documento legal ── */}
+      {showLegalDoc && (
+        <Modal title={`Generar documento legal — ${fullName}`} color={color} onClose={() => setShowLegalDoc(false)}>
+          <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Tipo de documento *</label>
+              <select className="input-base" style={{ fontSize:13 }}
+                value={legalForm.type} onChange={e => setLegalForm(f=>({...f,type:e.target.value}))}>
+                {Object.entries(TIPO_DOC_LABELS).map(([k,v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
-              <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Tipo</label>
-                <select className="input-base" style={{fontSize:13}} value={vacForm.type}
-                  onChange={e=>setVF('type',e.target.value)}>
-                  <option value="VACACIONES">Vacaciones</option>
-                  <option value="PERMISO">Permiso</option>
-                  <option value="INCAPACIDAD">Incapacidad</option>
-                </select>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                <div>
-                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha inicio</label>
-                  <input type="date" className="input-base" style={{fontSize:13}} value={vacForm.startDate}
-                    onChange={e=>{
-                      const s=e.target.value;
-                      const days = vacForm.endDate ? Math.ceil((new Date(vacForm.endDate).getTime()-new Date(s).getTime())/(1000*60*60*24))+1 : 0;
-                      setVacForm(f=>({...f,startDate:s,days:Math.max(0,days)}));
-                    }}/>
-                </div>
-                <div>
-                  <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Fecha fin</label>
-                  <input type="date" className="input-base" style={{fontSize:13}} value={vacForm.endDate}
-                    onChange={e=>{
-                      const en=e.target.value;
-                      const days = vacForm.startDate ? Math.ceil((new Date(en).getTime()-new Date(vacForm.startDate).getTime())/(1000*60*60*24))+1 : 0;
-                      setVacForm(f=>({...f,endDate:en,days:Math.max(0,days)}));
-                    }}/>
-                </div>
-              </div>
-              <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Días</label>
-                <input type="number" min="1" className="input-base" style={{fontSize:13}} value={vacForm.days||''}
-                  onChange={e=>setVF('days',+e.target.value)}/>
-              </div>
-              <div>
-                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Notas</label>
-                <input className="input-base" style={{fontSize:13}} value={vacForm.notes}
-                  onChange={e=>setVF('notes',e.target.value)} placeholder="Motivo (opcional)"/>
-              </div>
-            </div>
-            <div style={{display:'flex',gap:8}}>
-              <button className="btn-secondary" style={{flex:1,fontSize:13}} onClick={()=>setVacModal(false)}>Cancelar</button>
-              <button className="btn-primary" style={{flex:1,fontSize:13,background:color}}
-                onClick={()=>vacM.mutate()} disabled={vacM.isPending||!vacForm.startDate||!vacForm.endDate}>
-                {vacM.isPending?'Guardando…':'Registrar solicitud'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Modal vincular usuario */}
-      {linkModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-          <div style={{ background:'#1e293b', borderRadius:12, padding:24, width:420, border:'1px solid #334155' }}>
-            <h3 style={{ fontSize:15, fontWeight:700, margin:'0 0 16px' }}>Vincular usuario del sistema</h3>
-            <p style={{ fontSize:12, color:'#64748b', margin:'0 0 12px' }}>
-              Esto permite que el empleado acceda a <strong style={{color:'#8b5cf6'}}>Mi Perfil</strong> y solicite permisos/vacaciones desde su cuenta.
-            </p>
-            <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:4 }}>Usuario del sistema</label>
-            <select className="input-base" style={{ fontSize:13, marginBottom:16 }}
-              value={linkUserId} onChange={e => setLinkUserId(e.target.value)}>
-              <option value="">— Sin vincular —</option>
-              {(usuarios as any[]).map((u: any) => (
-                <option key={u.user?.id || u.id} value={u.user?.id || u.id}>
-                  {u.user?.name || u.name} ({u.user?.email || u.email})
-                </option>
-              ))}
-            </select>
-            {emp.userId && (
-              <p style={{ fontSize:11, color:'#10b981', margin:'0 0 12px' }}>
-                ✓ Actualmente vinculado — al cambiar se actualizará
+            <div style={{ background:'#0f172a', borderRadius:8, padding:'10px 12px' }}>
+              <p style={{ fontSize:11, color:'#64748b', margin:'0 0 6px', fontWeight:600 }}>
+                Datos que se incluirán automáticamente:
               </p>
-            )}
-            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button onClick={() => setLinkModal(false)}
-                style={{ padding:'7px 16px', borderRadius:7, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
-                Cancelar
-              </button>
-              <button disabled={linkSaving} onClick={async () => {
-                  setLinkSaving(true);
-                  try {
-                    await api.put(`/companies/${cid}/rh/employees/${id}/link-user`, { userId: linkUserId || null });
-                    setLinkModal(false);
-                    refetch();
-                  } catch(e:any) {
-                    const msg = e.response?.data?.message || e.response?.data?.error || 'Error al vincular';
-                    const status = e.response?.status;
-                    if (status === 500 && msg.includes('Unique')) {
-                      alert('Este usuario ya está vinculado a otro empleado. Primero desvincúlalo desde ese expediente.');
-                    } else {
-                      alert(`Error ${status || ''}: ${msg}`);
-                    }
-                  } finally { setLinkSaving(false); }
-                }}
-                style={{ padding:'7px 16px', borderRadius:7, border:'none', background:'#8b5cf6', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                {linkSaving ? 'Guardando…' : 'Guardar vínculo'}
-              </button>
+              {[
+                ['Empleado', fullName],
+                ['RFC', emp.rfc||'—'],
+                ['Puesto', emp.position],
+                ['Empresa', activeCompany?.companyName||'—'],
+                ['Fecha ingreso', fmtDate(emp.startDate)],
+                ['Salario mensual', fmt(emp.grossSalary)],
+              ].map(([k,v]) => (
+                <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
+                  <span style={{ fontSize:11, color:'#475569' }}>{k}</span>
+                  <span style={{ fontSize:11, color:'#94a3b8' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Notas / términos adicionales</label>
+              <textarea className="input-base" rows={3} style={{ fontSize:12, resize:'vertical' }}
+                value={legalForm.notes} onChange={e => setLegalForm(f=>({...f,notes:e.target.value}))}
+                placeholder="Términos adicionales o condiciones específicas…"/>
             </div>
           </div>
-        </div>
+          <ModalFooter
+            onCancel={() => setShowLegalDoc(false)}
+            onConfirm={() => legalDocM.mutate()}
+            loading={legalDocM.isPending}
+            color={color}
+            label="📄 Generar documento"
+          />
+        </Modal>
       )}
     </AppLayout>
+  );
+}
+
+// ── Sub-componentes ───────────────────────────────────────────────
+
+function Section({ title, icon, children }: any) {
+  return (
+    <div style={{ background:'#1e293b', borderRadius:10, padding:16, border:'1px solid #334155' }}>
+      <p style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:1, margin:'0 0 10px' }}>
+        {icon} {title}
+      </p>
+      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label:string; value:string }) {
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', borderBottom:'1px solid #0f172a', paddingBottom:5 }}>
+      <span style={{ fontSize:11, color:'#475569' }}>{label}</span>
+      <span style={{ fontSize:12, color:'#f1f5f9', fontWeight:500, maxWidth:200, textAlign:'right' }}>{value}</span>
+    </div>
+  );
+}
+
+function Empty({ icon, text, sub }: { icon:string; text:string; sub?:string }) {
+  return (
+    <div style={{ textAlign:'center', padding:48, color:'#334155' }}>
+      <p style={{ fontSize:36, margin:'0 0 10px' }}>{icon}</p>
+      <p style={{ fontSize:14, fontWeight:600, color:'#64748b', margin:'0 0 6px' }}>{text}</p>
+      {sub && <p style={{ fontSize:12, color:'#475569', margin:0 }}>{sub}</p>}
+    </div>
+  );
+}
+
+function Modal({ title, color, onClose, children }: any) {
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+      <div style={{ background:'#1e293b', borderRadius:14, padding:28, width:500,
+        maxHeight:'90vh', overflowY:'auto', border:`1px solid ${color}44` }}>
+        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:18 }}>
+          <h3 style={{ fontSize:15, fontWeight:800, margin:0, color }}>{title}</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:20 }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalFooter({ onCancel, onConfirm, loading, disabled, color, label }: any) {
+  return (
+    <div style={{ display:'flex', gap:8 }}>
+      <button onClick={onCancel}
+        style={{ flex:1, padding:'10px', borderRadius:8, border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
+        Cancelar
+      </button>
+      <button onClick={onConfirm} disabled={loading||disabled}
+        style={{ flex:2, padding:'10px', borderRadius:8, border:'none',
+          background:!disabled?color:'#334155', color:'#fff',
+          cursor:!disabled?'pointer':'not-allowed', fontSize:13, fontWeight:700 }}>
+        {loading ? 'Procesando…' : label}
+      </button>
+    </div>
   );
 }
