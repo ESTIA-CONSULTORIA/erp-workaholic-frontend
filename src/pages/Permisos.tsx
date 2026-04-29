@@ -123,12 +123,12 @@ export default function PermisosPage() {
 
   const toggleM = useMutation({
     mutationFn: ({ module, action, allowed }: any) =>
-      api.put(`/permissions/roles/${selectedRole}/modules/${module}/actions/${action}`, { allowed }),
+      api.put(`/companies/${cid}/permissions/roles/${selectedRole}/modules/${module}/actions/${action}`, { allowed }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['permissions-all'] }),
   });
 
   const resetM = useMutation({
-    mutationFn: () => api.post(`/permissions/roles/${selectedRole}/reset`, {}),
+    mutationFn: () => api.post(`/companies/${cid}/permissions/roles/${selectedRole}/reset`, {}),
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['permissions-all'] }),
   });
 

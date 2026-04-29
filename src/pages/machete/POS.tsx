@@ -192,6 +192,8 @@ function POSPageInner() {
   const [creditPin,       setCreditPin]       = useState('');
   const [creditPinError,  setCreditPinError]  = useState('');
   const [showCobro,     setShowCobro]     = useState(false);
+  const [descPct,       setDescPct]       = useState(0);  // % descuento
+  const [descAmt,       setDescAmt]       = useState(0);  // $ descuento
   const [conCuanto,     setConCuanto]     = useState(0);
   const [efectivoCobro, setEfectivoCobro] = useState<any>({});
   const [tecladoInput,  setTecladoInput]  = useState('');

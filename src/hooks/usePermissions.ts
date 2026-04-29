@@ -19,7 +19,7 @@ export function usePermissions() {
 
   const { data: dbPerms } = useQuery({
     queryKey: ['permissions-role', role, cid],
-    queryFn:  () => api.get(`/permissions/roles/${role}?companyId=${cid}`).then(r => r.data),
+    queryFn:  () => api.get(`/companies/${cid}/permissions/roles/${role}`).then(r => r.data),
     enabled:  !!cid,
     staleTime: 5 * 60 * 1000,
   });
