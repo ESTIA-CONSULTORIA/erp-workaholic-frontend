@@ -52,6 +52,7 @@ export default function ArqueoContadorPage() {
   const [error, setError] = useState<string | null>(null);
   const [historial, setHistorial] = useState<ArqueoRow[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
+  const [detalleModal,    setDetalleModal]    = useState<any>(null);
 
   const totalMxnFisico = useMemo(() => sumDenoms(mxn, MXN), [mxn]);
   const totalUsdFisico = useMemo(() => sumDenoms(usd, USD), [usd]);
@@ -134,7 +135,7 @@ const diferenciaVisible = isDirector
 
         <section className="card" style={{ padding: 16, marginTop: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}><div><h3 style={sectionTitle}>Histórico de arqueos</h3><p style={sectionHelp}>Últimos arqueos guardados.</p></div><button className="btn-secondary" onClick={loadHistorial} disabled={loadingHistorial}>{loadingHistorial ? 'Cargando...' : 'Actualizar'}</button></div>
-          <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}><thead><tr style={{ color: '#94a3b8', textAlign: 'left', borderBottom: '1px solid #334155' }}><th style={th}>Folio</th><th style={th}>Fecha</th><th style={th}>Estatus</th><th style={th}>Declarado</th><th style={th}>Sistema</th><th style={th}>Diferencia</th></tr></thead><tbody>{historial.length === 0 ? <tr><td colSpan={6} style={{ padding: 14, color: '#64748b', textAlign: 'center' }}>Sin arqueos registrados.</td></tr> : historial.map((r) => { const s = r.summaryJson || {}; return <tr key={r.id} style={{ borderBottom: '1px solid #1e293b' }}><td style={td}>{r.folio}</td><td style={td}>{new Date(r.createdAt).toLocaleString('es-MX')}</td><td style={td}>{s.estatus || r.status || '—'}</td><td style={td}>{fmt(s.totalDeclarado || 0)}</td><td style={td}>{fmt(s.totalSistema || 0)}</td><td style={td}>{fmt(s.diferencia || 0)}</td></tr>; })}</tbody></table></div>
+          <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}><thead><tr style={{ color: '#94a3b8', textAlign: 'left', borderBottom: '1px solid #334155' }}><th style={th}>Folio</th><th style={th}>Fecha</th><th style={th}>Estatus</th><th style={th}>Declarado</th><th style={th}>Sistema</th><th style={th}>Diferencia</th></tr></thead><tbody>{historial.length === 0 ? <tr><td colSpan={6} style={{ padding: 14, color: '#64748b', textAlign: 'center' }}>Sin arqueos registrados.</td></tr> : historial.map((r) => { const s = r.summaryJson || {}; return <tr key={r.id} onClick={() => setDetalleModal({...r, s})} style={{ borderBottom: '1px solid #1e293b', cursor:'pointer' }}><td style={td}>{r.folio}</td><td style={td}>{new Date(r.createdAt).toLocaleString('es-MX')}</td><td style={td}>{s.estatus || r.status || '—'}</td><td style={td}>{fmt(s.totalDeclarado || 0)}</td><td style={td}>{fmt(s.totalSistema || 0)}</td><td style={td}>{fmt(s.diferencia || 0)}</td></tr>; })}</tbody></table></div>
         </section>
       </div>
     </AppLayout>

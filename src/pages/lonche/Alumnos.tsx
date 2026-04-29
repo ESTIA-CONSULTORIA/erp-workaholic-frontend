@@ -1,5 +1,5 @@
 import AppLayout from '../../components/layout/AppLayout';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt, fmtDate } from '../../lib/api';
@@ -18,7 +18,25 @@ export default function AlumnosPage() {
   const [form, setForm] = useState({
     code:'', name:'', grade:'', tutorName:'', tutorEmail:'', tutorPhone:'', dailyLimit:'',
   });
+  const [scanCode, setScanCode] = useState('');
+  const scanRef   = useRef<HTMLInputElement>(null);
   const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
+
+  const buscarPorCodigo = async (code: string) => {
+    try {
+      const r = await api.get(`/companies/${cid}/lonche/students/by-code/${encodeURIComponent(code)}`);
+      if (r.data) {
+        setSelected(r.data);
+        setScanCode('');
+      } else {
+        alert(`Alumno con código "${code}" no encontrado`);
+        setScanCode('');
+      }
+    } catch {
+      alert(`Código "${code}" no encontrado`);
+      setScanCode('');
+    }
+  };
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ['lonche-students', cid, search],
@@ -80,6 +98,27 @@ export default function AlumnosPage() {
           </div>
         )}
 
+        {/* Scanner rápido por código */}
+        <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+          <div style={{ flex:1, position:'relative' }}>
+            <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
+              fontSize:16, color:'#64748b' }}>📷</span>
+            <input
+              ref={scanRef}
+              className="input-base"
+              style={{ paddingLeft:34, fontSize:13, fontWeight:600, border:`1px solid ${color}44` }}
+              placeholder="Escanear código QR o de barras — Enter para buscar"
+              value={scanCode}
+              onChange={e => setScanCode(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && scanCode.trim()) {
+                  e.preventDefault();
+                  buscarPorCodigo(scanCode.trim());
+                }
+              }}
+            />
+          </div>
+        </div>
         <div style={{ display:'flex', gap:8, marginBottom:12 }}>
           <input className="input-base" style={{flex:1,fontSize:12}}
             placeholder="🔍 Buscar por nombre, código o grado..."

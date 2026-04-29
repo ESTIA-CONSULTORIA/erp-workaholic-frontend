@@ -46,13 +46,19 @@ export default function UsuariosPage() {
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ['users', cid],
     queryFn:  () => api.get(`/companies/${cid}/users`).then(r => r.data),
-    enabled:  !!cid,
+    enabled:  !!cidActivo,
+  });
+
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['all-companies'],
+    queryFn:  () => api.get('/companies').then(r => r.data),
+    enabled:  isGlobalAdmin,
   });
 
   const { data: rolesCustom = [] } = useQuery({
-    queryKey: ['company-roles', cid],
-    queryFn:  () => api.get(`/companies/${cid}/permissions/roles`).then(r => r.data),
-    enabled:  !!cid,
+    queryKey: ['company-roles', cidActivo],
+    queryFn:  () => api.get(`/companies/${cidActivo}/permissions/roles`).then(r => r.data),
+    enabled:  !!cidActivo,
   });
 
   // Combinar roles base + custom
@@ -65,7 +71,7 @@ export default function UsuariosPage() {
 
   // ── Mutations ─────────────────────────────────────────────────
   const createM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/users`, { ...form, companyId: cid }),
+    mutationFn: () => api.post(`/companies/${cid}/users`, { ...form, companyId: cidActivo }),
     onSuccess: () => {
       setShowNew(false);
       setForm({ name:'', email:'', password:PASS_DEFAULT, roleCode:'cajero', phone:'' });
@@ -121,6 +127,16 @@ export default function UsuariosPage() {
             </p>
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            {isGlobalAdmin && (empresas as any[]).length > 1 && (
+              <select value={empresaFiltro} onChange={e => setEmpresaFiltro(e.target.value)}
+                style={{ padding:'7px 10px', borderRadius:8, border:'1px solid #334155',
+                  background:'#0f172a', color:'#f1f5f9', fontSize:12 }}>
+                <option value="">Empresa activa ({activeCompany?.companyName})</option>
+                {(empresas as any[]).map((e:any) => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
+            )}
             <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
               placeholder="Buscar usuario…"
               style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #334155',
