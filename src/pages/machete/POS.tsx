@@ -251,6 +251,13 @@ function POSPageInner() {
         setBusqueda('');
       }
       if (e.key === 'Enter' && !showCobro && carrito.length > 0) {
+        // Only fire cobrar if NO input/select is focused
+        const activeTag = (document.activeElement as HTMLElement)?.tagName;
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+          // If it's the search box, just blur it (don't cobrar)
+          (document.activeElement as HTMLElement)?.blur();
+          return;
+        }
         e.preventDefault();
         cobrar();
       }
@@ -560,6 +567,7 @@ function POSPageInner() {
             <input
               ref={busquedaRef}
               value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (e.target as HTMLElement).blur(); } }}
               placeholder="Buscar producto, SKU o código...  F2"
               style={{ width:'100%', padding:'8px 10px 8px 34px', borderRadius:8, border:'1px solid #1e293b',
                 background:'#0a0f1a', color:'#f1f5f9', fontSize:12, outline:'none', boxSizing:'border-box' }}/>
