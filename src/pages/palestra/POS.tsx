@@ -82,11 +82,12 @@ export default function PalestraPOSPage() {
   };
 
   const saleM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/palestra/sales`, {
+    mutationFn: (pagos: any[]) => api.post(`/companies/${cid}/palestra/sales`, {
       date: new Date().toISOString(),
       channel: 'MOSTRADOR',
       clientName: clientName || null,
-      paymentMethod: metodo,
+      paymentMethod: pagos[0]?.method || 'EFECTIVO',
+      paymentSplits: pagos.length > 1 ? pagos : null,
       discount: montoDescuento,
       lines: carrito.map(l => ({
         ...l,
@@ -97,7 +98,6 @@ export default function PalestraPOSPage() {
       setExito(true);
       setCarrito([]);
       setClientName('');
-      setReferencia('');
       setCoachId('');
       setTimeout(() => setExito(false), 3000);
       qc.invalidateQueries({ queryKey: ['palestra-dashboard', cid] });
@@ -105,17 +105,7 @@ export default function PalestraPOSPage() {
     onError: (e:any) => setError(e.response?.data?.message || 'Error al registrar venta'),
   });
 
-  const cobrar = () => {
-    if (carrito.length === 0) { setError('Agrega al menos un servicio'); return; }
-    if (['TARJETA_DEBITO','TARJETA_CREDITO'].includes(metodo) && referencia.length < 4) {
-      setError('Ingresa los últimos 4 dígitos de autorización'); return;
-    }
-    if (metodo === 'TRANSFERENCIA' && referencia.length < 10) {
-      setError('Ingresa la clave de rastreo (mín. 10 dígitos)'); return;
-    }
-    setError('');
-    saleM.mutate();
-  };
+
 
   const filtered = catalog.filter(s =>
     !busqueda || s.name.toLowerCase().includes(busqueda.toLowerCase()) || s.type === busqueda
@@ -247,24 +237,7 @@ export default function PalestraPOSPage() {
           </div>
         )}
 
-        {/* Método de pago */}
-        <div style={{ padding:'8px 12px', borderTop:'1px solid #1e293b' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4, marginBottom:6 }}>
-            {METODOS.map(m => (
-              <button key={m.id} onClick={() => { setMetodo(m.id); setReferencia(''); }}
-                style={{ padding:'5px 4px', borderRadius:6, border:`1px solid ${metodo===m.id?m.color:'#334155'}`,
-                  background: metodo===m.id?m.color+'22':'transparent', color:metodo===m.id?m.color:'#64748b',
-                  cursor:'pointer', fontSize:10, fontWeight:metodo===m.id?700:400 }}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-          {metodo !== 'EFECTIVO' && (
-            <input value={referencia} onChange={e => setReferencia(e.target.value)}
-              placeholder={metodo==='TRANSFERENCIA'?'Clave rastreo (10+ dígitos)':'Últimos 4 dígitos'}
-              style={{ width:'100%', padding:'6px 8px', borderRadius:6, border:`1px solid ${referencia.length>=(metodo==='TRANSFERENCIA'?10:4)?'#10b981':'#f87171'}`, background:'#0a0f1a', color:'#f1f5f9', fontSize:11, boxSizing:'border-box' }}/>
-          )}
-        </div>
+
 
         {/* Total y cobrar */}
         <div style={{ padding:12, borderTop:'1px solid #334155' }}>
@@ -296,11 +269,14 @@ export default function PalestraPOSPage() {
                 </div>
               </div>
             )}
-          <button onClick={cobrar} disabled={saleM.isPending || carrito.length===0}
-            style={{ width:'100%', padding:12, borderRadius:10, border:'none', background: carrito.length===0?'#1e293b':color,
-              color: carrito.length===0?'#334155':'#fff', cursor: carrito.length===0?'not-allowed':'pointer',
+          <button onClick={() => { setError(''); setShowCobro(true); }}
+            disabled={carrito.length===0}
+            style={{ width:'100%', padding:12, borderRadius:10, border:'none',
+              background: carrito.length===0?'#1e293b':color,
+              color: carrito.length===0?'#334155':'#fff',
+              cursor: carrito.length===0?'not-allowed':'pointer',
               fontSize:14, fontWeight:700 }}>
-            {saleM.isPending ? 'Procesando…' : `COBRAR ${fmt(total)}`}
+            COBRAR {fmt(totalConDesc)}
           </button>
         </div>
       </div>

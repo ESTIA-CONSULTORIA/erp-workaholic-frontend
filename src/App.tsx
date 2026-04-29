@@ -16,6 +16,7 @@ import PalestraDashboardPage from './pages/palestra/PalestraDashboard';
 import MembresiasPage from './pages/palestra/Membresias';
 import PalestraPOSPage from './pages/palestra/POS';
 import ServiciosPage from './pages/palestra/Servicios';
+import CoachesPage from './pages/palestra/Coaches';
 import SoftRestaurantPage from './pages/palestra/SoftRestaurant';
 import ComisionesPage from './pages/palestra/Comisiones';
 import PalestraProductosPage from './pages/palestra/Productos';
@@ -92,6 +93,7 @@ export default function App() {
               <Route path="/palestra" element={<PalestraDashboardPage />} />
               <Route path="/palestra/pos" element={<PalestraPOSPage />} />
               <Route path="/palestra/membresias" element={<MembresiasPage />} />
+              <Route path="/palestra/coaches" element={<CoachesPage />} />
               <Route path="/palestra/servicios" element={<ServiciosPage />} />
               <Route path="/palestra/soft-restaurant" element={<SoftRestaurantPage />} />
               <Route path="/palestra/comisiones" element={<ComisionesPage />} />
