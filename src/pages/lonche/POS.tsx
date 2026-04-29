@@ -76,18 +76,13 @@ export default function LonchePOS() {
   });
 
   const ventaM = useMutation({
-    mutationFn: () => {
-      // Validar referencia para tarjeta/transferencia
-      if (['TARJETA_DEBITO','TARJETA_CREDITO'].includes(metodo) && referencia.trim().length < 4) {
-        throw new Error('Ingresa los últimos 4 dígitos de autorización');
-      }
-      if (metodo === 'TRANSFERENCIA' && referencia.trim().length < 10) {
-        throw new Error('Ingresa la clave de rastreo (mín. 10 dígitos)');
-      }
+    mutationFn: (pagos: any[]) => {
+      const metodoPrincipal = pagos[0]?.method || 'EFECTIVO';
       return api.post(`/companies/${cid}/lonche/turnos/${turno.id}/ventas`, {
         items: carrito.map(l => ({ productId: l.id, qty: l.qty, ivaRate: l.ivaRate ?? 0 })),
-        paymentMethod: metodo,
-        referencia: referencia || null,
+        paymentMethod: metodoPrincipal,
+        paymentSplits: pagos.length > 1 ? pagos : null,
+        discount:    montoDescuento,
         studentId:   student?.id   || null,
         studentName: student?.name || null,
       });
@@ -346,17 +341,42 @@ export default function LonchePOS() {
                   )}
                 </div>
               )}
-              <button onClick={() => ventaM.mutate()}
-                disabled={ventaM.isPending || carrito.length===0}
+              {/* Botón prepago si hay alumno con saldo */}
+              {student && metodo === 'PREPAGO' && (
+                <button onClick={() => ventaM.mutate([{ method:'PREPAGO', amount:totalConDesc }])}
+                  disabled={ventaM.isPending || carrito.length===0}
+                  style={{ width:'100%', padding:10, borderRadius:9, border:'none',
+                    background:'#10b981', color:'#fff',
+                    cursor:carrito.length===0?'not-allowed':'pointer', fontSize:13, fontWeight:800,
+                    marginBottom:6 }}>
+                  {ventaM.isPending ? 'Procesando…' : `🎓 PREPAGO — ${fmt(totalConDesc)}`}
+                </button>
+              )}
+              <button onClick={() => { setError(''); setShowCobro(true); }}
+                disabled={carrito.length===0}
                 style={{ width:'100%', padding:11, borderRadius:9, border:'none',
                   background:carrito.length===0?'#1e293b':color,
                   color:carrito.length===0?'#334155':'#fff',
                   cursor:carrito.length===0?'not-allowed':'pointer', fontSize:14, fontWeight:700 }}>
-                {ventaM.isPending ? 'Procesando…' : `COBRAR ${fmt(totalConDesc)}`}
+                {metodo === 'PREPAGO' ? '💳 Otro método' : `COBRAR ${fmt(totalConDesc)}`}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* CobroModal */}
+      {showCobro && (
+        <CobroModal
+          total={totalConDesc}
+          color={color}
+          onCobrar={(pagos, _nota) => {
+            setShowCobro(false);
+            ventaM.mutate(pagos);
+          }}
+          onCancel={() => setShowCobro(false)}
+          loading={ventaM.isPending}
+        />
       )}
 
       {/* Modal cerrar turno */}
