@@ -123,7 +123,7 @@ const NAV_GROUPS = [
     label: null,
     items: [
       { to:'/admin',            icon:'⊛', label:'Admin',    roles:['admin','administrador'] },
-      { to:'/admin/usuarios',  icon:'👤', label:'Usuarios', roles:['admin','administrador'] },
+      { to:'/admin/usuarios',  icon:'👤', label:'Usuarios', roles:['admin','administrador','gerente'] },
       { to:'/admin/permisos',   icon:'🔒', label:'Permisos', roles:['admin','administrador'], permission:'admin.editar' },
     ]
   },

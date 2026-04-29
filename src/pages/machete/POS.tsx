@@ -168,6 +168,7 @@ function POSPageInner() {
 
   const [pagos, setPagos] = useState<{method:string, amount:number, reference?:string}[]>([{ method:'EFECTIVO', amount:0 }]);
   const [showDescuento, setShowDescuento] = useState(false);
+  const [varianteModal, setVarianteModal] = useState<any>(null); // producto base para seleccionar variante
   const [tipoDesc,      setTipoDesc]      = useState<'descuento'|'cortesia'>('descuento');
   const [descValor,     setDescValor]     = useState(0);
   const [descPin,       setDescPin]       = useState('');
@@ -625,7 +626,19 @@ function POSPageInner() {
               const enCarrito = carrito.find(i => i.id === p.id);
               const stockBajo = p.stock > 0 && p.stock <= 5;
               return (
-                <div key={p.id} onClick={() => !bloqueado && !sinPrecio && agregar(p)}
+                <div key={p.id} onClick={() => {
+                    if (bloqueado || sinPrecio || p.stock<=0) return;
+                    // Check if this product has siblings (same meatType, different presentation)
+                    const hermanos = (pt as any[]).filter((h:any) => 
+                      h.meatType === p.meatType && h.flavor === p.flavor && h.id !== p.id && 
+                      Number((h as any)[priceKey]||0) > 0
+                    );
+                    if (hermanos.length > 0) {
+                      setVarianteModal({ base: p, hermanos: [p, ...hermanos] });
+                    } else {
+                      agregar(p);
+                    }
+                  }}
                   style={{ background:'#0f172a', borderRadius:10, border:`2px solid ${enCarrito?color:p.stock<=0?'#1e293b':'#1e293b'}`,
                     padding:10, cursor:p.stock<=0||sinPrecio||bloqueado?'not-allowed':'pointer',
                     opacity:p.stock<=0?0.4:1, position:'relative', transition:'border-color 0.15s',
@@ -643,11 +656,21 @@ function POSPageInner() {
                       {p.stock<=0?'SIN STOCK':`Stock: ${p.stock}`}
                     </div>
                   </div>
-                  {/* Badge familia */}
+                  {/* Badge familia + composición */}
                   <div style={{ display:'flex', gap:3, marginBottom:5, flexWrap:'wrap' }}>
                     <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:color+'22', color }}>
                       {getFamilia(p).toUpperCase()}
                     </span>
+                    {p.flavor && p.flavor !== 'NAT' && (
+                      <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#f59e0b22', color:'#f59e0b' }}>
+                        {SABOR_LABELS[p.flavor]||p.flavor}
+                      </span>
+                    )}
+                    {p.presentation && (
+                      <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#334155', color:'#94a3b8' }}>
+                        {p.presentation}
+                      </span>
+                    )}
                   </div>
                   <p style={{ fontSize:11, fontWeight:600, color:'#f1f5f9', margin:'0 0 2px', lineHeight:1.3 }}>{p.name}</p>
                   <p style={{ fontSize:13, fontWeight:800, color:sinPrecio?'#334155':color, margin:'0 0 6px' }}>

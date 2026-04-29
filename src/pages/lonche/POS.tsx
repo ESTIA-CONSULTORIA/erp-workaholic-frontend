@@ -370,6 +370,12 @@ export default function LonchePOS() {
         <CobroModal
           total={totalConDesc}
           color={color}
+          pinValidator={async (pin, pct) => {
+            try {
+              const r = await api.post('/auth/verify-pin', { companyId: cid, pin });
+              return !!r.data?.valid;
+            } catch { return false; }
+          }}
           onCobrar={(pagos, _nota) => {
             setShowCobro(false);
             ventaM.mutate(pagos);

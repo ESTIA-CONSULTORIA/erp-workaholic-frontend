@@ -26,7 +26,7 @@ export default function WorkaholicMembresias() {
 
   const [form, setForm] = useState({
     membershipTypeId:'', holderName:'', holderEmail:'', holderPhone:'',
-    holderRfc:'', companyName:'', startDate: new Date().toISOString().slice(0,10),
+    holderRfc:'', companyName:'', members:[] as any[], startDate: new Date().toISOString().slice(0,10),
     paymentMethod:'TRANSFERENCIA', reference:'', notes:'', registerPayment: true,
   });
   const set = (k:string,v:any) => setForm(f=>({...f,[k]:v}));
@@ -54,7 +54,11 @@ export default function WorkaholicMembresias() {
     enabled:  !!cid,
   });
 
-  const crearM = useMutation({
+  // Tipo seleccionado para saber cuántos miembros permitir
+  const selectedType = (types as any[]).find((t:any) => t.id === form.membershipTypeId);
+  const maxExtras = selectedType ? Math.max(0, (selectedType.maxMembers||1) - 1) : 0;
+
+    const crearM = useMutation({
     mutationFn: () => api.post(`/companies/${cid}/workaholic/memberships`, form),
     onSuccess: () => { setVista('lista'); qc.invalidateQueries({ queryKey: ['wk-memberships', cid] }); },
     onError: (e:any) => alert(e.response?.data?.message || 'Error'),
@@ -205,6 +209,57 @@ export default function WorkaholicMembresias() {
                 <input className="input-base" style={{ fontSize:13 }} value={form.notes}
                   onChange={e => set('notes', e.target.value)}/>
               </div>
+
+              {/* Miembros adicionales dinámicos por maxMembers */}
+              {selectedType && selectedType.maxMembers > 1 && (
+                <div style={{ gridColumn:'span 2' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                    <label style={{ fontSize:11, color:'#64748b', fontWeight:700, textTransform:'uppercase' }}>
+                      👥 Miembros adicionales ({form.members.length}/{maxExtras} máx.)
+                    </label>
+                    {form.members.length < maxExtras && (
+                      <button onClick={() => setForm(f => ({...f, members:[...f.members,{name:'',email:'',phone:''}]}))}
+                        style={{ padding:'4px 12px', borderRadius:6, border:`1px solid ${color}`,
+                          background:'none', color, cursor:'pointer', fontSize:11, fontWeight:600 }}>
+                        + Agregar miembro
+                      </button>
+                    )}
+                  </div>
+                  {form.members.length === 0 && (
+                    <p style={{ fontSize:11, color:'#475569', padding:'8px 12px', background:'#0f172a', borderRadius:7 }}>
+                      Este tipo permite hasta {selectedType.maxMembers} personas.
+                      Puedes agregar hasta {maxExtras} miembro{maxExtras!==1?'s':''} adicional{maxExtras!==1?'es':''}.
+                    </p>
+                  )}
+                  {form.members.map((m:any, mi:number) => (
+                    <div key={mi} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr auto', gap:8,
+                      marginBottom:8, padding:'10px 12px', background:'#0f172a', borderRadius:8,
+                      border:`1px solid ${color}22` }}>
+                      <div>
+                        <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:2 }}>Nombre *</label>
+                        <input className="input-base" style={{ fontSize:12 }} placeholder="Nombre completo"
+                          value={m.name}
+                          onChange={e => setForm(f=>({...f, members:f.members.map((mm:any,mj:number)=>mj===mi?{...mm,name:e.target.value}:mm)}))}/>
+                      </div>
+                      <div>
+                        <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:2 }}>Email</label>
+                        <input className="input-base" style={{ fontSize:12 }} placeholder="correo@ejemplo.com"
+                          value={m.email}
+                          onChange={e => setForm(f=>({...f, members:f.members.map((mm:any,mj:number)=>mj===mi?{...mm,email:e.target.value}:mm)}))}/>
+                      </div>
+                      <div>
+                        <label style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:2 }}>Teléfono</label>
+                        <input className="input-base" style={{ fontSize:12 }} placeholder="55 1234 5678"
+                          value={m.phone}
+                          onChange={e => setForm(f=>({...f, members:f.members.map((mm:any,mj:number)=>mj===mi?{...mm,phone:e.target.value}:mm)}))}/>
+                      </div>
+                      <button onClick={() => setForm(f=>({...f, members:f.members.filter((_:any,mj:number)=>mj!==mi)}))}
+                        style={{ alignSelf:'flex-end', padding:'7px', borderRadius:6, border:'1px solid #f87171',
+                          background:'none', color:'#f87171', cursor:'pointer', fontSize:13, marginTop:14 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div style={{ gridColumn:'span 2' }}>
                 <label style={{ fontSize:12, color:'#94a3b8', display:'flex', gap:8, alignItems:'center', cursor:'pointer' }}>
                   <input type="checkbox" checked={form.registerPayment} style={{ accentColor:color }}
