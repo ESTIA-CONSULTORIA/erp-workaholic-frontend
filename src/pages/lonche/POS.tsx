@@ -17,6 +17,9 @@ export default function LonchePOS() {
   const navigate = useNavigate();
   const scanRef = useRef<HTMLInputElement>(null);
 
+  const [showCobro,   setShowCobro]   = useState(false);
+  const [descPct,     setDescPct]     = useState(0);   // % descuento
+  const [descAmt,     setDescAmt]     = useState(0);   // $ descuento
   const [turno,       setTurno]       = useState<any>(null);
   const [carrito,     setCarrito]     = useState<any[]>([]);
   const [student,     setStudent]     = useState<any>(null);
@@ -127,6 +130,12 @@ export default function LonchePOS() {
     (categoria==='Todos'||p.category===categoria) &&
     (!busqueda||p.name.toLowerCase().includes(busqueda.toLowerCase()))
   );
+
+  // ── Totales con descuento ─────────────────────────────────
+  const subtotalBruto  = carrito.reduce((t:number, i:any) => t + (i.qty||i.cantidad||1) * (i.price||i.precio||0), 0);
+  const montoDescuento = descAmt > 0 ? descAmt : (subtotalBruto * descPct / 100);
+  const totalConDesc   = Math.max(0, subtotalBruto - montoDescuento);
+
 
   return (
     <div style={{ position:'fixed', inset:0, background:'#0a0f1a', fontFamily:'system-ui,sans-serif', display:'flex', flexDirection:'column' }}>
@@ -317,13 +326,32 @@ export default function LonchePOS() {
                   <span style={{ fontSize:11, fontWeight:600, color:'#f59e0b' }}>+{fmt(cashback)}</span>
                 </div>
               )}
+              {/* Descuento */}
+              {carrito.length > 0 && (
+                <div style={{ display:'flex', gap:6, marginBottom:6, alignItems:'center' }}>
+                  <span style={{ fontSize:10, color:'#64748b' }}>Desc:</span>
+                  <input type="number" min={0} max={100} value={descPct||''}
+                    onChange={e => { setDescPct(Number(e.target.value)); setDescAmt(0); }}
+                    placeholder="%" style={{ width:45, padding:'4px 5px', borderRadius:5,
+                      border:'1px solid #334155', background:'#0a0f1a', color:'#f1f5f9', fontSize:11 }}/>
+                  <span style={{ fontSize:10, color:'#475569' }}>%</span>
+                  <input type="number" min={0} value={descAmt||''}
+                    onChange={e => { setDescAmt(Number(e.target.value)); setDescPct(0); }}
+                    placeholder="$" style={{ width:55, padding:'4px 5px', borderRadius:5,
+                      border:'1px solid #334155', background:'#0a0f1a', color:'#f1f5f9', fontSize:11 }}/>
+                  {(descPct>0||descAmt>0) && (
+                    <button onClick={()=>{setDescPct(0);setDescAmt(0);}}
+                      style={{ padding:'3px 6px', borderRadius:4, border:'none', background:'#f87171', color:'#fff', cursor:'pointer', fontSize:9 }}>✕</button>
+                  )}
+                </div>
+              )}
               <button onClick={() => ventaM.mutate()}
                 disabled={ventaM.isPending || carrito.length===0}
                 style={{ width:'100%', padding:11, borderRadius:9, border:'none',
                   background:carrito.length===0?'#1e293b':color,
                   color:carrito.length===0?'#334155':'#fff',
                   cursor:carrito.length===0?'not-allowed':'pointer', fontSize:14, fontWeight:700 }}>
-                {ventaM.isPending ? 'Procesando…' : `COBRAR ${fmt(total)}`}
+                {ventaM.isPending ? 'Procesando…' : `COBRAR ${fmt(totalConDesc)}`}
               </button>
             </div>
           </div>

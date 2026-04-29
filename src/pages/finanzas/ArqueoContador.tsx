@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import AppLayout from '../../components/layout/AppLayout';
 import { useERPStore } from '../../store/erp.store';
 import { api, fmt } from '../../lib/api';
@@ -22,7 +23,27 @@ export default function ArqueoContadorPage() {
   const [usd, setUsd] = useState<Denoms>({});
   const [tc, setTc] = useState('17.00');
   const [declarado, setDeclarado] = useState({ banorte: '', banregio: '', mercadoPago: '', cheques: '', vales: '', transferenciasPendientes: '', notas: '' });
-  const sistema = { efectivoMxn: 0, efectivoUsd: 0, banorte: 0, banregio: 0, mercadoPago: 0, cheques: 0, vales: 0, transferenciasPendientes: 0 };
+  // Fetch real balances from flow
+  const { data: rawBalances } = useQuery({
+    queryKey: ['balances-arqueo', companyId],
+    queryFn:  () => api.get(`/companies/${companyId}/flow/balances`).then(r => r.data),
+    enabled:  !!companyId,
+    refetchInterval: 60000,
+  });
+  const balances: any[] = Array.isArray(rawBalances) ? rawBalances : (rawBalances?.accounts || []);
+  const findBal = (type: string) => Number(balances.find((b: any) =>
+    b.type === type || b.accountName?.toLowerCase().includes(type.toLowerCase()))?.balance || 0);
+
+  const sistema = {
+    efectivoMxn:               findBal('EFECTIVO'),
+    efectivoUsd:               findBal('USD'),
+    banorte:                   findBal('BANORTE'),
+    banregio:                  findBal('BANREGIO'),
+    mercadoPago:               findBal('MERCADO_PAGO') || findBal('PLATAFORMA'),
+    cheques:                   findBal('CHEQUES') || findBal('CHEQUE'),
+    vales:                     findBal('VALES') || findBal('VALE'),
+    transferenciasPendientes:  findBal('TRANSFERENCIAS_PENDIENTES') || 0,
+  };
 
   const [enviadoAt, setEnviadoAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -38,8 +59,8 @@ export default function ArqueoContadorPage() {
   const totalDeclarado = totalMxnFisico + totalUsdMxn + n(declarado.banorte) + n(declarado.banregio) + n(declarado.mercadoPago) + n(declarado.cheques) + n(declarado.vales) + n(declarado.transferenciasPendientes);
   const totalSistema = n(sistema.efectivoMxn) + n(sistema.efectivoUsd) * n(tc) + n(sistema.banorte) + n(sistema.banregio) + n(sistema.mercadoPago) + n(sistema.cheques) + n(sistema.vales) + n(sistema.transferenciasPendientes);
   const diferencia = totalDeclarado - totalSistema;
-  const isDirector =
-  user?.role === 'ADMIN' || user?.role === 'DIRECTOR';
+  const roleCode = activeCompany?.roleCode || '';
+  const isDirector = ['admin', 'administrador', 'director'].includes(roleCode);
 
 const diferenciaVisible = isDirector
   ? true

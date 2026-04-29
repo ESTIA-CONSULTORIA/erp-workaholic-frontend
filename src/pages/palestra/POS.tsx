@@ -1,3 +1,4 @@
+import CobroModal, { type MetodoPago } from '../../components/CobroModal';
 import AppLayout from '../../components/layout/AppLayout';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,9 @@ export default function PalestraPOSPage() {
   const qc     = useQueryClient();
   const navigate = useNavigate();
 
+  const [showCobro,   setShowCobro]   = useState(false);
+  const [descPct,     setDescPct]     = useState(0);   // % descuento
+  const [descAmt,     setDescAmt]     = useState(0);   // $ descuento
   const [carrito,     setCarrito]     = useState<any[]>([]);
   const [clientName,  setClientName]  = useState('');
   const [metodo,      setMetodo]      = useState('EFECTIVO');
@@ -83,6 +87,7 @@ export default function PalestraPOSPage() {
       channel: 'MOSTRADOR',
       clientName: clientName || null,
       paymentMethod: metodo,
+      discount: montoDescuento,
       lines: carrito.map(l => ({
         ...l,
         coachId: l.coachable && coachId ? coachId : null,
@@ -117,6 +122,12 @@ export default function PalestraPOSPage() {
   );
 
   const hasCoachable = carrito.some(l => l.coachable);
+
+  // ── Totales con descuento ─────────────────────────────────
+  const subtotalBruto  = carrito.reduce((t:number, i:any) => t + (i.qty||i.cantidad||1) * (i.price||i.precio||0), 0);
+  const montoDescuento = descAmt > 0 ? descAmt : (subtotalBruto * descPct / 100);
+  const totalConDesc   = Math.max(0, subtotalBruto - montoDescuento);
+
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', background:'#0a0f1a', fontFamily:'system-ui,sans-serif' }}>
@@ -262,6 +273,28 @@ export default function PalestraPOSPage() {
             <span style={{ fontSize:13, color:'#64748b' }}>Total</span>
             <span style={{ fontSize:22, fontWeight:800, color }}>{fmt(total)}</span>
           </div>
+            {/* ── Descuento ── */}
+            {carrito.length > 0 && (
+              <div style={{ padding:'0 10px 8px', display:'flex', gap:6, alignItems:'center' }}>
+                <span style={{ fontSize:11, color:'#64748b', flexShrink:0 }}>Desc:</span>
+                <div style={{ display:'flex', gap:4, flex:1 }}>
+                  <input type="number" min={0} max={100} value={descPct||''}
+                    onChange={e => { setDescPct(Number(e.target.value)); setDescAmt(0); }}
+                    placeholder="%" style={{ width:50, padding:'4px 6px', borderRadius:6,
+                      border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:12 }}/>
+                  <span style={{ fontSize:11, color:'#475569' }}>%</span>
+                  <input type="number" min={0} value={descAmt||''}
+                    onChange={e => { setDescAmt(Number(e.target.value)); setDescPct(0); }}
+                    placeholder="$" style={{ width:60, padding:'4px 6px', borderRadius:6,
+                      border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:12 }}/>
+                  {(descPct > 0 || descAmt > 0) && (
+                    <button onClick={() => { setDescPct(0); setDescAmt(0); }}
+                      style={{ padding:'4px 6px', borderRadius:6, border:'none',
+                        background:'#f87171', color:'#fff', cursor:'pointer', fontSize:10 }}>✕</button>
+                  )}
+                </div>
+              </div>
+            )}
           <button onClick={cobrar} disabled={saleM.isPending || carrito.length===0}
             style={{ width:'100%', padding:12, borderRadius:10, border:'none', background: carrito.length===0?'#1e293b':color,
               color: carrito.length===0?'#334155':'#fff', cursor: carrito.length===0?'not-allowed':'pointer',
