@@ -869,6 +869,36 @@ export function CxCPage() {
     enabled:  !!cid,
   });
 
+  // ── Mutations + state ─────────────────────────────────────
+  const [showNewCxC, setShowNewCxC] = useState(false);
+  const [newCxCForm, setNewCxCForm] = useState({ concept:'', originalAmount:'', dueDate:'', clientId:'', notes:'' });
+
+  const createCxCM = useMutation({
+    mutationFn: (data: any) => api.post(`/companies/${cid}/cxc`, data),
+    onSuccess: () => {
+      setShowNewCxC(false);
+      setNewCxCForm({ concept:'', originalAmount:'', dueDate:'', clientId:'', notes:'' });
+      qc.invalidateQueries({ queryKey: ['cxc-list', cid] });
+    },
+    onError: (e: any) => alert(e.response?.data?.message || 'Error al crear CxC'),
+  });
+
+  const pagoM = useMutation({
+    mutationFn: (data: any) => api.post(`/companies/${cid}/cxc/${pagoModal?.id}/payments`, data),
+    onSuccess: () => {
+      setPagoModal(null);
+      setPagoForm({ amount:'', date:new Date().toISOString().slice(0,10), paymentMethod:'EFECTIVO', reference:'' });
+      qc.invalidateQueries({ queryKey: ['cxc-list', cid] });
+    },
+    onError: (e: any) => alert(e.response?.data?.message || 'Error al registrar pago'),
+  });
+
+  const cancelCxCM = useMutation({
+    mutationFn: ({ id, motivo }: any) => api.put(`/companies/${cid}/cxc/${id}/cancel`, { motivo }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cxc-list', cid] }),
+    onError: (e: any) => alert(e.response?.data?.message || 'Error al cancelar'),
+  });
+
   // Ordenar por fecha de pago más reciente primero
   const cxcsOrdenadas = [...(cxcs as any[])].sort((a, b) => {
     const fechaA = a.payments?.[0]?.date || a.date;
@@ -1126,6 +1156,54 @@ export function CxCPage() {
               display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span style={{fontSize:12,color:'#64748b'}}>Total pagado</span>
               <span style={{fontSize:16,fontWeight:700,color:'#10b981'}}>{fmt(historialModal.paidAmount)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal nueva CxC */}
+      {showNewCxC && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',
+          display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'#1e293b',borderRadius:12,padding:24,width:420,border:`1px solid ${color}44`}}>
+            <h3 style={{fontSize:15,fontWeight:700,margin:'0 0 16px',color}}>Nueva CxC manual</h3>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Concepto *</label>
+                <input className="input-base" style={{fontSize:13}} placeholder="Ej: Factura #001"
+                  value={newCxCForm.concept} onChange={e=>setNewCxCForm(f=>({...f,concept:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Monto *</label>
+                <input type="number" className="input-base" style={{fontSize:14,fontWeight:700}}
+                  value={newCxCForm.originalAmount} onChange={e=>setNewCxCForm(f=>({...f,originalAmount:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Vencimiento</label>
+                <input type="date" className="input-base" style={{fontSize:13}}
+                  value={newCxCForm.dueDate} onChange={e=>setNewCxCForm(f=>({...f,dueDate:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Cliente</label>
+                <select className="input-base" style={{fontSize:13}}
+                  value={newCxCForm.clientId} onChange={e=>setNewCxCForm(f=>({...f,clientId:e.target.value}))}>
+                  <option value="">— Sin cliente —</option>
+                  {(clients as any[]).map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setShowNewCxC(false)}
+                style={{flex:1,padding:'9px',borderRadius:8,border:'1px solid #334155',background:'none',color:'#64748b',cursor:'pointer',fontSize:13}}>
+                Cancelar
+              </button>
+              <button onClick={()=>createCxCM.mutate({...newCxCForm,companyId:cid})}
+                disabled={createCxCM.isPending||!newCxCForm.concept||!newCxCForm.originalAmount}
+                style={{flex:1,padding:'9px',borderRadius:8,border:'none',
+                  background:newCxCForm.concept&&newCxCForm.originalAmount?color:'#334155',
+                  color:'#fff',cursor:newCxCForm.concept&&newCxCForm.originalAmount?'pointer':'not-allowed',
+                  fontSize:13,fontWeight:700}}>
+                {createCxCM.isPending?'Creando…':'Crear CxC'}
+              </button>
             </div>
           </div>
         </div>

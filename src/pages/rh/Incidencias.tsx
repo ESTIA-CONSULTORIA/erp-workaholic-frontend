@@ -169,6 +169,7 @@ export default function IncidenciasPage() {
           <table className="table-base">
             <thead><tr>
               <th>Tipo</th><th>Período</th><th>Cantidad</th><th>Monto</th><th>Nómina</th><th>Estado</th>
+                  <th></th>
             </tr></thead>
             <tbody>
               {!filtroEmp && (
@@ -210,6 +211,16 @@ export default function IncidenciasPage() {
                         color: inc.status==='APLICADA'?'#10b981':inc.status==='APROBADA'?'#3b82f6':'#f59e0b' }}>
                         {inc.status}
                       </span>
+                    </td>
+                    <td>
+                      {inc.status !== 'APLICADA' && inc.status !== 'RESUELTA' && (
+                        <button onClick={() => resolverM.mutate(inc.id)}
+                          disabled={resolverM.isPending}
+                          style={{ padding:'3px 9px', borderRadius:5, border:'1px solid #10b981',
+                            background:'none', color:'#10b981', cursor:'pointer', fontSize:11 }}>
+                          ✓ Resolver
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

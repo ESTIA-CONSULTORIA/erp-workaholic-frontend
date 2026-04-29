@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useERPStore } from './store/erp.store';
 import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
+import MacheteDashboardPage from './pages/machete/Dashboard';
 import POSPage from './pages/machete/POS';
 import ProduccionPage from './pages/machete/Produccion';
 import InventarioPage from './pages/machete/Inventario';
@@ -74,8 +75,10 @@ export default function App() {
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/permisos" element={<PermisosPage />} />
               <Route path="/pos" element={<POSPage />} />
+              <Route path="/machete" element={<MacheteDashboardPage />} />
               <Route path="/catalogo" element={<CatalogoPage />} />
               <Route path="/ordenes-compra" element={<OrdenesCompraPage />} />
+              <Route path="/machete" element={<MacheteDashboardPage />} />
               <Route path="/machete/compras" element={<ComprasPage />} />
               <Route path="/intercompany" element={<IntercompanyPage />} />
               <Route path="/bitacora" element={<BitacoraPage />} />

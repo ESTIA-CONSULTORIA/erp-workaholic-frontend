@@ -233,13 +233,18 @@ export default function CorteCajaPage() {
               </thead>
               <tbody>
                 {(cortes as any[]).length === 0 && (
-                  <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cortes registrados</td></tr>
+                  <tr><td colSpan={8} style={{textAlign:'center',padding:32,color:'#64748b'}}>Sin cortes registrados</td></tr>
                 )}
                 {(cortes as any[]).map((c: any) => {
                   const historial = parsearHistorial(c.notasCajero);
                   const tieneConversacion = historial.length > 0;
                   return (
                     <tr key={c.id}>
+                      <td>
+                        <code style={{fontSize:11,background:'#334155',padding:'2px 7px',borderRadius:4,color:'#f1f5f9',fontWeight:700}}>
+                          {c.folio || `CRT-${String(c.id).slice(-4).toUpperCase()}`}
+                        </code>
+                      </td>
                       <td>{fmtDate(c.fecha)}</td>
                       <td style={{ fontWeight:500 }}>{c.cajero?.name}</td>
                       <td style={{ textAlign:'right' }}>{fmt(c.totalVentas)}</td>
