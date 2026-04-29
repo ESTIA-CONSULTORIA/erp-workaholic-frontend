@@ -126,11 +126,6 @@ const VoucherSPEISVG = () => (
 const RefTooltip = ({method}:{method:string}) => {
   const [show, setShow] = useState(false);
   const isTransfer = method === 'TRANSFERENCIA';
-  // ── Totales con descuento ─────────────────────────────────
-  const subtotalBruto  = carrito.reduce((t:number, i:any) => t + (i.qty||i.cantidad||1) * (i.price||i.precio||0), 0);
-  const montoDescuento = descAmt > 0 ? descAmt : (subtotalBruto * descPct / 100);
-  const totalConDesc   = Math.max(0, subtotalBruto - montoDescuento);
-
 
   return(
     <div style={{position:'relative',display:'inline-block'}}>
@@ -845,28 +840,6 @@ function POSPageInner() {
             {error && <p style={{ color:'#f87171', fontSize:11, marginBottom:6 }}>{error}</p>}
 
             {/* Botón cobrar */}
-            {/* ── Descuento ── */}
-            {carrito.length > 0 && (
-              <div style={{ padding:'0 10px 8px', display:'flex', gap:6, alignItems:'center' }}>
-                <span style={{ fontSize:11, color:'#64748b', flexShrink:0 }}>Desc:</span>
-                <div style={{ display:'flex', gap:4, flex:1 }}>
-                  <input type="number" min={0} max={100} value={descPct||''}
-                    onChange={e => { setDescPct(Number(e.target.value)); setDescAmt(0); }}
-                    placeholder="%" style={{ width:50, padding:'4px 6px', borderRadius:6,
-                      border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:12 }}/>
-                  <span style={{ fontSize:11, color:'#475569' }}>%</span>
-                  <input type="number" min={0} value={descAmt||''}
-                    onChange={e => { setDescAmt(Number(e.target.value)); setDescPct(0); }}
-                    placeholder="$" style={{ width:60, padding:'4px 6px', borderRadius:6,
-                      border:'1px solid #334155', background:'#0f172a', color:'#f1f5f9', fontSize:12 }}/>
-                  {(descPct > 0 || descAmt > 0) && (
-                    <button onClick={() => { setDescPct(0); setDescAmt(0); }}
-                      style={{ padding:'4px 6px', borderRadius:6, border:'none',
-                        background:'#f87171', color:'#fff', cursor:'pointer', fontSize:10 }}>✕</button>
-                  )}
-                </div>
-              </div>
-            )}
             <button onClick={cobrar}
               disabled={saleM.isPending || (esCredito && !clienteId) || carrito.length === 0}
               style={{ width:'100%', padding:'14px', borderRadius:10, border:'none', fontSize:15, fontWeight:800,
