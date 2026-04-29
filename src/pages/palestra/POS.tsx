@@ -123,6 +123,7 @@ export default function PalestraPOSPage() {
 
   const hasCoachable = carrito.some(l => l.coachable);
 
+
   // ── Totales con descuento ─────────────────────────────────
   const subtotalBruto  = carrito.reduce((t:number, i:any) => t + (i.qty||i.cantidad||1) * (i.price||i.precio||0), 0);
   const montoDescuento = descAmt > 0 ? descAmt : (subtotalBruto * descPct / 100);

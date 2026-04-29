@@ -126,6 +126,12 @@ const VoucherSPEISVG = () => (
 const RefTooltip = ({method}:{method:string}) => {
   const [show, setShow] = useState(false);
   const isTransfer = method === 'TRANSFERENCIA';
+  // ── Totales con descuento ─────────────────────────────────
+  const subtotalBruto  = carrito.reduce((t:number, i:any) => t + (i.qty||i.cantidad||1) * (i.price||i.precio||0), 0);
+  const montoDescuento = descAmt > 0 ? descAmt : (subtotalBruto * descPct / 100);
+  const totalConDesc   = Math.max(0, subtotalBruto - montoDescuento);
+
+
   return(
     <div style={{position:'relative',display:'inline-block'}}>
       <button onClick={()=>setShow(s=>!s)}
@@ -1486,9 +1492,5 @@ function POSPageInner() {
 export default function POSPage() {
   return <POSErrorBoundary><POSPageInner/></POSErrorBoundary>;
 }
-  // ── Totales con descuento ─────────────────────────────────
-  const subtotalBruto  = carrito.reduce((t:number, i:any) => t + (i.qty||i.cantidad||1) * (i.price||i.precio||0), 0);
-  const montoDescuento = descAmt > 0 ? descAmt : (subtotalBruto * descPct / 100);
-  const totalConDesc   = Math.max(0, subtotalBruto - montoDescuento);
 
 
