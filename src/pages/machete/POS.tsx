@@ -222,15 +222,21 @@ function POSPageInner() {
   const metodoPrincipal = pagos[0]?.method || 'EFECTIVO';
 
   const { data: inventory = [] } = useQuery({ queryKey:['pt-inventory',cid], queryFn:()=>api.get(`/companies/${cid}/machete/inventory/pt`).then(r=>r.data), enabled:!!cid });
+  const { data: ventasHistorial = [] } = useQuery({
+    queryKey: ['machete-sales-historial', cid],
+    queryFn:  () => api.get(`/companies/${cid}/machete/sales?limit=50`).then(r => r.data),
+    enabled:  !!cid && vistaNav === 'historial',
+  });
   const { data: clientes  = [] } = useQuery({ queryKey:['clients',cid],       queryFn:()=>api.get(`/companies/${cid}/clients`).then(r=>r.data),                enabled:!!cid });
   const { data: ocsPendientes=[] } = useQuery({ queryKey:['ocs-pendientes',cid,clienteId], queryFn:()=>api.get(`/companies/${cid}/ordenes?clientId=${clienteId}&status=ACTIVAS`).then(r=>r.data), enabled:!!cid&&!!clienteId });
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // No activar si estamos en un input/textarea que no sea el de búsqueda
+      // No activar atajos si hay un input con foco (excepto F2/F3/Escape)
       const tag = (e.target as HTMLElement)?.tagName;
-      const isBusqueda = (e.target as HTMLElement) === busquedaRef.current;
-      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isBusqueda) return;
+      const isAnyInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      // For non-function keys (Enter, letters, numbers), block when input is focused
+      if (isAnyInput && !['F2','F3','F4','F5','Escape'].includes(e.key) && !(e.ctrlKey||e.metaKey)) return;
 
       if (e.key === 'F2') { e.preventDefault(); busquedaRef.current?.focus(); busquedaRef.current?.select(); }
       if (e.key === 'F3') { e.preventDefault(); clienteRef.current?.focus(); }
@@ -447,30 +453,37 @@ function POSPageInner() {
   const GRUPOS:Record<string,{label:string,familias:string[],color:string}>={RES:{label:'Res',familias:['Machete','Chicali','Escarchado','Scrap'],color:'#B5451B'},CER:{label:'Cerdo',familias:['Cerdo'],color:'#8b5cf6'},OTROS:{label:'Otros',familias:['Machaca','Otros'],color:'#64748b'}};
   const prods=(inventory as any[]).filter((p:any)=>p.isActive!==false);
   const FILTROS = [
-    {id:'TODOS',label:'Todos'},{id:'RES',label:'Res'},{id:'CHICALI',label:'Chicali'},
-    {id:'ESCARCHADO',label:'Escarchado'},{id:'CERDO',label:'Cerdo'},{id:'MACHACA',label:'Machaca'},
+    {id:'TODOS',    label:'Todos'},
+    {id:'MACHETE',  label:'Machete (Res)'},
+    {id:'CHICALI',  label:'Chicali'},
+    {id:'ESCARCHADO',label:'Escarchado'},
+    {id:'CERDO',    label:'Cerdo'},
+    {id:'MACHACA',  label:'Machaca'},
   ];
-  const FAMILIA_GRUPO: Record<string, string> = {
-    'Machete':    'RES',
-    'Chicali':    'RES',
-    'Escarchado': 'RES',
-    'Scrap':      'SCRAP',
-    'Cerdo':      'CERDO',
-    'Machaca':    'MACHACA',
-    'Otros':      'OTROS',
-  };
-  const prodsFiltrados = prods.filter((p:any) => {
-    const fam     = getFamilia(p);
-    const grupo   = FAMILIA_GRUPO[fam] || 'OTROS';
-    const passGrupo  = filtroGrupo === 'TODOS' || grupo === filtroGrupo || fam.toUpperCase() === filtroGrupo;
-    const passSearch = !busqueda || p.name?.toLowerCase().includes(busqueda.toLowerCase()) || (p.sku||'').toLowerCase().includes(busqueda.toLowerCase());
-    return passGrupo && passSearch;
-  });
+  // Filtrar directamente por familia (getFamilia devuelve el nombre de la línea)
+  const masVendidosIds = new Set(
+    [...prods].sort((a:any,b:any)=>Number(b.totalSold||b.unitsSold||0)-Number(a.totalSold||a.unitsSold||0))
+    .slice(0,12).map((p:any)=>p.id)
+  );
+
+  const prodsFiltrados = (() => {
+    if (filtroGrupo === 'TOP') {
+      return [...prods]
+        .sort((a:any,b:any)=>Number(b.totalSold||b.unitsSold||0)-Number(a.totalSold||a.unitsSold||0))
+        .slice(0,12)
+        .filter((p:any)=>!busqueda||p.name?.toLowerCase().includes(busqueda.toLowerCase()));
+    }
+    return prods.filter((p:any) => {
+      const fam = getFamilia(p).toUpperCase();
+      const passGrupo = filtroGrupo === 'TODOS' || fam === filtroGrupo;
+      const passSearch = !busqueda || p.name?.toLowerCase().includes(busqueda.toLowerCase()) || (p.sku||'').toLowerCase().includes(busqueda.toLowerCase());
+      return passGrupo && passSearch;
+    });
+  })();
 
   // ─── POS UI ───────────────────────────────────────────────────
 
   
-  const masVendidos = [...prods].sort((a: any, b: any) => Number(b.stock || 0) - Number(a.stock || 0)).slice(0, 6);
 
   return(
     <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', height:'100vh', background:'#0a0f1a', fontFamily:'system-ui,-apple-system,sans-serif', overflow:'hidden' }}>
@@ -515,8 +528,8 @@ function POSPageInner() {
 
           <p style={{ fontSize:9, color:'#334155', margin:'8px 0 6px 10px', textTransform:'uppercase', letterSpacing:1, fontWeight:700 }}>ACCESOS RÁPIDOS</p>
           {[
-            { icon:'⚡', label:'Más vendidos', action:() => setFiltroGrupo('TODOS') },
-            { icon:'⭐', label:'Favoritos',    action:() => {} },
+            { icon:'⚡', label:'Más vendidos', action:() => { setVistaNav('venta'); setFiltroGrupo('TOP'); } },
+            { icon:'🕐', label:'Historial',    action:() => setVistaNav('historial') },
           ].map(a => (
             <button key={a.label} onClick={a.action}
               style={{ width:'100%', display:'flex', alignItems:'center', gap:8, padding:'7px 10px',
@@ -594,6 +607,44 @@ function POSPageInner() {
           </div>
         </div>
 
+        {vistaNav === 'historial' ? (
+          <div style={{ flex:1, overflowY:'auto', padding:16 }}>
+            <h3 style={{ fontSize:14, fontWeight:700, color:'#f1f5f9', margin:'0 0 12px' }}>
+              Últimas ventas
+            </h3>
+            {(ventasHistorial as any[]).length === 0 ? (
+              <p style={{ color:'#64748b', textAlign:'center', padding:40 }}>Sin ventas registradas</p>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {(ventasHistorial as any[]).map((v:any) => (
+                  <div key={v.id} style={{ background:'#1e293b', borderRadius:10, padding:'12px 16px',
+                    border:'1px solid #334155' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                      <div>
+                        <p style={{ fontSize:12, fontWeight:700, color:'#f1f5f9', margin:'0 0 2px' }}>
+                          {v.folio || `#${String(v.id).slice(-6).toUpperCase()}`}
+                          {v.clientName && <span style={{ fontSize:11, color:'#64748b', marginLeft:8 }}>{v.clientName}</span>}
+                        </p>
+                        <p style={{ fontSize:11, color:'#64748b', margin:0 }}>
+                          {new Date(v.date||v.createdAt).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+                          {' · '}{(v.paymentMethod||'').replace('_',' ')}
+                        </p>
+                      </div>
+                      <p style={{ fontSize:18, fontWeight:800, color, margin:0 }}>{fmt(v.total)}</p>
+                    </div>
+                    {v.lines && v.lines.length > 0 && (
+                      <p style={{ fontSize:11, color:'#475569', margin:0 }}>
+                        {v.lines.slice(0,3).map((l:any,i:number)=>`${i>0?', ':''}${l.productName||l.description||'?'} x${l.quantity}`).join('')}
+                        {v.lines.length > 3 && ` +${v.lines.length-3} más`}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         {/* Filtros de familia */}
         <div style={{ padding:'8px 16px', background:'#0f172a', borderBottom:'1px solid #1e293b', display:'flex', gap:6, alignItems:'center', overflowX:'auto' }}>
           {FILTROS.map(f => (
@@ -712,6 +763,8 @@ function POSPageInner() {
             <span key={s} style={{ fontSize:10, color:'#475569' }}>{s}</span>
           ))}
         </div>
+      </>
+      )}
       </div>
 
       {/* ── PANEL DERECHO: PEDIDO ────────────────────── */}
