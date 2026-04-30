@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, fmt, fmtDate, exportCSV } from '../../lib/api';
+import ImportExportBar from '../../components/ImportExportBar';
 import AppLayout from '../../components/layout/AppLayout';
 import { useERPStore } from '../../store/erp.store';
 import ImportCSV from '../../components/ImportCSV';
@@ -168,7 +169,16 @@ function ProductosTab({ cid, color, qc }: any) {
           ⬇ Exportar CSV
         </button>
       </div>
-      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+      
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+          <ImportExportBar
+            onExport={() => exportCSV('catalogo_machete', inventory as any[], [{ key:'sku', label:'SKU' }, { key:'name', label:'Nombre' }, { key:'group', label:'Grupo' }, { key:'price', label:'Precio' }, { key:'stock', label:'Stock' }])}
+            importColumns={[{ key:'sku', label:'SKU', required:true, example:'MCH-RES-001' }, { key:'name', label:'Nombre', required:true, example:'Filete de Res 500g' }, { key:'group', label:'Grupo', example:'Machete' }, { key:'price', label:'Precio', required:true, example:'150.00' }, { key:'cost', label:'Costo', example:'90.00' }]}
+            templateName="catalogo_machete"
+            color={color}
+          />
+        </div>
+<div className="card" style={{ padding:0, overflow:'hidden' }}>
         <table className="table-base">
           <thead>
             <tr>

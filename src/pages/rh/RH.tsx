@@ -1,4 +1,5 @@
 // src/pages/rh/RH.tsx
+import ImportExportBar from '../../components/ImportExportBar';
 import AppLayout from '../../components/layout/AppLayout';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -198,6 +199,24 @@ export default function RHPage() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Export empleados */}
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
+          <ImportExportBar
+            color={color}
+            onExport={() => exportCSV('empleados', employees as any[], [
+              { key:'employeeNumber', label:'No. Empleado' },
+              { key:'firstName', label:'Nombre' },
+              { key:'lastName', label:'Apellido Paterno' },
+              { key:'secondLastName', label:'Apellido Materno' },
+              { key:'position', label:'Puesto' },
+              { key:'department', label:'Departamento' },
+              { key:'startDate', label:'Fecha Ingreso' },
+              { key:'grossSalary', label:'Salario Bruto' },
+              { key:'status', label:'Estado' },
+            ])}
+          />
         </div>
 
         {showNew && (

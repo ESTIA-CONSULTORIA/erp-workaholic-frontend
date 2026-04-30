@@ -1,8 +1,9 @@
+import ImportExportBar from '../../components/ImportExportBar';
 import AppLayout from '../../components/layout/AppLayout';
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '../../store/erp.store';
-import { api, fmt, fmtDate } from '../../lib/api';
+import { api, exportCSV, fmt, fmtDate } from '../../lib/api';
 
 export default function AlumnosPage() {
   const { activeCompany } = useERPStore();
@@ -127,7 +128,16 @@ export default function AlumnosPage() {
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
           {/* Lista */}
-          <div className="card" style={{ padding:0, overflow:'hidden', height:'fit-content' }}>
+          
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+          <ImportExportBar
+            onExport={() => exportCSV('alumnos_lonche', students as any[], [{ key:'code', label:'Código' }, { key:'name', label:'Nombre' }, { key:'grade', label:'Grado' }, { key:'balance', label:'Saldo' }, { key:'isActive', label:'Activo' }])}
+            importColumns={[{ key:'code', label:'Código', required:true, example:'ALU-001' }, { key:'name', label:'Nombre', required:true, example:'Juan Pérez' }, { key:'grade', label:'Grado', example:'3ro' }, { key:'tutor', label:'Tutor', example:'María Pérez' }, { key:'phone', label:'Teléfono', example:'686-123-4567' }]}
+            templateName="alumnos_lonche"
+            color={color}
+          />
+        </div>
+<div className="card" style={{ padding:0, overflow:'hidden', height:'fit-content' }}>
             <table className="table-base">
               <thead><tr><th>Alumno</th><th>Grado</th><th style={{textAlign:'right'}}>Saldo</th><th>Acciones</th></tr></thead>
               <tbody>
