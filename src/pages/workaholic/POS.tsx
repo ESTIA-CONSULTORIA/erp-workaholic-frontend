@@ -10,18 +10,12 @@ import { api, fmt } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import CobroModal from '../../components/CobroModal';
 
-// Servicios adicionales fijos del centro de negocios
-const SERVICIOS_EXTRA = [
-  { id:'impresion_bw',    name:'Impresión B/N',       price:3,    icon:'🖨',  cat:'Servicios' },
-  { id:'impresion_color', name:'Impresión Color',      price:8,    icon:'🖨',  cat:'Servicios' },
-  { id:'escaner',         name:'Escaneo',              price:5,    icon:'📲',  cat:'Servicios' },
-  { id:'copiado',         name:'Copiado B/N',          price:2,    icon:'📄',  cat:'Servicios' },
-  { id:'paqueteria',      name:'Recepción Paquetería', price:50,   icon:'📦',  cat:'Servicios' },
-  { id:'estacion',        name:'Estacionamiento/día',  price:80,   icon:'🚗',  cat:'Servicios' },
-  { id:'cafe',            name:'Café',                 price:25,   icon:'☕',  cat:'A&B' },
-  { id:'agua',            name:'Agua Embotellada',     price:20,   icon:'💧',  cat:'A&B' },
-  { id:'snack',           name:'Snack',                price:35,   icon:'🍪',  cat:'A&B' },
-  { id:'refresco',        name:'Refresco',             price:25,   icon:'🥤',  cat:'A&B' },
+// Servicios de fallback (se reemplazan por los de la BD)
+const SERVICIOS_FALLBACK = [
+  { id:'impresion_bw',    name:'Impresión B/N',       price:3,    icon:'🖨',  cat:'Servicios', category:'SERVICIO' },
+  { id:'cafe',            name:'Café',                 price:50,   icon:'☕',  cat:'A&B',      category:'CAFETERIA' },
+  { id:'agua',            name:'Agua Embotellada',     price:20,   icon:'💧',  cat:'A&B',      category:'CAFETERIA' },
+  { id:'refresco',        name:'Coca-Cola / Soda',     price:33,   icon:'🥤',  cat:'A&B',      category:'CAFETERIA' },
 ];
 
 const TIPO_ICON: Record<string,string> = {
@@ -68,6 +62,21 @@ export default function WorkaholicPOS() {
     queryFn:  () => api.get(`/companies/${cid}/workaholic/membership-types`).then(r => r.data),
     enabled:  !!cid,
   });
+
+  const { data: serviciosBD = [] } = useQuery({
+    queryKey: ['wk-services', cid],
+    queryFn:  () => api.get(`/companies/${cid}/workaholic/services`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const SERVICIOS_EXTRA = (serviciosBD as any[]).length > 0
+    ? (serviciosBD as any[]).map((s:any) => ({
+        id: s.id, name: s.name, price: Number(s.price),
+        icon: s.category==='CAFETERIA'?'☕':s.category==='ALIMENTO'?'🍽':s.category==='SALA'?'🤝':'🖨',
+        cat: s.category==='CAFETERIA'||s.category==='ALIMENTO' ? 'A&B' : 'Servicios',
+        category: s.category,
+      }))
+    : SERVICIOS_FALLBACK;
 
   const { data: membresiaActivas = [] } = useQuery({
     queryKey: ['wk-memberships-active', cid, busquedaMem],
