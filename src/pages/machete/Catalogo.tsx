@@ -21,7 +21,7 @@ function ProductosTab({ cid, color, qc }: any) {
 
   const initForm = {
     sku:'', name:'', meatType:'RES', flavor:'NAT',
-    presentation:'', gramsWeight:'', minStock:'5',
+    presentation:'UNIDAD', gramsWeight:'', minStock:'5',
     priceMostrador:'', priceMayoreo:'', priceOnline:'', priceML:'',
   };
   const [form, setForm] = useState(initForm);
