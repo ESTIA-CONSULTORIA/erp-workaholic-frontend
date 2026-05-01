@@ -12,6 +12,13 @@ function ProductosTab({ cid, color, qc }: any) {
   const [saving,    setSaving]    = useState(false);
   const [filtroActivo, setFiltroActivo] = useState<'todos'|'activos'|'inactivos'>('activos');
 
+  const FLAVORS = ['NAT','AJO','LIMON','CHILE','MARINADO','HABANERO','CHIPOTLE','ADOBADO','ESPECIAL'];
+  const SABOR_LABELS: Record<string,string> = {
+    NAT:'Natural', AJO:'Ajo', LIMON:'Limón', CHILE:'Chile',
+    MARINADO:'Marinado', HABANERO:'Habanero', CHIPOTLE:'Chipotle',
+    ADOBADO:'Adobado', ESPECIAL:'Especial',
+  };
+
   const initForm = {
     sku:'', name:'', meatType:'RES', flavor:'NAT',
     presentation:'', gramsWeight:'', minStock:'5',
@@ -172,7 +179,7 @@ function ProductosTab({ cid, color, qc }: any) {
       
         <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
           <ImportExportBar
-            onExport={() => exportCSV('catalogo_machete', inventory as any[], [{ key:'sku', label:'SKU' }, { key:'name', label:'Nombre' }, { key:'group', label:'Grupo' }, { key:'price', label:'Precio' }, { key:'stock', label:'Stock' }])}
+            onExport={() => exportCSV('catalogo_machete', products as any[], [{ key:'sku', label:'SKU' }, { key:'name', label:'Nombre' }, { key:'group', label:'Grupo' }, { key:'price', label:'Precio' }, { key:'stock', label:'Stock' }])}
             importColumns={[{ key:'sku', label:'SKU', required:true, example:'MCH-RES-001' }, { key:'name', label:'Nombre', required:true, example:'Filete de Res 500g' }, { key:'group', label:'Grupo', example:'Machete' }, { key:'price', label:'Precio', required:true, example:'150.00' }, { key:'cost', label:'Costo', example:'90.00' }]}
             templateName="catalogo_machete"
             color={color}
@@ -342,6 +349,9 @@ function InsumosTab({ cid, color, qc }: any) {
       setEditId(null);
     } finally { setSaving(false); }
   };
+
+  const GROUPS = ['GENERAL','CARNE','ESPECIAS','EMPAQUE','INSUMO','LIMPIEZA','OTROS'];
+  const UNITS  = ['kg','g','lt','ml','pz','caja','bolsa','rollo','par','sobre'];
 
   // Agrupar por group
   const grupos = (insumos as any[]).reduce((acc: any, ins: any) => {
