@@ -28,6 +28,15 @@ export default function UsuariosPage() {
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
+  const { user } = useERPStore();
+
+  // Admin global puede cambiar de empresa
+  const [empresaFiltro, setEmpresaFiltro] = useState('');
+  const cidActivo = empresaFiltro || cid || '';
+  const isGlobalAdmin = activeCompany?.roleCode === 'admin' ||
+    activeCompany?.roleCode === 'administrador' ||
+    (user as any)?.email === 'loraloraangel@gmail.com' ||
+    (user as any)?.email === 'admin@grupoworkaholic.com';
 
   const [showNew,   setShowNew]   = useState(false);
   const [editUser,  setEditUser]  = useState<any>(null);
@@ -44,8 +53,8 @@ export default function UsuariosPage() {
 
   // ── Queries ──────────────────────────────────────────────────
   const { data: usuarios = [], isLoading } = useQuery({
-    queryKey: ['users', cid],
-    queryFn:  () => api.get(`/companies/${cid}/users`).then(r => r.data),
+    queryKey: ['users', cidActivo],
+    queryFn:  () => api.get(`/companies/${cidActivo}/users`).then(r => r.data),
     enabled:  !!cidActivo,
   });
 
@@ -71,7 +80,7 @@ export default function UsuariosPage() {
 
   // ── Mutations ─────────────────────────────────────────────────
   const createM = useMutation({
-    mutationFn: () => api.post(`/companies/${cid}/users`, { ...form, companyId: cidActivo }),
+    mutationFn: () => api.post(`/companies/${cidActivo}/users`, { ...form, companyId: cidActivo }),
     onSuccess: () => {
       setShowNew(false);
       setForm({ name:'', email:'', password:PASS_DEFAULT, roleCode:'cajero', phone:'' });
@@ -81,7 +90,7 @@ export default function UsuariosPage() {
   });
 
   const updateM = useMutation({
-    mutationFn: () => api.put(`/companies/${cid}/users/${editUser?.id}`, {
+    mutationFn: () => api.put(`/companies/${cidActivo}/users/${editUser?.id}`, {
       ...editForm,
       // Only send password if not empty
       ...(editForm.password.trim() ? {} : { password: undefined }),
@@ -94,7 +103,7 @@ export default function UsuariosPage() {
   });
 
   const toggleM = useMutation({
-    mutationFn: (userId: string) => api.put(`/companies/${cid}/users/${userId}/toggle`),
+    mutationFn: (userId: string) => api.put(`/companies/${cidActivo}/users/${userId}/toggle`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users', cid] }),
     onError: (e: any) => alert(e.response?.data?.message || 'Error'),
   });
