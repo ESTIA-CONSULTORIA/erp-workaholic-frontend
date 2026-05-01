@@ -1023,3 +1023,214 @@ function OCSection({ cid, clientId, color, ordenes, qc }: any) {
     </div>
   );
 }
+
+// ══════════════════════════════════════════════════════════════
+//  TAB PROVEEDORES
+// ══════════════════════════════════════════════════════════════
+function ProveedoresTab({ cid, color, qc }: any) {
+  const [showNew, setShowNew] = useState(false);
+  const [editProv, setEditProv] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [error, setError] = useState('');
+
+  const initForm = { name:'', email:'', phone:'', rfc:'', notes:'' };
+  const [form, setForm] = useState(initForm);
+  const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+
+  const { data: proveedores = [], isLoading } = useQuery({
+    queryKey: ['suppliers', cid],
+    queryFn:  () => api.get(`/companies/${cid}/suppliers`).then(r => r.data),
+    enabled:  !!cid,
+  });
+
+  const filtrados = (proveedores as any[]).filter(p =>
+    !busqueda || p.name?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    p.email?.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const crear = async () => {
+    if (!form.name.trim()) { setError('El nombre es requerido'); return; }
+    setSaving(true); setError('');
+    try {
+      await api.post(`/companies/${cid}/suppliers`, form);
+      qc.invalidateQueries({ queryKey: ['suppliers', cid] });
+      setShowNew(false); setForm(initForm);
+    } catch(e: any) { setError(e.response?.data?.message || 'Error al crear'); }
+    finally { setSaving(false); }
+  };
+
+  const guardar = async () => {
+    if (!editProv?.name?.trim()) { setError('El nombre es requerido'); return; }
+    setSaving(true); setError('');
+    try {
+      await api.put(`/companies/${cid}/suppliers/${editProv.id}`, editProv);
+      qc.invalidateQueries({ queryKey: ['suppliers', cid] });
+      setEditProv(null);
+    } catch(e: any) { setError(e.response?.data?.message || 'Error al guardar'); }
+    finally { setSaving(false); }
+  };
+
+  const toggle = async (p: any) => {
+    await api.put(`/companies/${cid}/suppliers/${p.id}`, { isActive: !p.isActive });
+    qc.invalidateQueries({ queryKey: ['suppliers', cid] });
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <input className="input-base" style={{ width:260, fontSize:13 }}
+          placeholder="Buscar proveedor…" value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}/>
+        <div style={{ display:'flex', gap:8 }}>
+          <ImportExportBar
+            color={color}
+            onExport={() => exportCSV('proveedores', proveedores as any[], [
+              { key:'name',  label:'Nombre' },
+              { key:'email', label:'Email' },
+              { key:'phone', label:'Teléfono' },
+              { key:'notes', label:'Notas' },
+            ])}
+            importColumns={[
+              { key:'name',  label:'Nombre',    required:true, example:'Ganadería Norteña SA' },
+              { key:'email', label:'Email',      example:'ventas@ganaderia.com' },
+              { key:'phone', label:'Teléfono',   example:'686-123-4567' },
+              { key:'notes', label:'Notas',      example:'Proveedor de res y cerdo' },
+            ]}
+            templateName="proveedores"
+          />
+          <button className="btn-primary" style={{ background:color, fontSize:13 }}
+            onClick={() => { setShowNew(s => !s); setEditProv(null); setError(''); }}>
+            {showNew ? 'Cancelar' : '+ Nuevo proveedor'}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <p style={{ fontSize:12, color:'#f87171', background:'rgba(248,113,113,0.1)',
+          padding:'8px 12px', borderRadius:7, marginBottom:12 }}>⚠ {error}</p>
+      )}
+
+      {/* Formulario nuevo */}
+      {showNew && (
+        <div className="card" style={{ marginBottom:20 }}>
+          <h3 style={{ fontSize:14, fontWeight:600, margin:'0 0 16px' }}>Nuevo proveedor</h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:12 }}>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Nombre *</label>
+              <input className="input-base" style={{ fontSize:13 }} value={form.name}
+                onChange={e => set('name', e.target.value)} placeholder="Ganadería Norteña SA"/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Email</label>
+              <input type="email" className="input-base" style={{ fontSize:13 }} value={form.email}
+                onChange={e => set('email', e.target.value)} placeholder="ventas@proveedor.com"/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Teléfono</label>
+              <input className="input-base" style={{ fontSize:13 }} value={form.phone}
+                onChange={e => set('phone', e.target.value)} placeholder="686-123-4567"/>
+            </div>
+            <div style={{ gridColumn:'span 3' }}>
+              <label style={{ fontSize:11, color:'#64748b', display:'block', marginBottom:3 }}>Notas</label>
+              <input className="input-base" style={{ fontSize:13 }} value={form.notes}
+                onChange={e => set('notes', e.target.value)} placeholder="Productos que provee, condiciones, etc."/>
+            </div>
+          </div>
+          <button className="btn-primary" style={{ background:color, fontSize:13 }}
+            onClick={crear} disabled={saving || !form.name}>
+            {saving ? 'Guardando…' : 'Crear proveedor'}
+          </button>
+        </div>
+      )}
+
+      {/* Tabla */}
+      {isLoading ? (
+        <p style={{ color:'#64748b', padding:32, textAlign:'center' }}>Cargando…</p>
+      ) : filtrados.length === 0 ? (
+        <div style={{ textAlign:'center', padding:48, color:'#334155' }}>
+          <p style={{ fontSize:32, margin:'0 0 10px' }}>🏭</p>
+          <p style={{ fontSize:14, color:'#64748b' }}>
+            {busqueda ? 'Sin resultados' : 'Sin proveedores registrados'}
+          </p>
+        </div>
+      ) : (
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <table className="table-base">
+            <thead>
+              <tr>
+                <th>Nombre</th><th>Email</th><th>Teléfono</th>
+                <th>Notas</th><th>Estado</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.map((p: any) => (
+                <tr key={p.id}>
+                  {editProv?.id === p.id ? (
+                    <>
+                      <td><input className="input-base" style={{ fontSize:12 }} value={editProv.name}
+                        onChange={e => setEditProv((x:any) => ({ ...x, name:e.target.value }))}/></td>
+                      <td><input className="input-base" style={{ fontSize:12 }} value={editProv.email||''}
+                        onChange={e => setEditProv((x:any) => ({ ...x, email:e.target.value }))}/></td>
+                      <td><input className="input-base" style={{ fontSize:12 }} value={editProv.phone||''}
+                        onChange={e => setEditProv((x:any) => ({ ...x, phone:e.target.value }))}/></td>
+                      <td><input className="input-base" style={{ fontSize:12 }} value={editProv.notes||''}
+                        onChange={e => setEditProv((x:any) => ({ ...x, notes:e.target.value }))}/></td>
+                      <td colSpan={2}>
+                        <div style={{ display:'flex', gap:6 }}>
+                          <button className="btn-primary" style={{ background:color, fontSize:11, padding:'4px 10px' }}
+                            onClick={guardar} disabled={saving}>
+                            {saving ? '…' : '💾 Guardar'}
+                          </button>
+                          <button style={{ fontSize:11, padding:'4px 10px', borderRadius:6,
+                            border:'1px solid #334155', background:'none', color:'#64748b', cursor:'pointer' }}
+                            onClick={() => setEditProv(null)}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ fontWeight:600 }}>{p.name}</td>
+                      <td style={{ fontSize:12, color:'#64748b' }}>{p.email || '—'}</td>
+                      <td style={{ fontSize:12 }}>{p.phone || '—'}</td>
+                      <td style={{ fontSize:12, color:'#475569', maxWidth:180,
+                        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {p.notes || '—'}
+                      </td>
+                      <td>
+                        <span style={{ fontSize:10, padding:'2px 8px', borderRadius:99, fontWeight:600,
+                          background: p.isActive ? '#10b98122' : '#f8717122',
+                          color: p.isActive ? '#10b981' : '#f87171' }}>
+                          {p.isActive ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display:'flex', gap:6 }}>
+                          <button style={{ fontSize:11, padding:'3px 9px', borderRadius:5,
+                            border:`1px solid ${color}`, background:'none', color, cursor:'pointer' }}
+                            onClick={() => { setEditProv({...p}); setShowNew(false); }}>
+                            ✎
+                          </button>
+                          <button style={{ fontSize:11, padding:'3px 9px', borderRadius:5,
+                            border:`1px solid ${p.isActive ? '#f59e0b' : '#10b981'}`,
+                            background:'none', color: p.isActive ? '#f59e0b' : '#10b981', cursor:'pointer' }}
+                            onClick={() => toggle(p)}>
+                            {p.isActive ? '⏸' : '▶'}
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
