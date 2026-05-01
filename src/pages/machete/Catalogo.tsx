@@ -25,6 +25,7 @@ function ProductosTab({ cid, color, qc }: any) {
     priceMostrador:'', priceMayoreo:'', priceOnline:'', priceML:'',
   };
   const [form, setForm] = useState(initForm);
+  const [error, setError] = useState('');
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
 
   const { data: products = [] } = useQuery({
@@ -96,6 +97,15 @@ function ProductosTab({ cid, color, qc }: any) {
           {showNew ? 'Cancelar' : '+ Nuevo producto'}
         </button>
       </div>
+
+      {error && (
+        <div style={{ padding:'10px 14px', background:'rgba(248,113,113,0.15)', border:'1px solid #f87171',
+          borderRadius:8, marginBottom:12, fontSize:12, color:'#f87171' }}>
+          ⚠ {error}
+          <button onClick={() => setError('')} style={{ marginLeft:8, background:'none', border:'none',
+            color:'#f87171', cursor:'pointer', fontSize:12 }}>✕</button>
+        </div>
+      )}
 
       {/* Formulario nuevo producto */}
       {showNew && (
@@ -1066,8 +1076,10 @@ function ProveedoresTab({ cid, color, qc }: any) {
       await api.post(`/companies/${cid}/suppliers`, form);
       qc.invalidateQueries({ queryKey: ['suppliers', cid] });
       setShowNew(false); setForm(initForm);
-    } catch(e: any) { setError(e.response?.data?.message || 'Error al crear'); }
-    finally { setSaving(false); }
+    } catch(e: any) {
+      console.error('CREATE PROVEEDOR ERROR:', JSON.stringify(e.response?.data || e.message || e));
+      setError(e.response?.data?.message || e.response?.data?.error || e.message || JSON.stringify(e.response?.data) || 'Error al crear');
+    } finally { setSaving(false); }
   };
 
   const guardar = async () => {
