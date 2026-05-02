@@ -86,7 +86,10 @@ export default function UsuariosPage() {
       setForm({ name:'', email:'', password:PASS_DEFAULT, roleCode:'cajero', phone:'' });
       qc.invalidateQueries({ queryKey: ['users', cid] });
     },
-    onError: (e: any) => alert(e.response?.data?.message || 'Error al crear usuario'),
+    onError: (e: any) => {
+      const msg = e.response?.data?.message || e.response?.data?.error || e.message || 'Error desconocido';
+      alert('Error al crear usuario: ' + msg);
+    },
   });
 
   const updateM = useMutation({
@@ -99,7 +102,10 @@ export default function UsuariosPage() {
       setEditUser(null);
       qc.invalidateQueries({ queryKey: ['users', cid] });
     },
-    onError: (e: any) => alert(e.response?.data?.message || 'Error al actualizar'),
+    onError: (e: any) => {
+      const msg = e.response?.data?.message || e.response?.data?.error || e.message || 'Error desconocido';
+      alert('Error al guardar: ' + msg);
+    },
   });
 
   const toggleM = useMutation({
@@ -406,7 +412,11 @@ export default function UsuariosPage() {
                   background:'none', color:'#64748b', cursor:'pointer', fontSize:13 }}>
                 Cancelar
               </button>
-              <button onClick={() => createM.mutate()}
+              <button onClick={() => {
+                  if (!form.name.trim() || !form.email.trim()) { alert('Nombre y correo son requeridos'); return; }
+                  if (!cidActivo) { alert('No hay empresa activa'); return; }
+                  createM.mutate();
+                }}
                 disabled={createM.isPending || !form.name || !form.email || !form.password || !form.roleCode}
                 style={{ flex:2, padding:'10px', borderRadius:8, border:'none',
                   background:form.name&&form.email?color:'#334155',
