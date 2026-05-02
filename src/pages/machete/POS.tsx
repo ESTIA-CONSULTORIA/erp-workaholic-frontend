@@ -680,7 +680,7 @@ function POSPageInner() {
                 <div key={p.id} onClick={() => {
                     if (bloqueado || sinPrecio || p.stock<=0) return;
                     // Check if this product has siblings (same meatType, different presentation)
-                    const hermanos = (pt as any[]).filter((h:any) => 
+                    const hermanos = (prods as any[]).filter((h:any) => 
                       h.meatType === p.meatType && h.flavor === p.flavor && h.id !== p.id && 
                       Number((h as any)[priceKey]||0) > 0
                     );
