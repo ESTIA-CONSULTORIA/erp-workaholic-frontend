@@ -946,7 +946,7 @@ function POSPageInner() {
       {/* ── MODAL COBRO REDISEÑADO ── */}
       {showCobro&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'#1e2535',borderRadius:16,width:820,maxHeight:'92vh',overflow:'hidden',border:'1px solid #334155',display:'flex',flexDirection:'column'}}>
+          <div onKeyDown={e => { if(e.key==='Enter'){e.preventDefault(); const pagado=pagos.reduce((t,p)=>t+Number(p.amount||0),0); if(pagado>=total) saleM.mutate(); } }} style={{background:'#1e2535',borderRadius:16,width:820,maxHeight:'92vh',overflow:'hidden',border:'1px solid #334155',display:'flex',flexDirection:'column'}}>
             {/* Header */}
             <div style={{background:'#0f172a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #334155'}}>
               <div>
