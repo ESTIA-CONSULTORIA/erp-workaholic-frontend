@@ -2404,7 +2404,6 @@ function CxPReporteTab({ cid, color }: any) {
       </div>
     </div>
   );
-        }
 
 // ── DOCUMENTOS ────────────────────────────────────────────────
 export function DocumentosPage() {
