@@ -2405,6 +2405,7 @@ function CxPReporteTab({ cid, color }: any) {
     </div>
   );
 
+} 
 // ── DOCUMENTOS ────────────────────────────────────────────────
 export function DocumentosPage() {
   const { activeCompany } = useERPStore();
