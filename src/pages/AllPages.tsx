@@ -17,7 +17,9 @@ export function CortesPage() {
   const cid   = activeCompany?.companyId;
   const color = activeCompany?.color || '#3b82f6';
   const qc    = useQueryClient();
-  const role  = activeCompany?.roleCode || '';
+  const { user } = useERPStore();
+const role  = (user as any)?.roleCode || activeCompany?.roleCode || '';
+const esAdmin = ['admin','administrador','gerente','director'].includes(role.toLowerCase());
 
   const [corteActivo, setCorteActivo] = useState<any>(null);
   const [notas,       setNotas]       = useState('');
@@ -657,11 +659,13 @@ export function ConciliacionPage() {
                     {[
                       { label:'Efectivo declarado hoy', value: efDeclarado, col:'#f59e0b' },
                       { label:'Efectivo teórico (sistema)', value: Number(efTeorico), col: color },
-                      { label:'Diferencia', value: diferencia, col: diferencia===0?'#10b981':diferencia>0?'#3b82f6':'#f87171' },
+                      { label:'Diferencia', value: diferencia, col: diferencia===0?'#10b981':diferencia>0?'#3b82f6':'#f87171', bloqueado: !['admin','director'].includes(role.toLowerCase()) },
                     ].map(k => (
                       <div key={k.label} style={{ background:'#1e293b', borderRadius:8, padding:14, border:'1px solid #334155' }}>
                         <p style={{ fontSize:10, color:'#64748b', margin:'0 0 4px', textTransform:'uppercase' }}>{k.label}</p>
-                        <p style={{ fontSize:20, fontWeight:700, color:k.col, margin:0 }}>{fmt(k.value)}</p>
+                        <p style={{ fontSize:20, fontWeight:700, color:k.col, margin:0 }}>
+                        {k.bloqueado && k.label==='Diferencia' ? '🔒 Ver en 5 min' : fmt(k.value)}
+                        </p>
                       </div>
                     ))}
                   </div>
